@@ -1,0 +1,1 @@
+select * from OTOLITH_V1.V_CREEL_CATCH_EST_COMPLETE where year in (XXXYEARXXX) and hart_cd = '124'
