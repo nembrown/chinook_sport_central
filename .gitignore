@@ -8,6 +8,10 @@
 
 # User-specific files
 .Ruserdata
+crest_password.txt
+makecon.B
+*.csv
+
 
 # Example code in package build process
 *-Ex.R

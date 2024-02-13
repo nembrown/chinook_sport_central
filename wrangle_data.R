@@ -1,43 +1,64 @@
 
+#load packages
 library(tidyverse)
-#run Crest connection
-View(Sport)
-"%notin%" <- Negate("%in%")
-#Sport data is creel and irec and lodge log and logbook
+library(odbc)
+library(lubridate)
+library(ggnewscale)
 
-#Take out the North Coast and Central Coast data, and just work with the WCVI
+#utils
+"%notin%" <- Negate("%in%")
+
+#Pull sport data from CREST
+source("PullAllSport.R")
+# PullAllSport(Start_year) set the calendar year to start querying from to the current year
+rslt <- PullAllSport(2005)
+quality_report <- rslt[[1]]
+estimates <- rslt[[2]]
+rm(rslt)
 
 # Filter data based on no infill data, QC creel, final estimates only
-Sport_filtered_south<- Sport %>%
-                       as_tibble() %>%
-                       filter(SOURCE %in% c('Creel Estimate', 'iRec Estimate C', 'Historic Estimate',
-                                       'Log Estimate', 'Lodge Manifest', 'Lodge Log', 'Lodge Estimate') ) %>% # no in fill data or errors
-                      #filter(STATUS %in% c('Published Estimate - Full Month')) %>% #no preliminary estimates, only published full
-                       filter(DATESINC %notin% c("0114", "0106", "1731","1831","0107" ))%>% #take out estimates based on <15 days of fly overs
-                       filter(AREA %notin% c(1:10, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 142, 130, NA)) %>%
-                       filter(SUB_TYPE == "LEGAL") %>%
-                       mutate(REGION2 = case_when(REGION == "QC" ~ "QC",
-                                                  TRUE ~ REGION2)) %>%
-                       mutate(MARKS_DESC = case_when(
-                         MARKS_DESC == "Not Adipose Checked" ~ "unchecked",
-                         MARKS_DESC == "Not Applicable" ~ "unchecked",
-                         MARKS_DESC == "Not Adipose Marked" ~ "unmarked",
-                         MARKS_DESC == "Adipose Marked" ~ "marked",
-                       ))%>%
-                       mutate(SOURCE = case_when(
-                         SOURCE == "Creel Estimate" ~ "creel",
-                         SOURCE == "Lodge Log" ~ "lodge_log",
-                         SOURCE == "Lodge Manifest" ~ "lodge_manifest",
-                         SOURCE == "Lodge Estimate" ~ "lodge_estimate",
-                         SOURCE == "Log Estimate" ~ "log_estimate",
-                         SOURCE == "iRec Estimate C" ~ "irec_calibrated",
-                         TRUE ~ SOURCE
-                       )) %>%
-                       group_by(YEAR, MONTH, AREA, REGION2, MANAGEMENT, SOURCE, MARKS_DESC, TYPE) %>%
-                       summarise(VAL=sum(VAL)) %>% ungroup()
+Sport_filtered_south_irec<-
+  estimates |>
+  as_tibble() |>
+  filter(AREA %notin% c("Area 29 (In River)", "Campbell River", "Quinsam River", "CR-1", "CR-2", "CR-3", "CR-4", "QR-1", "QR-2", "QR-3", "QR-4")) |>
+  mutate(AREA = case_when(
+    YEAR <2020 & str_detect(AREA, "Area 20") ~ "Area 20",
+    YEAR == 2020 & MONTH < 4 & str_detect(AREA, "Area 20") ~ "Area 20",
+    YEAR <2014 & str_detect(AREA, "Area 23") ~ "Area 23",
+    YEAR == 2014  & MONTH < 4 & str_detect(AREA, "Area 23") ~ "Area 23",
+    YEAR <2014 & str_detect(AREA, "Area 19") ~ "Area 19",
+    YEAR == 2014  & MONTH < 4 & str_detect(AREA, "Area 19") ~ "Area 19",
+    YEAR <2014 & str_detect(AREA, "2E|2W") ~ "Area 2",
+    YEAR == 2014 & MONTH < 4 & str_detect(AREA, "2E|2W") ~ "Area 2",
+    TRUE ~ as.character(AREA)))|>
+  mutate(AREA = case_when(
+    AREA == "Area 20" & MONTH %in% c(1) & YEAR %in% c(2008,2009,2012) ~ "Area 20 (East)",
+    AREA == "Area 20" & MONTH %in% c(2) & YEAR %in% c(2008,2009,2011,2012,2014,2015,2018) ~ "Area 20 (East)",
+    AREA == "Area 20" & MONTH %in% c(3) & YEAR %in% c(2008,2009,2010,2011,2012,2013,2015,2016,2017,2018) ~ "Area 20 (East)",
+    AREA == "Area 20" & MONTH %in% c(4) & YEAR %in% c(2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019) ~ "Area 20 (East)",
+    AREA == "Area 20" & MONTH %in% c(5) & YEAR %in% c(2009,2010,2011,2012,2014,2015,2016,2018) ~ "Area 20 (East)",
+    AREA == "Area 20" & MONTH %in% c(10) & YEAR %in% c(2015,2017,2018, 2019) ~ "Area 20 (East)",
+    AREA == "Area 20" & MONTH %in% c(11) & YEAR %in% c(2008,2009,2011) ~ "Area 20 (East)",
+    AREA == "Area 20" & MONTH %in% c(12) & YEAR %in% c(2008,2009,2011) ~ "Area 20 (East)",
+    AREA== "Area 29 (Marine)" ~ "Area 29",
+    TRUE ~ as.character(AREA))) |>
+  filter(SUB_TYPE == "LEGAL") |>
+  mutate(REGION2 = case_when(AREA == "Area 2" ~ "NC", TRUE ~ REGION2)) |>
+  mutate(MARKS_DESC = case_when(
+         MARKS_DESC == "Not Adipose Checked" ~ "unchecked",
+         MARKS_DESC == "Not Checked" ~ "unchecked",
+         MARKS_DESC == "Not Applicable" ~ "unchecked",
+         MARKS_DESC == "Not Adipose Marked" ~ "unmarked",
+         MARKS_DESC == "Adipose Marked" ~ "marked")) |>
+  mutate(SOURCE = case_when(
+         SOURCE == "Creel" ~ "creel",
+         SOURCE == "Historic" ~ "historic",
+         SOURCE %in% c("Lodge Log","Lodge Manifest","Lodge Manifest - Log", "Lodge Estimate", "Log Estimate", "Lodge eLog") ~ "lodge_log",
+         SOURCE == "iREC" ~ "irec_calibrated",
+         TRUE ~ SOURCE )) |>
+  group_by(YEAR, MONTH, AREA, REGION2, MANAGEMENT, SOURCE, MARKS_DESC, TYPE) |>
+  summarise(VARIANCE=sum(VARIANCE), VAL=sum(ESTIMATE)) |> ungroup()
 
-Sport_filtered_south_irec<- bind_rows(Sport_filtered_south, irec) %>% distinct() %>% as_tibble()
-Sport_filtered_south_irec
 
 #Take filtered data and get a by-year estimate to in fill for NAs below
 
@@ -100,12 +121,13 @@ Sport_mark_rate_area<- Sport_filtered_south_irec  %>%
   select(AREA, REGION2, MANAGEMENT, SOURCE, marked_prop_area)
 
 
+#expand to include all combinations
 
 allobs2 <- expand(Sport_filtered_south_irec, nesting(AREA, REGION2, MANAGEMENT), YEAR, MONTH, MARKS_DESC, TYPE, SOURCE)
 
-
+#Join with mark rate data and expand unchecked
 Sport_mark_rate<- Sport_filtered_south_irec  %>%
-                  group_by(YEAR, MONTH, AREA, REGION2, MANAGEMENT, SOURCE, MARKS_DESC, TYPE) %>% summarise(sum=sum(VAL)) %>%
+                  group_by(YEAR, MONTH, AREA, REGION2, MANAGEMENT, SOURCE, MARKS_DESC, TYPE) %>% summarise(sum=sum(VAL), sum_VARIANCE=sum(VARIANCE)) %>%
                   full_join(allobs2) %>%
                   pivot_wider(id_cols = c(YEAR, MONTH, AREA, REGION2, MANAGEMENT, SOURCE), names_from=c(MARKS_DESC, TYPE), values_from = sum) %>%
                   mutate(marked_prop = sum(marked_Kept,marked_Released, na.rm = TRUE)/sum(marked_Kept,marked_Released,unmarked_Kept,unmarked_Released, na.rm =TRUE)) %>%
@@ -136,10 +158,12 @@ Sport_mark_rate<- Sport_filtered_south_irec  %>%
                  pivot_wider(id_cols = c(YEAR, MONTH, AREA, REGION2, MANAGEMENT, status), names_from = SOURCE, values_from = value) %>%
                  mutate_all(~ifelse(is.nan(.), NA, .)) %>%
                  rowwise() %>%
-                 mutate(creel_plus = sum(creel,lodge_log,lodge_manifest,lodge_estimate,log_estimate, na.rm=TRUE)) %>%
+                 mutate(creel_plus = sum(creel,lodge_log, na.rm=TRUE),
+                        historic_plus = sum(historic,lodge_log, na.rm=TRUE)) %>%
                  mutate(catch_estimate = case_when(
-                   YEAR > 2011 & MONTH %in% c(5:9) & (is.na(creel) | creel==0) ~ as.numeric(irec_calibrated),
-                   YEAR > 2011 & MONTH %in% c(1:4,10:12) ~ as.numeric(irec_calibrated),
+                   YEAR > 2012 & MONTH %in% c(5:9) & (is.na(creel) | creel==0) ~ as.numeric(irec_calibrated),
+                   YEAR > 2012 & MONTH %in% c(1:4,10:12) ~ as.numeric(irec_calibrated),
+                   YEAR < 2013 & (is.na(creel_plus) | creel_plus==0) ~ as.numeric(historic_plus),
                    TRUE ~ as.numeric(creel_plus)))
 
 
@@ -149,81 +173,245 @@ Sport_mark_rate<- Sport_filtered_south_irec  %>%
 # Now we need to sum up to the appropriate finescale fishery level, and do a calculation of how much more irec gets us.
 #Need to split the finescale fisheries now
 
-Sport_mark_rate_finescale<-Sport_mark_rate%>%
-                           mutate(finescale_fishery = case_when(
-                           AREA%in%c(121,122,123,124,125,126,127) & MANAGEMENT=="AABM" & MONTH%in%c(8:12) ~ "WCVI AABM S FALL",
-                           AREA%in%c(121,122,123,124,125,126,127) & MANAGEMENT=="AABM" & MONTH%in%c(1:7) ~ "WCVI AABM S SPRING",
-                           AREA%in%c(21,23,24) & MONTH%in%c(10:12) ~ "WCVI AABM S FALL",
-                           AREA%in%c(21,23,24) & MONTH%in%c(1:7) ~ "WCVI AABM S SPRING",
-                           AREA%in%c(25,26,27) & MONTH%in%c(10:12) ~ "WCVI AABM S FALL",
-                           AREA%in%c(25,26,27) & MONTH%in%c(1:6) ~ "WCVI AABM S SPRING",
 
-                           AREA%in%c(121,122,123,124,125,126,127) & MANAGEMENT=="ISBM" & MONTH%in%c(7:12) ~ "WCVI ISBM S FALL",
-                           AREA%in%c(21,22,23,24) & MONTH%in%c(8,9) ~ "WCVI ISBM S FALL",
-                           AREA%in%c(25,26,27) & MONTH%in%c(7,8,9) ~ "WCVI ISBM S FALL",
+Sport_mark_rate_finescale<-
+  Sport_mark_rate%>%
+  mutate(finescale_fishery = case_when(
+    AREA%in%c("Area 121", "Area 123", "Area 124", "Area 125", "Area 126", "Area 127") & MANAGEMENT=="AABM" & MONTH%in%c(10:12) ~ "WCVI AABM S FALL",
+    AREA%in%c("Area 121", "Area 123", "Area 124", "Area 125", "Area 126", "Area 127") & MANAGEMENT=="AABM" & MONTH%in%c(1:4) ~ "WCVI AABM S SPRING",
+    AREA%in%c("Area 121", "Area 123", "Area 124", "Area 125", "Area 126", "Area 127") & MANAGEMENT=="AABM" & MONTH%in%c(5:9) ~ "WCVI AABM S SUMMER",
 
-                           (AREA %in%c(13,14,15,16) |REGION2== "GSN")& MONTH%in%c(8:12) ~ "NGS S FALL",
-                           (AREA %in%c(13,14,15,16) |REGION2== "GSN")& MONTH%in%c(1:7) ~ "NGS S SPRING",
+    AREA%in%c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal)")  & MONTH%in%c(10:12) ~ "WCVI AABM S FALL",
+    AREA%in%c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal)")  & MONTH%in%c(1:4) ~ "WCVI AABM S SPRING",
+    AREA%in%c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal)")  & MONTH%in%c(5:7) ~ "WCVI AABM S SUMMER",
 
-                           (AREA %in%c(17,18,28,29) |REGION2== "GSS")& MONTH%in%c(8:12) ~ "SGS S FALL", #this captures 19
-                           (AREA %in%c(17,18,28,29) |REGION2== "GSS")& MONTH%in%c(1:7) ~ "SGS S SPRING",
+    AREA%in%c("Area 25", "Area 26", "Area 27") & MONTH%in%c(10:12) ~ "WCVI AABM S FALL",
+    AREA%in%c("Area 25", "Area 26", "Area 27") & MONTH%in%c(1:4) ~ "WCVI AABM S SPRING",
+    AREA%in%c("Area 25", "Area 26", "Area 27") & MONTH%in%c(5:6) ~ "WCVI AABM S SUMMER",
 
-                           (AREA %in% c(11,111,12) | REGION2 == "JST") & MONTH%in%c(8:12) ~ "JNST S FALL",
-                           (AREA %in% c(11,111,12) | REGION2 == "JST") & MONTH%in%c(1:7) ~ "JNST S SPRING",
+    AREA%in%c("Area 121", "Area 123", "Area 124", "Area 125", "Area 126", "Area 127") & MANAGEMENT=="ISBM" & MONTH%in%c(7:12) ~ "WCVI ISBM S SUMMER",
+    AREA%in%c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal)") & MONTH%in%c(8,9) ~ "WCVI ISBM S SUMMER",
+    AREA%in%c("Area 25", "Area 26", "Area 27") & MONTH%in%c(7,8,9) ~ "WCVI ISBM S SUMMER",
 
-                           (AREA %in% c(20) | REGION2 == "JDF") & MONTH%in%c(1:7) ~ "CA JDF S SPRING", #this captures 19
-                           (AREA %in% c(20) | REGION2 == "JDF") & MONTH%in%c(8:12) ~ "CA JDF S FALL")) %>%
+    (AREA %in%c("Area 13", "Area 14", "Area 15", "Area 16") |REGION2== "GSN")& MONTH%in%c(10:12) ~ "NGS S FALL",
+    (AREA %in%c("Area 13", "Area 14", "Area 15", "Area 16") |REGION2== "GSN")& MONTH%in%c(1:4) ~ "NGS S SPRING",
+    (AREA %in%c("Area 13", "Area 14", "Area 15", "Area 16") |REGION2== "GSN")& MONTH%in%c(5:9) ~ "NGS S SUMMER",
 
-                           mutate(finescale_fishery_term = case_when(
-                             AREA%in%c(23) & MONTH%in%c(8:12) ~ "TWCVI S FALL",
-                             AREA %in% c(11,111,12) & MONTH%in%c(8:12) ~ "TJOHN ST S FALL",
-                             AREA %in% c(11,111,12) & MONTH%in%c(5:7) ~ "TJOHN ST S SUMMER",
-                             (AREA%in% c(17,18,28,29) |  REGION2 == "GSS") & MONTH%in%c(8:12) ~ "TSGS S FALL",
-                             (AREA%in% c(17,18,28,29) |  REGION2 == "GSS") & MONTH%in%c(5:7) ~ "TSGS S SUMMER",
-                             (AREA%in% c(13,14,15,16) |  REGION2 == "GSN") & MONTH%in%c(8:12) ~ "TNGS S FALL",
-                             (AREA%in% c(13,14,15,16) |  REGION2 == "GSN") & MONTH%in%c(5:7) ~ "TNGS S SUMMER",
-                             (AREA %in%c(20) | REGION2 == "JDF") & MONTH%in%c(5:8) ~ "TCA JDF S SUMMER"))
+
+    (AREA %in%c("Area 17", "Area 18", "Area 19", "Area 19 (GS)", "Area 28", "Area 29") |REGION2== "GSS")& MONTH%in%c(10:12) ~ "SGS S FALL", #this captures 19
+    (AREA %in%c("Area 17", "Area 18", "Area 19", "Area 19 (GS)", "Area 28", "Area 29") |REGION2== "GSS")& MONTH%in%c(1:4) ~ "SGS S SPRING",
+    (AREA %in%c("Area 17", "Area 18", "Area 19", "Area 19 (GS)", "Area 28", "Area 29") |REGION2== "GSS")& MONTH%in%c(5:9) ~ "SGS S SUMMER",
+
+
+    (AREA %in% c("Area 11", "Area 111", "Area 12") | REGION2 == "JST") & MONTH%in%c(10:12) ~ "JNST S FALL",
+    (AREA %in% c("Area 11", "Area 111", "Area 12")| REGION2 == "JST") & MONTH%in%c(1:4) ~ "JNST S SPRING",
+    (AREA %in% c("Area 11", "Area 111", "Area 12")| REGION2 == "JST") & MONTH%in%c(5:9) ~ "JNST S SUMMER",
+
+
+    AREA %in% c("Area 10", "Area 106", "Area 110", "Area 6", "Area 7", "Area 8", "Area 9", "Area 130", "Area 108", "Area 109", "Area 107")& MONTH%in%c(1:4)  ~ "CBC S SPRING",
+    AREA %in% c("Area 10", "Area 106", "Area 110", "Area 6", "Area 7", "Area 8", "Area 9", "Area 130", "Area 108", "Area 109", "Area 107")& MONTH%in%c(10:12)  ~ "CBC S FALL",
+    AREA %in% c("Area 10", "Area 106", "Area 110", "Area 6", "Area 7", "Area 8", "Area 9", "Area 130", "Area 108", "Area 109", "Area 107")& MONTH%in%c(5:9)  ~ "CBC S SUMMER",
+
+
+    AREA %in% c("Area 2","Area 1", "Area 101", "Area 102",  "Area 142", "Area 2E", "Area 2W")& MONTH%in%c(1:4)  ~ "NBC AABM S SPRING",
+    AREA %in% c("Area 2","Area 1", "Area 101", "Area 102",  "Area 142", "Area 2E", "Area 2W")& MONTH%in%c(10:12) ~ "NBC AABM S FALL",
+    AREA %in% c("Area 2","Area 1", "Area 101", "Area 102",  "Area 142", "Area 2E", "Area 2W")& MONTH%in%c(5:9) ~ "NBC AABM S SUMMER",
+
+
+    AREA %in% c( "Area 103", "Area 104", "Area 105", "Area 3", "Area 4", "Area 5")& MONTH%in%c(1:4)  ~ "NBC ISBM S SPRING",
+    AREA %in% c( "Area 103", "Area 104", "Area 105", "Area 3", "Area 4", "Area 5")& MONTH%in%c(10:12)  ~ "NBC ISBM S FALL",
+    AREA %in% c( "Area 103", "Area 104", "Area 105", "Area 3", "Area 4", "Area 5")& MONTH%in%c(5:9)  ~ "NBC ISBM S SUMMER",
+
+
+    (AREA %in% c("Area 19", "Area 19 (JDF)", "Area 20", "Area 20 (East)", "Area 20 (West)") | REGION2 == "JDF") & MONTH%in%c(1:4) ~ "CA JDF S SPRING", #this captures 19
+    (AREA %in% c("Area 19", "Area 19 (JDF)", "Area 20", "Area 20 (East)", "Area 20 (West)") | REGION2 == "JDF") & MONTH%in%c(10:12) ~ "CA JDF S FALL",
+    (AREA %in% c("Area 19", "Area 19 (JDF)", "Area 20", "Area 20 (East)", "Area 20 (West)") | REGION2 == "JDF") & MONTH%in%c(5:9) ~ "CA JDF S SUMMER")) %>%
+
+  mutate(finescale_fishery_term = case_when(
+    AREA%in%c("Area 123", "Area 23 (Barkley)", "Area 23 (Alberni Canal)")  & MONTH%in%c(8:12) ~ "TWCVI S SUMMER",
+    AREA %in%  c("Area 11", "Area 111", "Area 12") & MONTH%in%c(10:12) ~ "TJOHN ST S FALL",
+    AREA %in%  c("Area 11", "Area 111", "Area 12") & MONTH%in%c(5:9) ~ "TJOHN ST S SUMMER",
+    (AREA%in% c("Area 17", "Area 18", "Area 19", "Area 19 (GS)", "Area 28", "Area 29")  |  REGION2 == "GSS") & MONTH%in%c(10:12) ~ "TSGS S FALL",
+    (AREA%in% c("Area 17", "Area 18", "Area 19", "Area 19 (GS)", "Area 28", "Area 29")  |  REGION2 == "GSS") & MONTH%in%c(5:9) ~ "TSGS S SUMMER",
+    (AREA%in% c("Area 13", "Area 14", "Area 15", "Area 16") |  REGION2 == "GSN") & MONTH%in%c(10:12) ~ "TNGS S FALL",
+    (AREA%in% c("Area 13", "Area 14", "Area 15", "Area 16") |  REGION2 == "GSN") & MONTH%in%c(5:9) ~ "TNGS S SUMMER",
+    (AREA %in%c("Area 19", "Area 19 (JDF)", "Area 20", "Area 20 (East)", "Area 20 (West)")  | REGION2 == "JDF") & MONTH%in%c(5:9) ~ "TCA JDF S SUMMER")) %>%
+
+  mutate(finescale_fishery_old = case_when(
+    AREA%in%c("Area 121", "Area 123", "Area 124", "Area 125", "Area 126", "Area 127") & MANAGEMENT=="AABM" & MONTH%in%c(1:12) ~ "WCVI AABM S",
+    AREA%in%c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal)")  & MONTH%in%c(1:7, 10:12) ~ "WCVI AABM S",
+    AREA%in%c("Area 25", "Area 26", "Area 27") & MONTH%in%c(1:6, 10:12) ~ "WCVI AABM S",
+    AREA%in%c("Area 121", "Area 123", "Area 124", "Area 125", "Area 126", "Area 127") & MANAGEMENT=="ISBM" & MONTH%in%c(7:12) ~ "WCVI ISBM S",
+    AREA%in%c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal)") & MONTH%in%c(8,9) ~ "WCVI ISBM S",
+    AREA%in%c("Area 25", "Area 26", "Area 27") & MONTH%in%c(7,8,9) ~ "WCVI ISBM S",
+    (AREA %in%c("Area 13", "Area 14", "Area 15", "Area 16") |REGION2== "GSN")& MONTH%in%c(1:12) ~ "NGS S",
+    (AREA %in%c("Area 17", "Area 18", "Area 19", "Area 19 (GS)", "Area 28", "Area 29") |REGION2== "GSS")& MONTH%in%c(1:12) ~ "SGS S",
+    (AREA %in% c("Area 11", "Area 111", "Area 12") | REGION2 == "JST") & MONTH%in%c(1:12) ~ "JNST S",
+    AREA %in% c("Area 10", "Area 106", "Area 110", "Area 6", "Area 7", "Area 8", "Area 9", "Area 130", "Area 108", "Area 109", "Area 107")& MONTH%in%c(1:12)  ~ "CBC S",
+    AREA %in% c("Area 2","Area 1", "Area 101", "Area 102",  "Area 142", "Area 2E", "Area 2W")& MONTH%in%c(1:12)  ~ "NBC AABM S",
+    AREA %in% c( "Area 103", "Area 104", "Area 105", "Area 3", "Area 4", "Area 5")& MONTH%in%c(1:12)  ~ "NBC ISBM S",
+    (AREA %in% c("Area 19", "Area 19 (JDF)", "Area 20", "Area 20 (East)", "Area 20 (West)") | REGION2 == "JDF") & MONTH%in%c(1:12) ~ "CA JDF S")) %>%
+
+  mutate(finescale_fishery_old_term = case_when(
+    AREA%in%c("Area 123", "Area 23 (Barkley)", "Area 23 (Alberni Canal)")  & MONTH%in%c(8:12) ~ "TWCVI S",
+    AREA %in%  c("Area 11", "Area 111", "Area 12") & MONTH%in%c(5:12) ~ "TJOHN ST S",
+    (AREA%in% c("Area 17", "Area 18", "Area 19", "Area 19 (GS)", "Area 28", "Area 29")  |  REGION2 == "GSS") & MONTH%in%c(5:12) ~ "TSGS S",
+    (AREA%in% c("Area 13", "Area 14", "Area 15", "Area 16") |  REGION2 == "GSN") & MONTH%in%c(5:12) ~ "TNGS S",
+    (AREA %in%c("Area 19", "Area 19 (JDF)", "Area 20", "Area 20 (East)", "Area 20 (West)")  | REGION2 == "JDF") & MONTH%in%c(5:8) ~ "TCA JDF S"))
+
+
+Sport_mark_rate_finescale<- Sport_mark_rate_finescale %>%
+  mutate(summer_coverage_tf = case_when(
+    finescale_fishery_old == "CA JDF S" & MONTH %in% c(5:9) & YEAR != 2020 ~ "yes",
+    finescale_fishery_old == "JNST S" & MONTH %in% c(6:8) & YEAR != 2020 ~ "yes",
+    finescale_fishery_old == "NGS S" & MONTH %in% c(6:9) & YEAR != 2020 ~ "yes",
+    finescale_fishery_old == "SGS S" & MONTH %in% c(6:9) & YEAR %notin% c(2016, 2020) ~ "yes",
+    finescale_fishery_old == "WCVI ISBM S" & MONTH %in% c(7:9) ~ "yes",
+    finescale_fishery_old == "WCVI AABM S" & MONTH %in% c(6:9)& YEAR != 2020 ~ "yes",
+    finescale_fishery_old == "CBC S" & MONTH %in% c(6:8) ~ "yes",
+    finescale_fishery_old == "NBC AABM S" & MONTH %in% c(6:9) ~ "yes",
+    finescale_fishery_old == "NBC ISBM S" & MONTH %in% c(6:8) ~ "yes",
+    TRUE ~ "no")) %>%
+  mutate(summer_coverage_tf_term = case_when(
+    finescale_fishery_old_term == "TCA JDF S" & MONTH %in% c(5:8) & YEAR != 2020 ~ "yes",
+    finescale_fishery_old_term == "TJOHN ST S" & MONTH %in% c(6:8) & YEAR != 2020 ~ "yes",
+    finescale_fishery_old_term == "TNGS S" & MONTH %in% c(6:9) & YEAR != 2020 ~ "yes",
+    finescale_fishery_old_term == "TSGS S" & MONTH %in% c(6:9) & YEAR %notin% c(2016, 2020) ~ "yes",
+    finescale_fishery_old_term == "TWCVI S" & MONTH %in% c(8:9) ~ "yes",
+    TRUE ~ "no")) %>% mutate(spring_coverage_tf = case_when(
+      finescale_fishery_old == "CA JDF S" & MONTH %in% c(4) & YEAR != 2020 ~ "yes",
+      finescale_fishery_old == "JNST S" & MONTH %in% c(6) & YEAR != 2020 ~ "yes",
+      finescale_fishery_old == "NGS S" & MONTH %in% c(6) & YEAR != 2020 ~ "yes",
+      finescale_fishery_old == "SGS S" & MONTH %in% c(4) & YEAR %notin% c(2020) ~ "yes",
+      finescale_fishery_old == "WCVI AABM S" & MONTH %in% c(6)& YEAR != 2020 ~ "yes",
+      finescale_fishery_old == "CBC S" & MONTH %in% c(6) ~ "yes",
+      finescale_fishery_old == "NBC AABM S" & MONTH %in% c(6) ~ "yes",
+      finescale_fishery_old == "NBC ISBM S" & MONTH %in% c(6) ~ "yes",
+      TRUE ~ "no")) %>%
+
+  mutate(fall_coverage_tf = case_when(
+    finescale_fishery_old == "CA JDF S" & MONTH %in% c(9) & YEAR != 2020 ~ "yes",
+    finescale_fishery_old == "JNST S" & MONTH %in% c(8) & YEAR != 2020 ~ "yes",
+    finescale_fishery_old == "NGS S" & MONTH %in% c(9) & YEAR != 2020 ~ "yes",
+    finescale_fishery_old == "SGS S" & MONTH %in% c(9) & YEAR %notin% c(2016) ~ "yes",
+    finescale_fishery_old == "WCVI ISBM S" & MONTH %in% c(9) ~ "yes",
+    finescale_fishery_old == "WCVI AABM S" & MONTH %in% c(9) ~ "yes",
+    finescale_fishery_old == "CBC S" & MONTH %in% c(8) ~ "yes",
+    finescale_fishery_old == "NBC AABM S" & MONTH %in% c(9) ~ "yes",
+    finescale_fishery_old == "NBC ISBM S" & MONTH %in% c(8) ~ "yes",
+    TRUE ~ "no")) %>%
+  mutate(fall_coverage_tf_term = case_when(
+    finescale_fishery_old_term == "TCA JDF S" & MONTH %in% c(8) ~ "yes",
+    finescale_fishery_old_term == "TJOHN ST S" & MONTH %in% c(8)  ~ "yes",
+    finescale_fishery_old_term == "TNGS S" & MONTH %in% c(9) ~ "yes",
+    finescale_fishery_old_term == "TSGS S" & MONTH %in% c(9) & YEAR %notin% c(2016) ~ "yes",
+    finescale_fishery_old_term == "TWCVI S" & MONTH %in% c(9) ~ "yes",
+    TRUE ~ "no"))
 
 Sport_mark_rate_finescale_sum<- Sport_mark_rate_finescale %>%
-                                filter(!is.na(finescale_fishery)) %>%
-                                group_by(YEAR, status, finescale_fishery) %>%
-                                summarise_at(vars(creel:catch_estimate), sum, na.rm=TRUE)
+  filter(!is.na(finescale_fishery)) %>%
+  group_by(YEAR, status, finescale_fishery_old, finescale_fishery) %>%
+  summarise_at(vars(creel:catch_estimate), sum, na.rm=TRUE)
 
 Sport_creel_finescale_summer<- Sport_mark_rate_finescale %>%
-                                          filter(!is.na(finescale_fishery), MONTH%in%c(5:9)) %>%
-                                          group_by(YEAR, status, finescale_fishery) %>%
-                                          summarise_at(vars(creel_plus), sum, na.rm=TRUE) %>%
-                                          rename(creel_plus_summer=creel_plus)
+  filter(!is.na(finescale_fishery_old), summer_coverage_tf=="yes") %>%
+  group_by(YEAR, status, finescale_fishery_old) %>%
+  summarise_at(vars(creel_plus), sum, na.rm=TRUE) %>%
+  rename(creel_plus_summer=creel_plus)
+
+Sport_creel_finescale_spring<- Sport_mark_rate_finescale %>%
+  filter(!is.na(finescale_fishery_old), spring_coverage_tf=="yes") %>%
+  group_by(YEAR, status, finescale_fishery_old) %>%
+  summarise_at(vars(creel_plus), sum, na.rm=TRUE) %>%
+  rename(creel_plus_spring=creel_plus)
+
+Sport_creel_finescale_fall<- Sport_mark_rate_finescale %>%
+  filter(!is.na(finescale_fishery_old), fall_coverage_tf=="yes") %>%
+  group_by(YEAR, status, finescale_fishery_old) %>%
+  summarise_at(vars(creel_plus), sum, na.rm=TRUE) %>%
+  rename(creel_plus_fall=creel_plus)
 
 Sport_mark_rate_finescale_term_sum<- Sport_mark_rate_finescale %>%
-                                      filter(!is.na(finescale_fishery_term)) %>%
-                                      group_by(YEAR, status, finescale_fishery_term) %>%
-                                      summarise_at(vars(creel:catch_estimate), sum, na.rm=TRUE) %>%
-                                      rename(finescale_fishery = finescale_fishery_term)
+  filter(!is.na(finescale_fishery_old_term)) %>%
+  group_by(YEAR, status, finescale_fishery_old_term, finescale_fishery_term) %>%
+  summarise_at(vars(creel:catch_estimate), sum, na.rm=TRUE) %>%
+  rename(finescale_fishery = finescale_fishery_term,
+         finescale_fishery_old = finescale_fishery_old_term)
 
 Sport_creel_finescale_term_summer<- Sport_mark_rate_finescale %>%
-                                    filter(!is.na(finescale_fishery_term), MONTH%in%c(5:9)) %>%
-                                    group_by(YEAR, status, finescale_fishery_term) %>%
-                                    summarise_at(vars(creel_plus), sum, na.rm=TRUE) %>%
-                                    rename(creel_plus_summer=creel_plus) %>%
-                                    rename(finescale_fishery = finescale_fishery_term)
+  filter(!is.na(finescale_fishery_old_term), summer_coverage_tf_term=="yes") %>%
+  group_by(YEAR, status, finescale_fishery_old_term) %>%
+  summarise_at(vars(creel_plus), sum, na.rm=TRUE) %>%
+  rename(creel_plus_summer=creel_plus) %>%
+  rename(finescale_fishery_old = finescale_fishery_old_term)
+
+Sport_creel_finescale_term_fall<- Sport_mark_rate_finescale %>%
+  filter(!is.na(finescale_fishery_old_term), fall_coverage_tf_term=="yes") %>%
+  group_by(YEAR, status, finescale_fishery_old_term) %>%
+  summarise_at(vars(creel_plus), sum, na.rm=TRUE) %>%
+  rename(creel_plus_fall=creel_plus) %>%
+  rename(finescale_fishery_old = finescale_fishery_old_term)
 
 
 #Year, finescale fishery
 Sport_creel_summer<- bind_rows(Sport_creel_finescale_term_summer, Sport_creel_finescale_summer)
+Sport_creel_fall<- bind_rows(Sport_creel_finescale_term_fall, Sport_creel_finescale_fall)
+Sport_creel_all_seasons <- left_join(Sport_creel_summer, Sport_creel_fall)
+Sport_creel_all_seasons<-left_join(Sport_creel_all_seasons,Sport_creel_finescale_spring)
+
 
 Sport_mark_rate_finescale_combined<-bind_rows(Sport_mark_rate_finescale_term_sum, Sport_mark_rate_finescale_sum)
 
-Sport_mark_rate_finescale_combined<-full_join(Sport_mark_rate_finescale_combined, Sport_creel_summer)
+Sport_mark_rate_finescale_combined<-left_join(Sport_mark_rate_finescale_combined, Sport_creel_all_seasons)
+
+### do the modelling here now.
+
+
+
+
+
+
+
+#### MRR URR
+
+
 
 Sport_mark_rate_mrr<-Sport_mark_rate_finescale_combined %>%
-                     pivot_wider(id_cols = c(YEAR, finescale_fishery), names_from=status, values_from = catch_estimate) %>%
+                     pivot_wider(id_cols = c(YEAR, MONTH, finescale_fishery_old), names_from=status, values_from = catch_estimate) %>%
                       mutate(mrr=marked_Released_total/(marked_Kept_total+marked_Released_total),
                              ukr=unmarked_Kept_total/(unmarked_Kept_total+unmarked_Released_total)) %>%
-                      mutate(mrrplusukr=mrr + ukr)
+                      mutate(unmarked_release=1-ukr)
 
 
-ggplot(Sport_mark_rate_mrr) + geom_point(aes(y=ukr, x=YEAR, col="lightblue")) + geom_line(aes(y=ukr, x=YEAR, col="lightblue"))+
+Sport_mark_rate_mrr_creel<-Sport_mark_rate_finescale_combined %>%
+  pivot_wider(id_cols = c(YEAR, finescale_fishery), names_from=status, values_from = creel_plus) %>%
+  mutate(mrr=marked_Released_total/(marked_Kept_total+marked_Released_total),
+         ukr=unmarked_Kept_total/(unmarked_Kept_total+unmarked_Released_total)) %>%
+  mutate(mrrplusukr=mrr + ukr)
+
+ggplot() +
+  geom_point(data=Sport_mark_rate_mrr %>% filter(finescale_fishery_old == "CA JDF S"), aes(y=ukr, x=as.factor(MONTH), col="lightblue")) + geom_line(data=Sport_mark_rate_mrr, aes(y=ukr, x=YEAR, col="lightblue"))+
+  geom_point(data=Sport_mark_rate_mrr, aes(y=mrr, x=YEAR, col="lightblue4")) + geom_line(data=Sport_mark_rate_mrr, aes(y=mrr, x=YEAR, col="lightblue4"))+
+ # geom_point(data=Sport_mark_rate_mrr_creel, aes(y=ukr, x=YEAR, col="lightgreen")) + geom_line(data=Sport_mark_rate_mrr_creel, aes(y=ukr, x=YEAR, col="lightgreen"))+
+ # geom_point(data=Sport_mark_rate_mrr_creel, aes(y=mrr, x=YEAR, col="darkgreen")) + geom_line(data=Sport_mark_rate_mrr_creel, aes(y=mrr, x=YEAR, col="darkgreen"))+
+  scale_color_manual(values=c("lightblue", "lightblue4", "lightgreen", "darkgreen"),  labels = c("UKR", "MRR", "UKR", "MRR"))+
+  theme(legend.position="bottom")+
+  ylab("Proportion")+
+  facet_wrap(~YEAR)+
+  theme_bw()+ geom_vline(xintercept = 2012)
+
+### by month plot:
+ggplot(Sport_mark_rate_mrr %>% filter(finescale_fishery_old=="CA JDF S")) +
+  geom_point( aes(y=mrr, x=month(MONTH, label=TRUE),  col="lightblue4", group=finescale_fishery_old)) +
+  geom_line( aes(y=mrr, x=month(MONTH, label=TRUE),  col="lightblue4", group=finescale_fishery_old))+
+  geom_point(aes(y=unmarked_release, x=month(MONTH, label=TRUE),  col="lightblue", group=finescale_fishery_old)) +
+  geom_line( aes(y=unmarked_release, x=month(MONTH, label=TRUE),  col="lightblue", group=finescale_fishery_old))+
+  scale_color_manual(values=c("lightblue", "lightblue4", "lightgreen", "darkgreen"),  labels = c("Unmarked Release Rate", "Marked Release Rate", "UKR", "MRR"))+
+  facet_wrap(~YEAR) +scale_x_discrete(guide = guide_axis(angle = 90)) +
+  xlab("Month") + ylab("MRR")+ theme_bw()+ geom_vline(xintercept = 2012)
+
+
+ggplot(Sport_mark_rate_mrr_creel) + geom_point(aes(y=ukr, x=YEAR, col="lightblue")) + geom_line(aes(y=ukr, x=YEAR, col="lightblue"))+
   geom_point(aes(y=mrr, x=YEAR, col="lightblue4")) + geom_line(aes(y=mrr, x=YEAR, col="lightblue4"))+
   scale_color_manual(values=c("lightblue", "lightblue4"),  labels = c("UKR", "MRR"))+
   theme(legend.position="bottom")+
@@ -269,10 +457,16 @@ ggplot(Sport_unmarked_kept, aes(x=creel_plus_summer, y= catch_estimate))+geom_po
   geom_smooth(method="lm") + facet_wrap(~finescale_fishery, scales="free") + ggtitle("unmarked Kept")
 
 
-Sport_wcvi<-Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2013:2023), finescale_fishery=="SGs S FALL")
-ggplot(Sport_wcvi, aes(x=creel_plus_summer, y= catch_estimate))+geom_point()+geom_abline(slope=1)+
-  geom_smooth(method="lm") + facet_wrap(~status, scales="free") + ggtitle("SGS S FALL")
+ggplot(Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2013:2023), finescale_fishery=="WCVI AABM S SUMMER"), aes(x=creel_plus_summer, y= catch_estimate))+geom_point()+geom_abline(slope=1)+
+  geom_smooth(method="lm") + facet_wrap(~status, scales="free") + ggtitle("WCVI AABM S SUMMER") + theme_bw()
 
+ggplot(Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2013:2023), finescale_fishery_old=="WCVI AABM S"), aes(x=creel_plus_summer, y= catch_estimate, col=status, fill=status))+geom_point()+geom_abline(slope=1)+
+  geom_smooth(method="lm") + facet_wrap(~finescale_fishery, scales="free") + ggtitle("WCVI AABM S") + theme_bw() + scale_colour_viridis_d() + scale_fill_viridis_d()
+
+
+
+ggplot(Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2013:2023)), aes(x=creel_plus_summer, y= catch_estimate, col=status, fill=status))+geom_point()+geom_abline(slope=1)+
+  geom_smooth(method="lm") + facet_wrap(~finescale_fishery, scales="free")+ theme_bw() + scale_colour_viridis_d() + scale_fill_viridis_d()
 
 
 
@@ -283,16 +477,36 @@ col4 = "lightblue4"
 col5 = "pink"
 col6 = "darkred"
 ####
-yearMonth <- plyr::ddply(Sport_mark_rate_finescale, c( "YEAR", "MONTH", "finescale_fishery"), summarise,
-                         sum    = sum(creel_plus), sum_catch_estimate = sum(catch_estimate), sum_irec = sum(irec_calibrated))
+yearMonth <- plyr::ddply(Sport_mark_rate_finescale, c( "YEAR", "MONTH", "finescale_fishery_old"), summarise,
+                         sum= sum(creel_plus, na.rm = TRUE), sum_historic= sum(historic_plus, na.rm = TRUE), sum_catch_estimate = sum(catch_estimate, na.rm = TRUE), sum_irec = sum(irec_calibrated, na.rm = TRUE))
 
-yearMonth_creel_1<-yearMonth %>% filter(sum!=0, sum_catch_estimate==sum, finescale_fishery!="NA")
-yearMonth_catch_estimate_1<-yearMonth %>% filter(sum_catch_estimate!=sum, sum_catch_estimate!=sum_irec, finescale_fishery!="NA")
-yearMonth_irec_1<-yearMonth %>% filter(sum_irec!=0, sum_catch_estimate==sum_irec, finescale_fishery!="NA")
+yearMonth_creel_1<-yearMonth %>% filter(sum!=0, finescale_fishery_old!="NA")
+yearMonth_historic_1<-yearMonth %>% filter(sum_historic!=0, finescale_fishery_old!="NA")
 
 
 ggplot()+
-  geom_tile(data=yearMonth_creel_1, aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
+  geom_tile(data=yearMonth_creel_1, aes(x=YEAR, y=as.factor(MONTH), fill = sum),colour = "white") +
+  scale_fill_gradient(low = col1, high = col2) +
+  scale_y_discrete(limits=rev)+
+  guides(fill=guide_legend(title="creel only estimates")) +
+  new_scale_fill() +
+  geom_tile(data=yearMonth_historic_1, aes(x=YEAR, y=as.factor(MONTH), fill = sum_historic),colour = "white") +
+  scale_fill_gradient(low = col1, high = col2)+
+    facet_wrap(~finescale_fishery_old)+
+  labs(title = "Coverage by finescale fishery",
+       x = "Year", y = "Month") +
+  theme_bw() + theme_minimal() + geom_vline(xintercept = 2012)
+
+
+yearMonth_creel_2<-yearMonth %>% filter(sum!=0, sum_catch_estimate==sum, finescale_fishery_old!="NA")
+yearMonth_catch_estimate_1<-yearMonth %>% filter(sum_catch_estimate!=sum, sum_catch_estimate!=sum_irec, finescale_fishery_old!="NA")
+yearMonth_irec_1<-yearMonth %>% filter(sum_irec!=0, sum_catch_estimate==sum_irec, finescale_fishery_old!="NA")
+
+
+
+
+ggplot()+
+  geom_tile(data=yearMonth_creel_2, aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
   scale_fill_gradient(low = col1, high = col2) +
   scale_y_discrete(limits=rev)+
   guides(fill=guide_legend(title="creel only estimates")) +
@@ -303,7 +517,7 @@ ggplot()+
   new_scale_fill() +
   geom_tile(data=yearMonth_irec_1, aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
   scale_fill_gradient(low = col5, high = col6)+
-  facet_wrap(~finescale_fishery)+
+  facet_wrap(~finescale_fishery_old)+
   guides(fill=guide_legend(title="irec only estimates")) +
   labs(title = "Coverage by finescale fishery",
        x = "Year", y = "Month") +

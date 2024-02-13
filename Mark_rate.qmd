@@ -1,0 +1,264 @@
+---
+title: "Mark rate exploration"
+author: "Norah Brown"
+format: html
+editor: visual
+toc: true
+toc-depth: 7
+embed-resources: true
+---
+
+# Mark Rate
+
+-   Pulls sport data from CREST - iREC and creel and lodge and log-book data.
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+#load packages
+library(tidyverse)
+library(odbc)
+library(lubridate)
+library(ggnewscale)
+
+#utils
+"%notin%" <- Negate("%in%")
+
+#Pull sport data from CREST
+source("PullAllSport.R")
+# PullAllSport(Start_year) set the calendar year to start querying from to the current year
+rslt <- PullAllSport(2005)
+quality_report <- rslt[[1]]
+estimates <- rslt[[2]]
+rm(rslt)
+```
+
+-   Filter based on qc'd creel, no in-river estimates, rename proper names
+
+```{r Aligning creel and irec, echo=FALSE, message=FALSE, warning=FALSE}
+Sport_filtered_south_irec_mr<-
+  estimates |>
+  as_tibble() |>
+  filter(AREA %notin% c("Area 29 (In River)", "Campbell River", "Quinsam River", "CR-1", "CR-2", "CR-3", "CR-4", "QR-1", "QR-2", "QR-3", "QR-4")) |>
+  mutate(AREA = case_when(
+    str_detect(AREA, "Area 20") ~ "Area 20",
+    str_detect(AREA, "Area 23") ~ "Area 23",
+    str_detect(AREA, "Area 19") ~ "Area 19",
+    str_detect(AREA, "2E|2W") ~ "Area 2",
+    AREA== "Area 29 (Marine)" ~ "Area 29",
+    TRUE ~ as.character(AREA))) |>
+  filter(SUB_TYPE == "LEGAL") |>
+  mutate(REGION2 = case_when(AREA == "Area 2" ~ "NC", TRUE ~ REGION2)) |>
+  mutate(MARKS_DESC = case_when(
+         MARKS_DESC == "Not Adipose Checked" ~ "unchecked",
+         MARKS_DESC == "Not Checked" ~ "unchecked",
+         MARKS_DESC == "Not Applicable" ~ "unchecked",
+         MARKS_DESC == "Not Adipose Marked" ~ "unmarked",
+         MARKS_DESC == "Adipose Marked" ~ "marked")) |>
+  mutate(SOURCE = case_when(
+         SOURCE == "Creel" ~ "creel",
+         SOURCE == "Historic" ~ "historic",
+         SOURCE %in% c("Lodge Log","Lodge Manifest","Lodge Manifest - Log", "Lodge Estimate", "Log Estimate", "Lodge eLog") ~ "lodge_log",
+         SOURCE == "iREC" ~ "irec_calibrated",
+         TRUE ~ SOURCE )) |>
+  group_by(YEAR, MONTH, AREA, REGION2, MANAGEMENT, SOURCE, MARKS_DESC, TYPE) |>
+  summarise(VARIANCE=sum(VARIANCE), VAL=sum(ESTIMATE)) |> ungroup()
+```
+
+Expand
+
+```{r expanding to all combinations, echo=FALSE, message=FALSE, warning=FALSE}
+allobs3 <- expand(Sport_filtered_south_irec_mr, nesting(AREA, REGION2, MANAGEMENT), YEAR, MONTH, MARKS_DESC, TYPE, SOURCE)
+
+```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+Sport_mark_rate_only<- Sport_filtered_south_irec_mr  %>%
+                  filter(REGION2 %notin% c("NC", "CC", "NIT")) %>% 
+                  group_by(YEAR, MONTH, AREA, SOURCE, MARKS_DESC, TYPE) %>% summarise(sum=sum(VAL), sum_VARIANCE=sum(VARIANCE)) %>%
+                  full_join(allobs3) %>%
+                  pivot_wider(id_cols = c(YEAR, MONTH, AREA), names_from=c(MARKS_DESC, SOURCE), values_from = sum, values_fn = ~ sum(.x, na.rm = TRUE)) %>%
+                 rowwise() %>%
+                 mutate(marked_creel_plus = sum(marked_creel,marked_lodge_log, na.rm=TRUE),
+                        unmarked_creel_plus = sum(unmarked_creel,unmarked_lodge_log, na.rm=TRUE),
+                        marked_historic_plus = sum(marked_historic,marked_lodge_log, na.rm=TRUE), 
+                        unmarked_historic_plus = sum(unmarked_historic,unmarked_lodge_log, na.rm=TRUE)) %>%
+   mutate(marked_prop_creel = marked_creel/sum(marked_creel,unmarked_creel, na.rm =TRUE), 
+          marked_prop_creel_plus = marked_creel_plus/sum(marked_creel_plus,unmarked_creel_plus, na.rm =TRUE), 
+          marked_prop_lodge_log = marked_lodge_log/sum(marked_lodge_log,unmarked_lodge_log, na.rm =TRUE), 
+           marked_prop_historic_plus = marked_historic_plus/sum(marked_historic_plus,unmarked_historic_plus, na.rm =TRUE), 
+          marked_prop_irec_calibrated = marked_irec_calibrated/sum(marked_irec_calibrated,unmarked_irec_calibrated, na.rm =TRUE)) %>% 
+    mutate_all(~ifelse(is.nan(.), NA, .)) %>%
+                 mutate(marked_prop_catch_estimate = case_when(
+                   YEAR > 2012 & MONTH %in% c(5:9) & (is.na(marked_prop_creel) | marked_prop_creel %in% c(0,1)) ~ as.numeric(marked_prop_irec_calibrated),
+                   YEAR > 2012 & MONTH %in% c(1:4,10:12) ~ as.numeric(marked_prop_irec_calibrated),
+                   YEAR < 2013 & (is.na(marked_prop_creel) | marked_prop_creel %in% c(0,1)) ~ as.numeric(marked_prop_historic_plus),
+                   TRUE ~ as.numeric(marked_prop_creel_plus))) %>% 
+  mutate(marked_prop_source = case_when(
+                   YEAR > 2012 & marked_prop_catch_estimate == marked_prop_irec_calibrated ~ "calibrated iREC",
+                   marked_prop_catch_estimate == marked_prop_historic_plus ~ "historic plus",
+                   marked_prop_catch_estimate == marked_prop_creel_plus ~ "creel plus logbook", 
+                   TRUE ~ "no source"))
+
+
+```
+
+## Heat Map
+
+### iREC, creel data combined 2019-current
+
+Rule: Months 5-9 use creel+lodge if there is that data, otherwise use iREC. Outside of 5-9 use iREC
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(paletteer)
+library(ggthemes)
+
+
+PFMAMonth_estimate <- plyr::ddply(Sport_mark_rate_only %>% filter(YEAR %in% 2019:2023), c( "MONTH", "AREA"), summarise,
+                         mr = mean(marked_prop_catch_estimate, na.rm=TRUE))
+
+PFMAMonth_estimate_2023source <- Sport_mark_rate_only %>% filter(YEAR %in% 2023, !is.na(marked_prop_source)) %>% ungroup()%>% select(MONTH, AREA, marked_prop_source)
+
+PFMAMonth_estimate <- left_join(PFMAMonth_estimate , PFMAMonth_estimate_2023source)
+
+
+ggplot(data=PFMAMonth_estimate %>% filter(mr!=0, mr!=1, marked_prop_source!="no source"), aes(x=month(MONTH, label=TRUE), y=as.factor(AREA), fill = mr, col=marked_prop_source))+
+  geom_tile(linewidth=1.5) +
+  scale_colour_manual(values = c("lightblue", "#1C00ff00", "#1C00ff00"))+
+  geom_text(aes(label=round(mr*100, 0)), col="black")+
+  scale_fill_paletteer_c("ggthemes::Red-Green-Gold Diverging", direction=1)+
+   scale_y_discrete(limits=rev)+
+  scale_x_discrete(position = "top")+
+  labs(title = "Mark rate by PFMA",
+       x = "Month", y = "PFMA") +
+  theme_bw() + theme_minimal()+ guides(colour = guide_legend("Data source"), 
+                                       fill = guide_colourbar("Mark rate"))
+```
+
+### iREC, creel data combined \<2019
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+PFMAMonth_estimate_past <- plyr::ddply(Sport_mark_rate_only %>% filter(YEAR < 2019), c( "MONTH", "AREA"), summarise,
+                         mr = mean(marked_prop_catch_estimate, na.rm=TRUE))
+
+PFMAMonth_estimate_2018source <- Sport_mark_rate_only %>% filter(YEAR %in% 2018, !is.na(marked_prop_source)) %>% ungroup()%>% select(MONTH, AREA, marked_prop_source)
+
+PFMAMonth_estimate_past <- left_join(PFMAMonth_estimate_past , PFMAMonth_estimate_2018source)
+
+
+ggplot(data=PFMAMonth_estimate_past %>% filter(mr!=0, mr!=1, marked_prop_source!="no source"), aes(x=month(MONTH, label=TRUE), y=as.factor(AREA), fill = mr, col=marked_prop_source))+
+  geom_tile(linewidth=1.5) +
+  scale_colour_manual(values = c("lightblue", "#1C00ff00", "#1C00ff00"))+
+  geom_text(aes(label=round(mr*100, 0)), col="black")+
+  scale_fill_paletteer_c("ggthemes::Red-Green-Gold Diverging", direction=1)+
+   scale_y_discrete(limits=rev)+
+  scale_x_discrete(position = "top")+
+  labs(title = "Mark rate by PFMA",
+       x = "Month", y = "PFMA") +
+  theme_bw() + theme_minimal()
+```
+
+### Individual data sets
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+library(patchwork)
+
+PFMAMonth_irec <- plyr::ddply(Sport_mark_rate_only %>% filter(YEAR %in% 2019:2023, REGION2 %notin% c("NC", "CC", "NIT")), c( "MONTH", "AREA"), summarise,
+                         mr = mean(marked_prop_irec_calibrated, na.rm=TRUE))
+
+PFMAMonth_irec_plot<-ggplot(data=PFMAMonth_irec %>% filter(mr!=0, mr!=100), aes(x=month(MONTH, label=TRUE), y=as.factor(AREA), fill = mr))+
+  geom_tile(colour = "white") +
+  geom_text(aes(label=round(mr*100, 0)))+
+  scale_fill_paletteer_c("ggthemes::Red-Green-Gold Diverging", direction=-1)+
+   scale_y_discrete(limits=rev)+
+  scale_x_discrete(position = "top")+
+  labs(title = "iREC data only",
+       x = "Month", y = "PFMA") +
+  theme_bw() + theme_minimal()
+
+PFMAMonth_creel <- plyr::ddply(Sport_mark_rate_only %>% filter(YEAR %in% 2019:2023, REGION2 %notin% c("NC", "CC", "NIT")), c( "MONTH", "AREA"), summarise,
+                         mr = mean(marked_prop_creel, na.rm=TRUE))
+
+PFMAMonth_creel_plot<-ggplot(data=PFMAMonth_creel %>% filter(mr!=0, mr!=100), aes(x=month(MONTH, label=TRUE), y=as.factor(AREA), fill = mr))+
+  geom_tile(colour = "white") +
+  geom_text(aes(label=round(mr*100, 0)))+
+  scale_fill_paletteer_c("ggthemes::Red-Green-Gold Diverging", direction=-1)+
+   scale_y_discrete(limits=rev)+
+  scale_x_discrete(position = "top")+
+  labs(title = "Creel data only",
+       x = "Month", y = "PFMA") +
+  theme_bw() + theme_minimal()
+
+PFMAMonth_lodge_log <- plyr::ddply(Sport_mark_rate_only %>% filter(YEAR %in% 2019:2023, REGION2 %notin% c("NC", "CC", "NIT")), c( "MONTH", "AREA"), summarise,
+                         mr = mean(marked_prop_lodge_log, na.rm=TRUE))
+
+PFMAMonth_lodge_log_plot<-ggplot(data=PFMAMonth_lodge_log %>% filter(mr!=0, mr!=100), aes(x=month(MONTH, label=TRUE), y=as.factor(AREA), fill = mr))+
+  geom_tile(colour = "white") +
+  geom_text(aes(label=round(mr*100, 0)))+
+  scale_fill_paletteer_c("ggthemes::Red-Green-Gold Diverging", direction=-1)+
+   scale_y_discrete(limits=rev)+
+  scale_x_discrete(position = "top")+
+  labs(title = "Logbook data only",
+       x = "Month", y = "PFMA") +
+  theme_bw() + theme_minimal()
+
+
+PFMAMonth_irec_plot
+PFMAMonth_creel_plot 
+PFMAMonth_lodge_log_plot 
+
+```
+
+## Plots over time
+
+Re-created these using the "best practices" combo of creel and irec
+
+### Area 16
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(Sport_mark_rate_only %>% filter(AREA=="Area 16"), aes(y=marked_prop_catch_estimate, x=month(MONTH, label=TRUE) , col=AREA, group=AREA)) +
+  geom_point() + geom_line()+  facet_wrap(~YEAR) + ggtitle("Area 16") +scale_x_discrete(guide = guide_axis(angle = 90)) + 
+  xlab("Month") + ylab("Proportion marked")+ theme_bw()
+```
+
+### Area 17
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(Sport_mark_rate_only %>% filter(AREA=="Area 17"), aes(y=marked_prop_catch_estimate, x=month(MONTH, label=TRUE) , col=AREA, group=AREA)) +
+  geom_point() + geom_line()+  facet_wrap(~YEAR) + ggtitle("Area 17") +scale_x_discrete(guide = guide_axis(angle = 90)) + 
+  xlab("Month") + ylab("Proportion marked")+ theme_bw()
+```
+
+### Area 18
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(Sport_mark_rate_only %>% filter(AREA=="Area 18"), aes(y=marked_prop_catch_estimate, x=month(MONTH, label=TRUE) , col=AREA, group=AREA)) +
+  geom_point() + geom_line()+  facet_wrap(~YEAR) + ggtitle("Area 18") +scale_x_discrete(guide = guide_axis(angle = 90)) + 
+  xlab("Month") + ylab("Proportion marked")+ theme_bw()
+```
+
+### Area 19 
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(Sport_mark_rate_only %>% filter(AREA=="Area 19"), aes(y=marked_prop_catch_estimate, x=month(MONTH, label=TRUE) , col=AREA, group=AREA)) +
+  geom_point() + geom_line()+  facet_wrap(~YEAR) + ggtitle("Area 19") +scale_x_discrete(guide = guide_axis(angle = 90)) + 
+  xlab("Month") + ylab("Proportion marked")+ theme_bw()
+```
+
+### Area 20
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(Sport_mark_rate_only %>% filter(AREA=="Area 20"), aes(y=marked_prop_catch_estimate, x=month(MONTH, label=TRUE) , col=AREA, group=AREA)) +
+  geom_point() + geom_line()+  facet_wrap(~YEAR) + ggtitle("Area 20") +scale_x_discrete(guide = guide_axis(angle = 90)) + 
+  xlab("Month") + ylab("Proportion marked")+ theme_bw()
+
+```
+
+### Area 25
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(Sport_mark_rate_only %>% filter(AREA=="Area 25"), aes(y=marked_prop_catch_estimate, x=month(MONTH, label=TRUE) , col=AREA, group=AREA)) +
+  geom_point() + geom_line()+  facet_wrap(~YEAR) + ggtitle("Area 25") +scale_x_discrete(guide = guide_axis(angle = 90)) + 
+  xlab("Month") + ylab("Proportion marked")+ theme_bw()
+```
