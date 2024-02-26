@@ -1,4 +1,5 @@
 
+
 #load packages
 library(tidyverse)
 library(odbc)
@@ -15,8 +16,6 @@ rslt <- PullAllSport(2005)
 quality_report <- rslt[[1]]
 estimates <- rslt[[2]]
 rm(rslt)
-
-# Filter data based on no infill data, QC creel, final estimates only
 Sport_filtered_south_irec<-
   estimates |>
   as_tibble() |>
@@ -45,17 +44,17 @@ Sport_filtered_south_irec<-
   filter(SUB_TYPE == "LEGAL") |>
   mutate(REGION2 = case_when(AREA == "Area 2" ~ "NC", TRUE ~ REGION2)) |>
   mutate(MARKS_DESC = case_when(
-         MARKS_DESC == "Not Adipose Checked" ~ "unchecked",
-         MARKS_DESC == "Not Checked" ~ "unchecked",
-         MARKS_DESC == "Not Applicable" ~ "unchecked",
-         MARKS_DESC == "Not Adipose Marked" ~ "unmarked",
-         MARKS_DESC == "Adipose Marked" ~ "marked")) |>
+    MARKS_DESC == "Not Adipose Checked" ~ "unchecked",
+    MARKS_DESC == "Not Checked" ~ "unchecked",
+    MARKS_DESC == "Not Applicable" ~ "unchecked",
+    MARKS_DESC == "Not Adipose Marked" ~ "unmarked",
+    MARKS_DESC == "Adipose Marked" ~ "marked")) |>
   mutate(SOURCE = case_when(
-         SOURCE == "Creel" ~ "creel",
-         SOURCE == "Historic" ~ "historic",
-         SOURCE %in% c("Lodge Log","Lodge Manifest","Lodge Manifest - Log", "Lodge Estimate", "Log Estimate", "Lodge eLog") ~ "lodge_log",
-         SOURCE == "iREC" ~ "irec_calibrated",
-         TRUE ~ SOURCE )) |>
+    SOURCE == "Creel" ~ "creel",
+    SOURCE == "Historic" ~ "historic",
+    SOURCE %in% c("Lodge Log","Lodge Manifest","Lodge Manifest - Log", "Lodge Estimate", "Log Estimate", "Lodge eLog") ~ "lodge_log",
+    SOURCE == "iREC" ~ "irec_calibrated",
+    TRUE ~ SOURCE )) |>
   group_by(YEAR, MONTH, AREA, REGION2, MANAGEMENT, SOURCE, MARKS_DESC, TYPE) |>
   summarise(VARIANCE=sum(VARIANCE), VAL=sum(ESTIMATE)) |> ungroup()
 
@@ -70,7 +69,7 @@ Sport_mark_rate_source<- Sport_filtered_south_irec  %>%
   mutate(marked_prop_source = sum(marked_Kept,marked_Released, na.rm = TRUE)/sum(marked_Kept,marked_Released,unmarked_Kept,unmarked_Released, na.rm =TRUE)) %>%
   mutate_all(~ifelse(is.nan(.), NA, .)) %>%
   group_by(YEAR, AREA, MONTH, REGION2, MANAGEMENT) %>% summarise(marked_prop_source =mean(marked_prop_source, na.rm=TRUE)) %>%
-  select(YEAR, AREA, MONTH, REGION2, MANAGEMENT, marked_prop_source)
+  select(YEAR, AREA, MONTH, REGION2, MANAGEMENT, marked_prop_source) %>% ungroup()
 
 #region and month and year
 Sport_mark_rate_REGION2<- Sport_filtered_south_irec  %>%
@@ -79,7 +78,7 @@ Sport_mark_rate_REGION2<- Sport_filtered_south_irec  %>%
   replace(is.na(.), 0) %>%
   mutate(marked_prop_REGION2 =sum(marked_Kept,marked_Released, na.rm = TRUE)/sum(marked_Kept,marked_Released,unmarked_Kept,unmarked_Released, na.rm =TRUE))%>%
   mutate_all(~ifelse(is.nan(.), NA, .)) %>%
-  select(YEAR, REGION2, MONTH, MANAGEMENT, SOURCE, marked_prop_REGION2)
+  select(YEAR, REGION2, MONTH, MANAGEMENT, SOURCE, marked_prop_REGION2)%>% ungroup()
 
 
 #aggregated source region and all years
@@ -90,7 +89,7 @@ Sport_mark_rate_REGION2_source<- Sport_filtered_south_irec  %>%
   mutate(marked_prop_REGION2_source =sum(marked_Kept,marked_Released, na.rm = TRUE)/sum(marked_Kept,marked_Released,unmarked_Kept,unmarked_Released, na.rm =TRUE))%>%
   mutate_all(~ifelse(is.nan(.), NA, .)) %>%
   group_by(REGION2, MANAGEMENT) %>% summarise(marked_prop_REGION2_source =mean(marked_prop_REGION2_source, na.rm=TRUE)) %>%
-  select(REGION2, MANAGEMENT, marked_prop_REGION2_source)
+  select(REGION2, MANAGEMENT, marked_prop_REGION2_source)%>% ungroup()
 
 
 #Mark rate by Area/month, across all years
@@ -100,7 +99,7 @@ Sport_mark_rate_area_month<- Sport_filtered_south_irec  %>%
   replace(is.na(.), 0) %>%
   mutate(marked_prop_area_month = sum(marked_Kept,marked_Released, na.rm = TRUE)/sum(marked_Kept,marked_Released,unmarked_Kept,unmarked_Released, na.rm =TRUE)) %>%
   mutate_all(~ifelse(is.nan(.), NA, .)) %>%
-  select(AREA, MONTH, REGION2, MANAGEMENT, SOURCE, marked_prop_area_month)
+  select(AREA, MONTH, REGION2, MANAGEMENT, SOURCE, marked_prop_area_month)%>% ungroup()
 
 #Mark rate by year for given area, whole year
 Sport_mark_rate_year<- Sport_filtered_south_irec  %>%
@@ -109,7 +108,7 @@ Sport_mark_rate_year<- Sport_filtered_south_irec  %>%
   replace(is.na(.), 0) %>%
   mutate(marked_prop_year = sum(marked_Kept,marked_Released, na.rm = TRUE)/sum(marked_Kept,marked_Released,unmarked_Kept,unmarked_Released, na.rm =TRUE)) %>%
   mutate_all(~ifelse(is.nan(.), NA, .)) %>%
-  select(YEAR, AREA, REGION2, MANAGEMENT, SOURCE, marked_prop_year)
+  select(YEAR, AREA, REGION2, MANAGEMENT, SOURCE, marked_prop_year)%>% ungroup()
 
 #Mark rate by Area, across all years and months
 Sport_mark_rate_area<- Sport_filtered_south_irec  %>%
@@ -118,7 +117,7 @@ Sport_mark_rate_area<- Sport_filtered_south_irec  %>%
   replace(is.na(.), 0) %>%
   mutate(marked_prop_area = sum(marked_Kept,marked_Released, na.rm = TRUE)/sum(marked_Kept,marked_Released,unmarked_Kept,unmarked_Released, na.rm =TRUE)) %>%
   mutate_all(~ifelse(is.nan(.), NA, .)) %>%
-  select(AREA, REGION2, MANAGEMENT, SOURCE, marked_prop_area)
+  select(AREA, REGION2, MANAGEMENT, SOURCE, marked_prop_area)%>% ungroup()
 
 
 #expand to include all combinations
@@ -127,44 +126,49 @@ allobs2 <- expand(Sport_filtered_south_irec, nesting(AREA, REGION2, MANAGEMENT),
 
 #Join with mark rate data and expand unchecked
 Sport_mark_rate<- Sport_filtered_south_irec  %>%
-                  group_by(YEAR, MONTH, AREA, REGION2, MANAGEMENT, SOURCE, MARKS_DESC, TYPE) %>% summarise(sum=sum(VAL), sum_VARIANCE=sum(VARIANCE)) %>%
-                  full_join(allobs2) %>%
-                  pivot_wider(id_cols = c(YEAR, MONTH, AREA, REGION2, MANAGEMENT, SOURCE), names_from=c(MARKS_DESC, TYPE), values_from = sum) %>%
-                  mutate(marked_prop = sum(marked_Kept,marked_Released, na.rm = TRUE)/sum(marked_Kept,marked_Released,unmarked_Kept,unmarked_Released, na.rm =TRUE)) %>%
-                  left_join(Sport_mark_rate_source) %>%
-                  left_join(Sport_mark_rate_year) %>%
-                  left_join(Sport_mark_rate_area_month) %>%
-                  left_join(Sport_mark_rate_area) %>%
-                  left_join(Sport_mark_rate_REGION2) %>%
-                  left_join(Sport_mark_rate_REGION2_source) %>%
-                  mutate_all(~ifelse(is.nan(.), NA, .)) %>%
-                  mutate(marked_prop_use = case_when(
-                    (is.na(marked_prop) | marked_prop %in% c(0,1)) & !is.na(marked_prop_source) & marked_prop_source %notin% c(0,1) ~ marked_prop_source,
-                    (is.na(marked_prop) | marked_prop %in% c(0,1)) & (is.na(marked_prop_source)| marked_prop_source %in% c(0,1))  & !is.na(marked_prop_REGION2) & marked_prop_REGION2 %notin% c(0,1) ~ marked_prop_REGION2,
-                    (is.na(marked_prop) | marked_prop %in% c(0,1)) & (is.na(marked_prop_source)| marked_prop_source %in% c(0,1))  & (is.na(marked_prop_REGION2)| marked_prop_REGION2 %in% c(0,1)) & !is.na(marked_prop_area_month) & marked_prop_area_month %notin% c(0,1) ~ marked_prop_area_month,
-                    (is.na(marked_prop) | marked_prop %in% c(0,1)) & (is.na(marked_prop_source)| marked_prop_source %in% c(0,1))  & (is.na(marked_prop_REGION2)| marked_prop_REGION2 %in% c(0,1)) & (is.na(marked_prop_area_month)| marked_prop_area_month %in% c(0,1)) & !is.na(marked_prop_year) & marked_prop_year %notin% c(0,1) ~ marked_prop_year,
-                    (is.na(marked_prop) | marked_prop %in% c(0,1)) & (is.na(marked_prop_source)| marked_prop_source %in% c(0,1))  & (is.na(marked_prop_REGION2)| marked_prop_REGION2 %in% c(0,1)) & (is.na(marked_prop_area_month)| marked_prop_area_month %in% c(0,1)) & (is.na(marked_prop_year)| marked_prop_year %in% c(0,1)) & !is.na(marked_prop_area) & marked_prop_area %notin% c(0,1) ~ marked_prop_area,
-                    TRUE~marked_prop_REGION2_source)) %>%
-                  mutate(marked_Kept_add = marked_prop_use*unchecked_Kept,
-                         marked_Released_add = marked_prop_use*unchecked_Released,
-                         unmarked_Kept_add = (1-marked_prop_use)*unchecked_Kept,
-                         unmarked_Released_add = (1-marked_prop_use)*unchecked_Released) %>%
-                  mutate(marked_Kept_total = sum(marked_Kept_add, marked_Kept, na.rm = TRUE),
-                         marked_Released_total = sum(marked_Released_add, marked_Released, na.rm=TRUE),
-                         unmarked_Kept_total = sum(unmarked_Kept_add, unmarked_Kept, na.rm=TRUE),
-                         unmarked_Released_total = sum(unmarked_Released_add, unmarked_Released, na.rm=TRUE)) %>%
-                 select(YEAR, MONTH, AREA, REGION2, MANAGEMENT, SOURCE, marked_Kept_total, unmarked_Kept_total, marked_Released_total, unmarked_Released_total) %>%
-                 pivot_longer(cols=c(contains("total")), names_to = "status", values_to = "value") %>%
-                 pivot_wider(id_cols = c(YEAR, MONTH, AREA, REGION2, MANAGEMENT, status), names_from = SOURCE, values_from = value) %>%
-                 mutate_all(~ifelse(is.nan(.), NA, .)) %>%
-                 rowwise() %>%
-                 mutate(creel_plus = sum(creel,lodge_log, na.rm=TRUE),
-                        historic_plus = sum(historic,lodge_log, na.rm=TRUE)) %>%
-                 mutate(catch_estimate = case_when(
-                   YEAR > 2012 & MONTH %in% c(5:9) & (is.na(creel) | creel==0) ~ as.numeric(irec_calibrated),
-                   YEAR > 2012 & MONTH %in% c(1:4,10:12) ~ as.numeric(irec_calibrated),
-                   YEAR < 2013 & (is.na(creel_plus) | creel_plus==0) ~ as.numeric(historic_plus),
-                   TRUE ~ as.numeric(creel_plus)))
+  group_by(YEAR, MONTH, AREA, REGION2, MANAGEMENT, SOURCE, MARKS_DESC, TYPE) %>% summarise(sum=sum(VAL), sum_VARIANCE=sum(VARIANCE)) %>%
+  ungroup() %>%
+  full_join(allobs2) %>%
+  pivot_wider(id_cols = c(YEAR, MONTH, AREA, REGION2, MANAGEMENT, SOURCE), names_from=c(MARKS_DESC, TYPE), values_from = sum) %>%
+  group_by(YEAR, MONTH, AREA, REGION2, MANAGEMENT, SOURCE) %>%
+  mutate(marked_prop = sum(marked_Kept,marked_Released, na.rm = TRUE)/sum(marked_Kept,marked_Released,unmarked_Kept,unmarked_Released, na.rm =TRUE)) %>%
+  left_join(Sport_mark_rate_source) %>%
+  left_join(Sport_mark_rate_year) %>%
+  left_join(Sport_mark_rate_area_month) %>%
+  left_join(Sport_mark_rate_area) %>%
+  left_join(Sport_mark_rate_REGION2) %>%
+  left_join(Sport_mark_rate_REGION2_source) %>%
+  mutate_all(~ifelse(is.nan(.), NA, .)) %>%
+  mutate(marked_prop_use = case_when(
+    (is.na(marked_prop) | marked_prop %in% c(0,1)) & !is.na(marked_prop_source) & marked_prop_source %notin% c(0,1) ~ marked_prop_source,
+    (is.na(marked_prop) | marked_prop %in% c(0,1)) & (is.na(marked_prop_source)| marked_prop_source %in% c(0,1))  & !is.na(marked_prop_REGION2) & marked_prop_REGION2 %notin% c(0,1) ~ marked_prop_REGION2,
+    (is.na(marked_prop) | marked_prop %in% c(0,1)) & (is.na(marked_prop_source)| marked_prop_source %in% c(0,1))  & (is.na(marked_prop_REGION2)| marked_prop_REGION2 %in% c(0,1)) & !is.na(marked_prop_area_month) & marked_prop_area_month %notin% c(0,1) ~ marked_prop_area_month,
+    (is.na(marked_prop) | marked_prop %in% c(0,1)) & (is.na(marked_prop_source)| marked_prop_source %in% c(0,1))  & (is.na(marked_prop_REGION2)| marked_prop_REGION2 %in% c(0,1)) & (is.na(marked_prop_area_month)| marked_prop_area_month %in% c(0,1)) & !is.na(marked_prop_year) & marked_prop_year %notin% c(0,1) ~ marked_prop_year,
+    (is.na(marked_prop) | marked_prop %in% c(0,1)) & (is.na(marked_prop_source)| marked_prop_source %in% c(0,1))  & (is.na(marked_prop_REGION2)| marked_prop_REGION2 %in% c(0,1)) & (is.na(marked_prop_area_month)| marked_prop_area_month %in% c(0,1)) & (is.na(marked_prop_year)| marked_prop_year %in% c(0,1)) & !is.na(marked_prop_area) & marked_prop_area %notin% c(0,1) ~ marked_prop_area,
+    TRUE~marked_prop_REGION2_source)) %>%
+  mutate(marked_Kept_add = marked_prop_use*unchecked_Kept,
+         marked_Released_add = marked_prop_use*unchecked_Released,
+         unmarked_Kept_add = (1-marked_prop_use)*unchecked_Kept,
+         unmarked_Released_add = (1-marked_prop_use)*unchecked_Released) %>%
+  mutate(marked_Kept_total = sum(marked_Kept_add, marked_Kept, na.rm = TRUE),
+         marked_Released_total = sum(marked_Released_add, marked_Released, na.rm=TRUE),
+         unmarked_Kept_total = sum(unmarked_Kept_add, unmarked_Kept, na.rm=TRUE),
+         unmarked_Released_total = sum(unmarked_Released_add, unmarked_Released, na.rm=TRUE)) %>%
+  ungroup() %>%
+  select(YEAR, MONTH, AREA, REGION2, MANAGEMENT, SOURCE, marked_Kept_total, unmarked_Kept_total, marked_Released_total, unmarked_Released_total) %>%
+  pivot_longer(cols=c(contains("total")), names_to = "status", values_to = "value") %>%
+  pivot_wider(id_cols = c(YEAR, MONTH, AREA, REGION2, MANAGEMENT, status), names_from = SOURCE, values_from = value) %>%
+  mutate_all(~ifelse(is.nan(.), NA, .)) %>%
+  rowwise() %>%
+  group_by(YEAR, MONTH, AREA, REGION2, MANAGEMENT, status) %>%
+  mutate(creel_plus = sum(creel,lodge_log, na.rm=TRUE),
+         historic_plus = sum(historic,lodge_log, na.rm=TRUE)) %>%
+  mutate(catch_estimate = case_when(
+    YEAR > 2012 & MONTH %in% c(5:9) & (is.na(creel) | creel==0) ~ as.numeric(irec_calibrated),
+    YEAR > 2012 & MONTH %in% c(1:4,10:12) ~ as.numeric(irec_calibrated),
+    YEAR < 2013 & (is.na(creel_plus) | creel_plus==0) ~ as.numeric(historic_plus),
+    TRUE ~ as.numeric(creel_plus))) %>%
+  ungroup()
 
 
 
@@ -172,10 +176,8 @@ Sport_mark_rate<- Sport_filtered_south_irec  %>%
 #presumably this is now the correct data at the PFMA level ...
 # Now we need to sum up to the appropriate finescale fishery level, and do a calculation of how much more irec gets us.
 #Need to split the finescale fisheries now
-
-
 Sport_mark_rate_finescale<-
-  Sport_mark_rate%>%
+  Sport_mark_rate%>% ungroup %>%
   mutate(finescale_fishery = case_when(
     AREA%in%c("Area 121", "Area 123", "Area 124", "Area 125", "Area 126", "Area 127") & MANAGEMENT=="AABM" & MONTH%in%c(10:12) ~ "WCVI AABM S FALL",
     AREA%in%c("Area 121", "Area 123", "Area 124", "Area 125", "Area 126", "Area 127") & MANAGEMENT=="AABM" & MONTH%in%c(1:4) ~ "WCVI AABM S SPRING",
@@ -260,7 +262,8 @@ Sport_mark_rate_finescale<-
     (AREA %in%c("Area 19", "Area 19 (JDF)", "Area 20", "Area 20 (East)", "Area 20 (West)")  | REGION2 == "JDF") & MONTH%in%c(5:8) ~ "TCA JDF S"))
 
 
-Sport_mark_rate_finescale<- Sport_mark_rate_finescale %>%
+
+Sport_mark_rate_finescale<- Sport_mark_rate_finescale %>% ungroup %>%
   mutate(summer_coverage_tf = case_when(
     finescale_fishery_old == "CA JDF S" & MONTH %in% c(5:9) & YEAR != 2020 ~ "yes",
     finescale_fishery_old == "JNST S" & MONTH %in% c(6:8) & YEAR != 2020 ~ "yes",
@@ -271,7 +274,7 @@ Sport_mark_rate_finescale<- Sport_mark_rate_finescale %>%
     finescale_fishery_old == "CBC S" & MONTH %in% c(6:8) ~ "yes",
     finescale_fishery_old == "NBC AABM S" & MONTH %in% c(6:9) ~ "yes",
     finescale_fishery_old == "NBC ISBM S" & MONTH %in% c(6:8) ~ "yes",
-    TRUE ~ "no")) %>%
+    .default = "no")) %>%
   mutate(summer_coverage_tf_term = case_when(
     finescale_fishery_old_term == "TCA JDF S" & MONTH %in% c(5:8) & YEAR != 2020 ~ "yes",
     finescale_fishery_old_term == "TJOHN ST S" & MONTH %in% c(6:8) & YEAR != 2020 ~ "yes",
@@ -287,7 +290,7 @@ Sport_mark_rate_finescale<- Sport_mark_rate_finescale %>%
       finescale_fishery_old == "CBC S" & MONTH %in% c(6) ~ "yes",
       finescale_fishery_old == "NBC AABM S" & MONTH %in% c(6) ~ "yes",
       finescale_fishery_old == "NBC ISBM S" & MONTH %in% c(6) ~ "yes",
-      TRUE ~ "no")) %>%
+      .default = "no")) %>%
 
   mutate(fall_coverage_tf = case_when(
     finescale_fishery_old == "CA JDF S" & MONTH %in% c(9) & YEAR != 2020 ~ "yes",
@@ -299,14 +302,14 @@ Sport_mark_rate_finescale<- Sport_mark_rate_finescale %>%
     finescale_fishery_old == "CBC S" & MONTH %in% c(8) ~ "yes",
     finescale_fishery_old == "NBC AABM S" & MONTH %in% c(9) ~ "yes",
     finescale_fishery_old == "NBC ISBM S" & MONTH %in% c(8) ~ "yes",
-    TRUE ~ "no")) %>%
+    .default = "no")) %>%
   mutate(fall_coverage_tf_term = case_when(
     finescale_fishery_old_term == "TCA JDF S" & MONTH %in% c(8) ~ "yes",
     finescale_fishery_old_term == "TJOHN ST S" & MONTH %in% c(8)  ~ "yes",
     finescale_fishery_old_term == "TNGS S" & MONTH %in% c(9) ~ "yes",
     finescale_fishery_old_term == "TSGS S" & MONTH %in% c(9) & YEAR %notin% c(2016) ~ "yes",
     finescale_fishery_old_term == "TWCVI S" & MONTH %in% c(9) ~ "yes",
-    TRUE ~ "no"))
+    .default = "no"))
 
 Sport_mark_rate_finescale_sum<- Sport_mark_rate_finescale %>%
   filter(!is.na(finescale_fishery)) %>%
@@ -364,12 +367,125 @@ Sport_mark_rate_finescale_combined<-bind_rows(Sport_mark_rate_finescale_term_sum
 
 Sport_mark_rate_finescale_combined<-left_join(Sport_mark_rate_finescale_combined, Sport_creel_all_seasons)
 
-### do the modelling here now.
+
+#### Modelling
+library(glmmTMB)
+library(DHARMa)
+library(fitdistrplus)
+library(MASS)
+library(car)
+library(lme4)
+library(bbmle)
+
+#"NBC AABM S SUMMER", "NBC ISBM S SUMMER","CBC S SUMMER",
+
+Summer_south<- Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2013:2023), finescale_fishery %in% c("CA JDF S SUMMER","JNST S SUMMER",  "NGS S SUMMER", "SGS S SUMMER", "TCA JDF S SUMMER", "TJOHN ST S SUMMER", "TNGS S SUMMER", "TSGS S SUMMER", "TWCVI S SUMMER", "WCVI AABM S SUMMER", "WCVI ISBM S SUMMER"))
+
+Summer_terminal<- Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2013:2023), finescale_fishery %in% c( "TCA JDF S SUMMER", "TJOHN ST S SUMMER", "TNGS S SUMMER", "TSGS S SUMMER", "TWCVI S SUMMER"))
+
+poisson.summer.south<-fitdistr(Summer_terminal$catch_estimate, "Poisson")
+qqp(Summer_south$catch_estimate, "pois", lambda=poisson.summer.south$estimate[[1]])
+
+
+descdist(Summer_south$catch_estimate)
+
+weibull.summer.south<-fitdistr(Summer_south$catch_estimate, "Weibull")
+qqp(Summer_south$catch_estimate, "weibull", shape=weibull.summer.south$estimate[[1]])
+
+
+poisson.summer.south<-fitdistr(Summer_terminal$catch_estimate, "Poisson")
+qqp(Summer_terminal$catch_estimate, "pois", lambda=poisson.summer.south$estimate[[1]])
 
 
 
 
+normal.12<-fitdistr(JDF_Summer$catch_estimate, "normal")
+qqp(JDF_Summer$catch_estimate, "pois", lambda=poisson.12$estimate[[1]])
+qqp(Summer_south$catch_estimate, "norm")
 
+qqnorm(Summer_south$catch_estimate)
+
+JDF_Summer_catch_estimate<- JDF_Summer$catch_estimate
+fnormal <- fitdist(JDF_Summer_catch_estimate, "dnorm")
+
+fg <- fitdist(JDF_Summer_catch_estimate, "pois")
+
+fw <- fitdist(JDF_Summer$catch_estimate, "weibull")
+plot.legend <- c("Weibull",  "gamma")
+denscomp(list(fw, fg))
+qqcomp(list(fw, fg), legendtext = plot.legend)
+cdfcomp(list(fw,  fg), legendtext = plot.legend)
+ppcomp(list(fw, fg), legendtext = plot.legend)
+
+
+
+Summer_model<- glmmTMB(formula = catch_estimate ~ creel_plus_summer*status*finescale_fishery,
+                       family = poisson,
+                       data = Summer_south)
+summary(Summer_model)
+
+Summer_model_random<- glmmTMB(formula = catch_estimate ~ creel_plus_summer + (creel_plus_summer|finescale_fishery) ,
+                              family = gaussian,
+                              data = Summer_south)
+summary(Summer_model_random)
+
+Summer_model_norm<- glmmTMB(formula = catch_estimate ~ creel_plus_summer*status*finescale_fishery,
+                            family = gaussian,
+                            data = Summer_south)
+summary(Summer_model_norm)
+
+Summer_model2<- glmmTMB(formula = catch_estimate ~ creel_plus_summer*finescale_fishery,
+                        family = poisson,
+                        data = Summer_south)
+summary(Summer_model2)
+
+Summer_model2_norm<- glmmTMB(formula = catch_estimate ~ creel_plus_summer*finescale_fishery,
+                             family = gaussian,
+                             data = Summer_south)
+
+Summer_model3_norm<- glmmTMB(formula = catch_estimate ~ creel_plus_summer,
+                             family = gaussian,
+                             data = Summer_south)
+
+summary(Summer_model3_norm)
+AIC(Summer_model2, Summer_model2_norm, Summer_model, Summer_model_norm, Summer_model3_norm)
+
+
+
+JDF_Summer_model<- glmmTMB(formula = catch_estimate ~ creel_plus_summer*status,
+                           family = poisson,
+                           data = JDF_Summer)
+
+JDF_Summer_model2<- glmmTMB(formula = catch_estimate ~ creel_plus_summer,
+                            family = gaussian,
+                            data = JDF_Summer)
+
+AIC_tab(JDF_Summer_model2, JDF_Summer_model)
+
+summary(JDF_Summer_model)
+
+JDF_Summer_model_simres <- simulateResiduals(JDF_Summer_model2)
+plot(JDF_Summer_model_simres)
+
+qqnorm(JDF_Summer$catch_estimate)
+
+CA_JDF_Summer<-ggplot(Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2013:2023), finescale_fishery=="CA JDF S SUMMER"), aes(x=creel_plus_summer, y= catch_estimate, col=status, fill=status))+geom_point()+geom_abline(slope=1)+
+  geom_smooth(method="lm") + facet_wrap(~status, scales="free") + ggtitle("CA JDF S Summer") + theme_bw() + scale_colour_viridis_d() + scale_fill_viridis_d()
+
+CA_JDF_Summer2<-ggplot(Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2013:2023), finescale_fishery=="CA JDF S SUMMER"), aes(x=creel_plus_summer, y= catch_estimate))+geom_point()+geom_abline(slope=1)+
+  geom_smooth(method="lm") + ggtitle("CA JDF S Summer") + theme_bw() + scale_colour_viridis_d() + scale_fill_viridis_d()
+
+JDF_Summer_old<- Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2005:2012), finescale_fishery %in% c("CA JDF S SUMMER")) %>% ungroup() %>% select(YEAR, status, finescale_fishery, creel_plus_summer)
+
+
+JDF_Summer_old_new<-predict(JDF_Summer_model2, newdata =  JDF_Summer_old)
+
+JDF_Summer_old_new_2<-JDF_Summer_old %>%   mutate(creel_estimate = JDF_Summer_old_new)
+
+
+
+
+descdist(Summer_south$catch_estimate)
 
 
 #### MRR URR

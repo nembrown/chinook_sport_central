@@ -11,6 +11,10 @@
 crest_password.txt
 makecon.B
 *.csv
+*.xlsx
+PullAllSport.R
+Creel_iRec.txt
+*.config
 
 
 # Example code in package build process

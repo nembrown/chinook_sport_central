@@ -8,9 +8,9 @@ toc-depth: 7
 embed-resources: true
 ---
 
-# Mark Rate
+# Methods
 
--   Pulls sport data from CREST - iREC and creel and lodge and log-book data.
+-   Pulled recreational catch data from CREST database: data sources include creel, iREC, lodge and log-book data.
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
 #load packages
@@ -31,7 +31,12 @@ estimates <- rslt[[2]]
 rm(rslt)
 ```
 
--   Filter based on qc'd creel, no in-river estimates, rename proper names
+-   Filtered based on high quality creel which meet the following criteria in a given PFMA and month:
+    -   At least 3 flights for each type of day (weekday or weekend)
+    -   At least 25 interviews mid week OR at least 10% of interviews from mid-week
+    -   At least 25 interviews on weekends OR at least 10% of interviews from weekend
+    -   At least 15 day spread in flights
+    -   At least 15 day spread in interviews
 
 ```{r Aligning creel and irec, echo=FALSE, message=FALSE, warning=FALSE}
 Sport_filtered_south_irec_mr<-
@@ -63,7 +68,13 @@ Sport_filtered_south_irec_mr<-
   summarise(VARIANCE=sum(VARIANCE), VAL=sum(ESTIMATE)) |> ungroup()
 ```
 
-Expand
+-   Calculated mark rate for each data source based on number of marked and unmarked fish encountered.
+
+-   Combined data sources using the following rule:
+
+    -   In months 5-9 use creel+ lodge if that data exists, otherwise use iREC
+
+    -   In months outside of 5-9 use iREC
 
 ```{r expanding to all combinations, echo=FALSE, message=FALSE, warning=FALSE}
 allobs3 <- expand(Sport_filtered_south_irec_mr, nesting(AREA, REGION2, MANAGEMENT), YEAR, MONTH, MARKS_DESC, TYPE, SOURCE)
@@ -102,11 +113,15 @@ Sport_mark_rate_only<- Sport_filtered_south_irec_mr  %>%
 
 ```
 
+# Results
+
 ## Heat Map
 
-### iREC, creel data combined 2019-current
+### iREC & creel data combined 2019-current
 
-Rule: Months 5-9 use creel+lodge if there is that data, otherwise use iREC. Outside of 5-9 use iREC
+-   Blue borders indicate the estimate includes data from iREC, without the border is creel-only information
+
+-   Green means go --\> green colours indicate higher mark rate
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
 library(paletteer)
@@ -121,7 +136,7 @@ PFMAMonth_estimate_2023source <- Sport_mark_rate_only %>% filter(YEAR %in% 2023,
 PFMAMonth_estimate <- left_join(PFMAMonth_estimate , PFMAMonth_estimate_2023source)
 
 
-ggplot(data=PFMAMonth_estimate %>% filter(mr!=0, mr!=1, marked_prop_source!="no source"), aes(x=month(MONTH, label=TRUE), y=as.factor(AREA), fill = mr, col=marked_prop_source))+
+MR_post2019<-ggplot(data=PFMAMonth_estimate %>% filter(marked_prop_source!="no source"), aes(x=month(MONTH, label=TRUE), y=as.factor(AREA), fill = mr, col=marked_prop_source))+
   geom_tile(linewidth=1.5) +
   scale_colour_manual(values = c("lightblue", "#1C00ff00", "#1C00ff00"))+
   geom_text(aes(label=round(mr*100, 0)), col="black")+
@@ -132,6 +147,8 @@ ggplot(data=PFMAMonth_estimate %>% filter(mr!=0, mr!=1, marked_prop_source!="no 
        x = "Month", y = "PFMA") +
   theme_bw() + theme_minimal()+ guides(colour = guide_legend("Data source"), 
                                        fill = guide_colourbar("Mark rate"))
+
+MR_post2019
 ```
 
 ### iREC, creel data combined \<2019
@@ -146,7 +163,7 @@ PFMAMonth_estimate_2018source <- Sport_mark_rate_only %>% filter(YEAR %in% 2018,
 PFMAMonth_estimate_past <- left_join(PFMAMonth_estimate_past , PFMAMonth_estimate_2018source)
 
 
-ggplot(data=PFMAMonth_estimate_past %>% filter(mr!=0, mr!=1, marked_prop_source!="no source"), aes(x=month(MONTH, label=TRUE), y=as.factor(AREA), fill = mr, col=marked_prop_source))+
+MR_pre2019<-ggplot(data=PFMAMonth_estimate_past %>% filter( marked_prop_source!="no source"), aes(x=month(MONTH, label=TRUE), y=as.factor(AREA), fill = mr, col=marked_prop_source))+
   geom_tile(linewidth=1.5) +
   scale_colour_manual(values = c("lightblue", "#1C00ff00", "#1C00ff00"))+
   geom_text(aes(label=round(mr*100, 0)), col="black")+
@@ -155,19 +172,25 @@ ggplot(data=PFMAMonth_estimate_past %>% filter(mr!=0, mr!=1, marked_prop_source!
   scale_x_discrete(position = "top")+
   labs(title = "Mark rate by PFMA",
        x = "Month", y = "PFMA") +
-  theme_bw() + theme_minimal()
+  theme_bw() + theme_minimal()+ guides(colour = guide_legend("Data source"), 
+                                       fill = guide_colourbar("Mark rate"))
+
+MR_pre2019
+# library(patchwork)
+# MR_post2019 + MR_pre2019 +  plot_layout(guides = "collect")
 ```
 
 ### Individual data sets
+
+Datasets for 2019-2023 separated out by source.
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
 
 library(patchwork)
 
-PFMAMonth_irec <- plyr::ddply(Sport_mark_rate_only %>% filter(YEAR %in% 2019:2023, REGION2 %notin% c("NC", "CC", "NIT")), c( "MONTH", "AREA"), summarise,
-                         mr = mean(marked_prop_irec_calibrated, na.rm=TRUE))
+PFMAMonth_irec <- plyr::ddply(Sport_mark_rate_only %>% filter(YEAR %in% 2019:2023), c( "MONTH", "AREA"), summarise, mr = mean(marked_prop_irec_calibrated, na.rm=TRUE)) %>% drop_na()
 
-PFMAMonth_irec_plot<-ggplot(data=PFMAMonth_irec %>% filter(mr!=0, mr!=100), aes(x=month(MONTH, label=TRUE), y=as.factor(AREA), fill = mr))+
+PFMAMonth_irec_plot<-ggplot(data=PFMAMonth_irec, aes(x=month(MONTH, label=TRUE), y=as.factor(AREA), fill = mr))+
   geom_tile(colour = "white") +
   geom_text(aes(label=round(mr*100, 0)))+
   scale_fill_paletteer_c("ggthemes::Red-Green-Gold Diverging", direction=-1)+
@@ -177,10 +200,11 @@ PFMAMonth_irec_plot<-ggplot(data=PFMAMonth_irec %>% filter(mr!=0, mr!=100), aes(
        x = "Month", y = "PFMA") +
   theme_bw() + theme_minimal()
 
-PFMAMonth_creel <- plyr::ddply(Sport_mark_rate_only %>% filter(YEAR %in% 2019:2023, REGION2 %notin% c("NC", "CC", "NIT")), c( "MONTH", "AREA"), summarise,
-                         mr = mean(marked_prop_creel, na.rm=TRUE))
 
-PFMAMonth_creel_plot<-ggplot(data=PFMAMonth_creel %>% filter(mr!=0, mr!=100), aes(x=month(MONTH, label=TRUE), y=as.factor(AREA), fill = mr))+
+PFMAMonth_creel <- plyr::ddply(Sport_mark_rate_only %>% filter(YEAR %in% 2019:2023,  AREA %notin% c("Section PR-1", "Section PR-3")), c( "MONTH", "AREA"), summarise,
+                         mr = mean(marked_prop_creel, na.rm=TRUE))%>% drop_na()
+
+PFMAMonth_creel_plot<-ggplot(data=PFMAMonth_creel, aes(x=month(MONTH, label=TRUE), y=as.factor(AREA), fill = mr))+
   geom_tile(colour = "white") +
   geom_text(aes(label=round(mr*100, 0)))+
   scale_fill_paletteer_c("ggthemes::Red-Green-Gold Diverging", direction=-1)+
@@ -190,10 +214,10 @@ PFMAMonth_creel_plot<-ggplot(data=PFMAMonth_creel %>% filter(mr!=0, mr!=100), ae
        x = "Month", y = "PFMA") +
   theme_bw() + theme_minimal()
 
-PFMAMonth_lodge_log <- plyr::ddply(Sport_mark_rate_only %>% filter(YEAR %in% 2019:2023, REGION2 %notin% c("NC", "CC", "NIT")), c( "MONTH", "AREA"), summarise,
-                         mr = mean(marked_prop_lodge_log, na.rm=TRUE))
+PFMAMonth_lodge_log <- plyr::ddply(Sport_mark_rate_only %>% filter(YEAR %in% 2019:2023), c( "MONTH", "AREA"), summarise,
+                         mr = mean(marked_prop_lodge_log, na.rm=TRUE))%>% drop_na()
 
-PFMAMonth_lodge_log_plot<-ggplot(data=PFMAMonth_lodge_log %>% filter(mr!=0, mr!=100), aes(x=month(MONTH, label=TRUE), y=as.factor(AREA), fill = mr))+
+PFMAMonth_lodge_log_plot<-ggplot(data=PFMAMonth_lodge_log, aes(x=month(MONTH, label=TRUE), y=as.factor(AREA), fill = mr))+
   geom_tile(colour = "white") +
   geom_text(aes(label=round(mr*100, 0)))+
   scale_fill_paletteer_c("ggthemes::Red-Green-Gold Diverging", direction=-1)+
@@ -238,7 +262,7 @@ ggplot(Sport_mark_rate_only %>% filter(AREA=="Area 18"), aes(y=marked_prop_catch
   xlab("Month") + ylab("Proportion marked")+ theme_bw()
 ```
 
-### Area 19 
+### Area 19
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
 ggplot(Sport_mark_rate_only %>% filter(AREA=="Area 19"), aes(y=marked_prop_catch_estimate, x=month(MONTH, label=TRUE) , col=AREA, group=AREA)) +
