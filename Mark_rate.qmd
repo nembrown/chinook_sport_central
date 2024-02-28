@@ -10,7 +10,7 @@ embed-resources: true
 
 # Methods
 
--   Pulled recreational catch data from CREST database: data sources include creel, iREC, lodge and log-book data.
+-   We pulled raw recreational catch data from CREST database: data sources include creel, iREC, lodge and log-book data. Data is typically in number of marked and unmarked fish kept and released.
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
 #load packages
@@ -31,7 +31,7 @@ estimates <- rslt[[2]]
 rm(rslt)
 ```
 
--   Filtered based on high quality creel which meet the following criteria in a given PFMA and month:
+-   Filtered the creel data based on high quality creel which meet the following criteria in a given PFMA and month:
     -   At least 3 flights for each type of day (weekday or weekend)
     -   At least 25 interviews mid week OR at least 10% of interviews from mid-week
     -   At least 25 interviews on weekends OR at least 10% of interviews from weekend
@@ -42,10 +42,10 @@ rm(rslt)
 Sport_filtered_south_irec_mr<-
   estimates |>
   as_tibble() |>
-  filter(AREA %notin% c("Area 29 (In River)", "Campbell River", "Quinsam River", "CR-1", "CR-2", "CR-3", "CR-4", "QR-1", "QR-2", "QR-3", "QR-4")) |>
+  filter(AREA %notin% c("Area 29 (In River)", "Campbell River", "Quinsam River", "CR-1", "CR-2", "CR-3", "CR-4", "QR-1", "QR-2", "QR-3", "QR-4", "Section PR-1", "Section PR-2", "Section PR-3")) |>
   mutate(AREA = case_when(
     str_detect(AREA, "Area 20") ~ "Area 20",
-    str_detect(AREA, "Area 23") ~ "Area 23",
+    #str_detect(AREA, "Area 23") ~ "Area 23",
     str_detect(AREA, "Area 19") ~ "Area 19",
     str_detect(AREA, "2E|2W") ~ "Area 2",
     AREA== "Area 29 (Marine)" ~ "Area 29",
@@ -68,18 +68,28 @@ Sport_filtered_south_irec_mr<-
   summarise(VARIANCE=sum(VARIANCE), VAL=sum(ESTIMATE)) |> ungroup()
 ```
 
--   Calculated mark rate for each data source based on number of marked and unmarked fish encountered.
+-   We calculated mark rate for each data source based on number of marked and unmarked fish encountered. We created a cut-off of data for n=100 fish in a given month. If the sample was less than that then there wasn't enough data to create a mark-rate estimate.
 
--   Combined data sources using the following rule:
+```{r expanding to all combinations, echo=FALSE, message=FALSE, warning=FALSE}
+allobs3 <- tidyr::expand(Sport_filtered_south_irec_mr, nesting(AREA, REGION2, MANAGEMENT), YEAR, MONTH, MARKS_DESC, TYPE, SOURCE) %>%
+                  filter(REGION2 %notin% c("NC", "CC", "NIT"))
+
+#Add in commercial
+
+Commercial_mr1<- read.csv(here::here("commercial_mark_rate.csv")) %>% as_tibble() %>% group_by(YEAR, AREA, MONTH) %>%  mutate(marked_prop_commercial=ADCLIP_OBS/ADCLIP_SAMPLE) %>% dplyr::select(YEAR, AREA, MONTH, marked_prop_commercial, ADCLIP_SAMPLE) %>% filter(AREA %notin% c("Area 1", "Area 101", "Area 142", "Area 2", "Area 8", "Area 3", "Area 4")) %>% filter(ADCLIP_SAMPLE>100)
+
+
+```
+
+-   Then we calculated an average of mark rate for the five year 2019-2023 period and one for the five year 2014-2018 period for each source.
+
+-   After the averages were calculated, we combined data sources using the following rule:
 
     -   In months 5-9 use creel+ lodge if that data exists, otherwise use iREC
 
     -   In months outside of 5-9 use iREC
 
-```{r expanding to all combinations, echo=FALSE, message=FALSE, warning=FALSE}
-allobs3 <- expand(Sport_filtered_south_irec_mr, nesting(AREA, REGION2, MANAGEMENT), YEAR, MONTH, MARKS_DESC, TYPE, SOURCE)
-
-```
+-   We included commercial troll data but this did not fill out the data frame any more than using only creel and iREC
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
 
@@ -93,24 +103,44 @@ Sport_mark_rate_only<- Sport_filtered_south_irec_mr  %>%
                         unmarked_creel_plus = sum(unmarked_creel,unmarked_lodge_log, na.rm=TRUE),
                         marked_historic_plus = sum(marked_historic,marked_lodge_log, na.rm=TRUE), 
                         unmarked_historic_plus = sum(unmarked_historic,unmarked_lodge_log, na.rm=TRUE)) %>%
-   mutate(marked_prop_creel = marked_creel/sum(marked_creel,unmarked_creel, na.rm =TRUE), 
-          marked_prop_creel_plus = marked_creel_plus/sum(marked_creel_plus,unmarked_creel_plus, na.rm =TRUE), 
-          marked_prop_lodge_log = marked_lodge_log/sum(marked_lodge_log,unmarked_lodge_log, na.rm =TRUE), 
-           marked_prop_historic_plus = marked_historic_plus/sum(marked_historic_plus,unmarked_historic_plus, na.rm =TRUE), 
-          marked_prop_irec_calibrated = marked_irec_calibrated/sum(marked_irec_calibrated,unmarked_irec_calibrated, na.rm =TRUE)) %>% 
+   mutate(marked_prop_creel = case_when(
+     sum(marked_creel,unmarked_creel, na.rm =TRUE) > 100 ~ marked_creel/sum(marked_creel,unmarked_creel, na.rm =TRUE)),
+          marked_prop_creel_plus = case_when(
+           sum(marked_creel_plus,unmarked_creel_plus, na.rm =TRUE) >100 ~ marked_creel_plus/sum(marked_creel_plus,unmarked_creel_plus, na.rm =TRUE)), 
+          marked_prop_lodge_log = case_when(
+            sum(marked_lodge_log,unmarked_lodge_log, na.rm =TRUE)>100 ~ marked_lodge_log/sum(marked_lodge_log,unmarked_lodge_log, na.rm =TRUE)), 
+           marked_prop_historic_plus = case_when(
+             sum(marked_historic_plus,unmarked_historic_plus, na.rm =TRUE)>100 ~ marked_historic_plus/sum(marked_historic_plus,unmarked_historic_plus, na.rm =TRUE)), 
+          marked_prop_irec_calibrated = case_when(
+            sum(marked_irec_calibrated,unmarked_irec_calibrated, na.rm =TRUE)>100 ~ marked_irec_calibrated/sum(marked_irec_calibrated,unmarked_irec_calibrated, na.rm =TRUE)))%>% 
     mutate_all(~ifelse(is.nan(.), NA, .)) %>%
-                 mutate(marked_prop_catch_estimate = case_when(
-                   YEAR > 2012 & MONTH %in% c(5:9) & (is.na(marked_prop_creel) | marked_prop_creel %in% c(0,1)) ~ as.numeric(marked_prop_irec_calibrated),
-                   YEAR > 2012 & MONTH %in% c(1:4,10:12) ~ as.numeric(marked_prop_irec_calibrated),
-                   YEAR < 2013 & (is.na(marked_prop_creel) | marked_prop_creel %in% c(0,1)) ~ as.numeric(marked_prop_historic_plus),
+  left_join(Commercial_mr1)
+  
+Sport_mark_rate_only_recent<- Sport_mark_rate_only %>% filter(YEAR %in% 2019:2023) %>% dplyr::select(YEAR, MONTH, AREA, marked_prop_lodge_log,marked_prop_creel, marked_prop_creel_plus,  marked_prop_historic_plus, marked_prop_irec_calibrated, marked_prop_commercial ) %>% group_by(MONTH, AREA) %>%  summarise_if(is.numeric, mean, na.rm = TRUE) %>%  mutate(marked_prop_catch_estimate = case_when(
+                   MONTH %in% c(5:9) & (is.na(marked_prop_creel) | marked_prop_creel %in% c(0,1)) & !is.na(marked_prop_irec_calibrated) & marked_prop_irec_calibrated %notin% c(0,1) ~ as.numeric(marked_prop_irec_calibrated),
+                   MONTH %in% c(1:4,10:12) & !is.na(marked_prop_irec_calibrated) & marked_prop_irec_calibrated %notin% c(0,1) ~ as.numeric(marked_prop_irec_calibrated),
+                   (marked_prop_irec_calibrated %in% c(0,1)| is.na(marked_prop_irec_calibrated)) ~ as.numeric(marked_prop_commercial),
                    TRUE ~ as.numeric(marked_prop_creel_plus))) %>% 
   mutate(marked_prop_source = case_when(
-                   YEAR > 2012 & marked_prop_catch_estimate == marked_prop_irec_calibrated ~ "calibrated iREC",
+                   marked_prop_catch_estimate == marked_prop_irec_calibrated ~ "calibrated iREC",
                    marked_prop_catch_estimate == marked_prop_historic_plus ~ "historic plus",
                    marked_prop_catch_estimate == marked_prop_creel_plus ~ "creel plus logbook", 
+                   marked_prop_catch_estimate == marked_prop_commercial ~ "commercial", 
                    TRUE ~ "no source"))
 
 
+Sport_mark_rate_only_past<- Sport_mark_rate_only %>% filter(YEAR %in% 2014:2018) %>% dplyr::select(YEAR, MONTH, AREA, marked_prop_lodge_log,marked_prop_creel, marked_prop_creel_plus,  marked_prop_historic_plus, marked_prop_irec_calibrated, marked_prop_commercial ) %>% group_by(MONTH, AREA) %>%  summarise_if(is.numeric, mean, na.rm = TRUE) %>%  mutate(marked_prop_catch_estimate = case_when(
+                   MONTH %in% c(5:9) & (is.na(marked_prop_creel) | marked_prop_creel %in% c(0,1)) & !is.na(marked_prop_irec_calibrated) & marked_prop_irec_calibrated %notin% c(0,1) ~ as.numeric(marked_prop_irec_calibrated),
+                   MONTH %in% c(1:4,10:12) & !is.na(marked_prop_irec_calibrated) & marked_prop_irec_calibrated %notin% c(0,1) ~ as.numeric(marked_prop_irec_calibrated),
+                   (marked_prop_irec_calibrated %in% c(0,1)| is.na(marked_prop_irec_calibrated)) ~ as.numeric(marked_prop_commercial),
+                   TRUE ~ as.numeric(marked_prop_creel_plus))) %>% 
+  mutate(marked_prop_source = case_when(
+                   marked_prop_catch_estimate == marked_prop_irec_calibrated ~ "calibrated iREC",
+                   marked_prop_catch_estimate == marked_prop_historic_plus ~ "historic plus",
+                   marked_prop_catch_estimate == marked_prop_creel_plus ~ "creel plus logbook", 
+                   marked_prop_catch_estimate == marked_prop_commercial ~ "commercial", 
+                   TRUE ~ "no source"))
+                   
 ```
 
 # Results
@@ -119,28 +149,17 @@ Sport_mark_rate_only<- Sport_filtered_south_irec_mr  %>%
 
 ### iREC & creel data combined 2019-current
 
--   Blue borders indicate the estimate includes data from iREC, without the border is creel-only information
-
--   Green means go --\> green colours indicate higher mark rate
+-   Pink borders indicate the estimate includes data from iREC, without the border is creel-only information
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
 library(paletteer)
 library(ggthemes)
 
-
-PFMAMonth_estimate <- plyr::ddply(Sport_mark_rate_only %>% filter(YEAR %in% 2019:2023), c( "MONTH", "AREA"), summarise,
-                         mr = mean(marked_prop_catch_estimate, na.rm=TRUE))
-
-PFMAMonth_estimate_2023source <- Sport_mark_rate_only %>% filter(YEAR %in% 2023, !is.na(marked_prop_source)) %>% ungroup()%>% select(MONTH, AREA, marked_prop_source)
-
-PFMAMonth_estimate <- left_join(PFMAMonth_estimate , PFMAMonth_estimate_2023source)
-
-
-MR_post2019<-ggplot(data=PFMAMonth_estimate %>% filter(marked_prop_source!="no source"), aes(x=month(MONTH, label=TRUE), y=as.factor(AREA), fill = mr, col=marked_prop_source))+
-  geom_tile(linewidth=1.5) +
-  scale_colour_manual(values = c("lightblue", "#1C00ff00", "#1C00ff00"))+
-  geom_text(aes(label=round(mr*100, 0)), col="black")+
-  scale_fill_paletteer_c("ggthemes::Red-Green-Gold Diverging", direction=1)+
+MR_post2019<-ggplot(data=Sport_mark_rate_only_recent %>% filter(AREA %notin% c("Area 23"), marked_prop_source %notin% c("no source")), aes(x=month(MONTH, label=TRUE), y=as.factor(AREA), fill = marked_prop_catch_estimate, col=marked_prop_source))+
+  geom_tile(linewidth=1) +
+  scale_colour_manual(values = c("pink", "#1C00ff00", "#1C00ff00"))+
+  geom_text(aes(label=round(marked_prop_catch_estimate*100, 0)), col="black")+
+  scale_fill_paletteer_c("ggthemes::Blue-Teal", direction=1, na.value="#1C00ff00", limits=c(0,1))+
    scale_y_discrete(limits=rev)+
   scale_x_discrete(position = "top")+
   labs(title = "Mark rate by PFMA",
@@ -151,23 +170,15 @@ MR_post2019<-ggplot(data=PFMAMonth_estimate %>% filter(marked_prop_source!="no s
 MR_post2019
 ```
 
-### iREC, creel data combined \<2019
+### iREC & creel data combined 2014-2018
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
 
-PFMAMonth_estimate_past <- plyr::ddply(Sport_mark_rate_only %>% filter(YEAR < 2019), c( "MONTH", "AREA"), summarise,
-                         mr = mean(marked_prop_catch_estimate, na.rm=TRUE))
-
-PFMAMonth_estimate_2018source <- Sport_mark_rate_only %>% filter(YEAR %in% 2018, !is.na(marked_prop_source)) %>% ungroup()%>% select(MONTH, AREA, marked_prop_source)
-
-PFMAMonth_estimate_past <- left_join(PFMAMonth_estimate_past , PFMAMonth_estimate_2018source)
-
-
-MR_pre2019<-ggplot(data=PFMAMonth_estimate_past %>% filter( marked_prop_source!="no source"), aes(x=month(MONTH, label=TRUE), y=as.factor(AREA), fill = mr, col=marked_prop_source))+
-  geom_tile(linewidth=1.5) +
-  scale_colour_manual(values = c("lightblue", "#1C00ff00", "#1C00ff00"))+
-  geom_text(aes(label=round(mr*100, 0)), col="black")+
-  scale_fill_paletteer_c("ggthemes::Red-Green-Gold Diverging", direction=1)+
+MR_pre2019<-ggplot(data=Sport_mark_rate_only_past %>% filter(AREA %notin% c("Area 23"), marked_prop_source %notin% c("no source")), aes(x=month(MONTH, label=TRUE), y=as.factor(AREA), fill = marked_prop_catch_estimate, col=marked_prop_source))+
+  geom_tile(linewidth=1) +
+  scale_colour_manual(values = c("pink", "#1C00ff00", "#1C00ff00"))+
+  geom_text(aes(label=round(marked_prop_catch_estimate*100, 0)), col="black")+
+  scale_fill_paletteer_c("ggthemes::Blue-Teal", direction=1, na.value="#1C00ff00", limits=c(0,1))+
    scale_y_discrete(limits=rev)+
   scale_x_discrete(position = "top")+
   labs(title = "Mark rate by PFMA",
@@ -188,49 +199,52 @@ Datasets for 2019-2023 separated out by source.
 
 library(patchwork)
 
-PFMAMonth_irec <- plyr::ddply(Sport_mark_rate_only %>% filter(YEAR %in% 2019:2023), c( "MONTH", "AREA"), summarise, mr = mean(marked_prop_irec_calibrated, na.rm=TRUE)) %>% drop_na()
-
-PFMAMonth_irec_plot<-ggplot(data=PFMAMonth_irec, aes(x=month(MONTH, label=TRUE), y=as.factor(AREA), fill = mr))+
+PFMAMonth_irec_plot<-ggplot(data=Sport_mark_rate_only_recent%>% filter(AREA %notin% c("Area 23")), aes(x=month(MONTH, label=TRUE), y=as.factor(AREA), fill = marked_prop_irec_calibrated))+
   geom_tile(colour = "white") +
-  geom_text(aes(label=round(mr*100, 0)))+
-  scale_fill_paletteer_c("ggthemes::Red-Green-Gold Diverging", direction=-1)+
+  geom_text(aes(label=round(marked_prop_irec_calibrated*100, 0)))+
+  scale_fill_paletteer_c("ggthemes::Blue-Teal", direction=1, na.value="#1C00ff00", limits=c(0,1))+
    scale_y_discrete(limits=rev)+
   scale_x_discrete(position = "top")+
   labs(title = "iREC data only",
        x = "Month", y = "PFMA") +
-  theme_bw() + theme_minimal()
+  theme_bw() + theme_minimal()+ guides(fill = guide_colourbar("Mark rate"))
 
 
-PFMAMonth_creel <- plyr::ddply(Sport_mark_rate_only %>% filter(YEAR %in% 2019:2023,  AREA %notin% c("Section PR-1", "Section PR-3")), c( "MONTH", "AREA"), summarise,
-                         mr = mean(marked_prop_creel, na.rm=TRUE))%>% drop_na()
-
-PFMAMonth_creel_plot<-ggplot(data=PFMAMonth_creel, aes(x=month(MONTH, label=TRUE), y=as.factor(AREA), fill = mr))+
+PFMAMonth_creel_plot<-ggplot(data=Sport_mark_rate_only_recent %>% filter(AREA %notin% c("Area 23")), aes(x=month(MONTH, label=TRUE), y=as.factor(AREA), fill = marked_prop_creel))+
   geom_tile(colour = "white") +
-  geom_text(aes(label=round(mr*100, 0)))+
-  scale_fill_paletteer_c("ggthemes::Red-Green-Gold Diverging", direction=-1)+
+  geom_text(aes(label=round(marked_prop_creel*100, 0)))+
+  scale_fill_paletteer_c("ggthemes::Blue-Teal", direction=1, na.value="#1C00ff00", limits=c(0,1))+
    scale_y_discrete(limits=rev)+
   scale_x_discrete(position = "top")+
   labs(title = "Creel data only",
        x = "Month", y = "PFMA") +
-  theme_bw() + theme_minimal()
+  theme_bw() + theme_minimal()+ guides(fill = guide_colourbar("Mark rate"))
 
-PFMAMonth_lodge_log <- plyr::ddply(Sport_mark_rate_only %>% filter(YEAR %in% 2019:2023), c( "MONTH", "AREA"), summarise,
-                         mr = mean(marked_prop_lodge_log, na.rm=TRUE))%>% drop_na()
-
-PFMAMonth_lodge_log_plot<-ggplot(data=PFMAMonth_lodge_log, aes(x=month(MONTH, label=TRUE), y=as.factor(AREA), fill = mr))+
+PFMAMonth_logbook_plot<-ggplot(data=Sport_mark_rate_only_recent %>% filter(AREA %notin% c("Area 23")), aes(x=month(MONTH, label=TRUE), y=as.factor(AREA), fill = marked_prop_lodge_log))+
   geom_tile(colour = "white") +
-  geom_text(aes(label=round(mr*100, 0)))+
-  scale_fill_paletteer_c("ggthemes::Red-Green-Gold Diverging", direction=-1)+
+  geom_text(aes(label=round(marked_prop_lodge_log*100, 0)))+
+  scale_fill_paletteer_c("ggthemes::Blue-Teal", direction=1, na.value="#1C00ff00", limits=c(0,1))+
    scale_y_discrete(limits=rev)+
   scale_x_discrete(position = "top")+
   labs(title = "Logbook data only",
        x = "Month", y = "PFMA") +
-  theme_bw() + theme_minimal()
+  theme_bw() + theme_minimal()+ guides(fill = guide_colourbar("Mark rate"))
+
+PFMAMonth_commercial_plot<-ggplot(data=Sport_mark_rate_only_recent%>% filter(AREA %notin% c("Area 23")), aes(x=month(MONTH, label=TRUE), y=as.factor(AREA), fill = marked_prop_commercial))+
+  geom_tile(colour = "white") +
+  geom_text(aes(label=round(marked_prop_commercial*100, 0)))+
+  scale_fill_paletteer_c("ggthemes::Blue-Teal", direction=1, na.value="#1C00ff00", limits=c(0,1))+
+   scale_y_discrete(limits=rev)+
+  scale_x_discrete(position = "top")+
+  labs(title = "Commercial troll data only",
+       x = "Month", y = "PFMA") +
+  theme_bw() + theme_minimal()+ guides(fill = guide_colourbar("Mark rate"))
 
 
 PFMAMonth_irec_plot
 PFMAMonth_creel_plot 
-PFMAMonth_lodge_log_plot 
+PFMAMonth_logbook_plot 
+PFMAMonth_commercial_plot
 
 ```
 
@@ -241,7 +255,21 @@ Re-created these using the "best practices" combo of creel and irec
 ### Area 16
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
-ggplot(Sport_mark_rate_only %>% filter(AREA=="Area 16"), aes(y=marked_prop_catch_estimate, x=month(MONTH, label=TRUE) , col=AREA, group=AREA)) +
+
+Sport_mark_rate_only_by_year<-Sport_mark_rate_only %>% dplyr::select(YEAR, MONTH, AREA, marked_prop_lodge_log,marked_prop_creel, marked_prop_creel_plus,  marked_prop_historic_plus, marked_prop_irec_calibrated, marked_prop_commercial ) %>%  mutate(marked_prop_catch_estimate = case_when(
+                   MONTH %in% c(5:9) & (is.na(marked_prop_creel) | marked_prop_creel %in% c(0,1)) & !is.na(marked_prop_irec_calibrated) & marked_prop_irec_calibrated %notin% c(0,1) ~ as.numeric(marked_prop_irec_calibrated),
+                   MONTH %in% c(1:4,10:12) & !is.na(marked_prop_irec_calibrated) & marked_prop_irec_calibrated %notin% c(0,1) ~ as.numeric(marked_prop_irec_calibrated),
+                   (marked_prop_irec_calibrated %in% c(0,1)| is.na(marked_prop_irec_calibrated)) ~ as.numeric(marked_prop_commercial),
+                   TRUE ~ as.numeric(marked_prop_creel_plus))) %>% 
+  mutate(marked_prop_source = case_when(
+                   marked_prop_catch_estimate == marked_prop_irec_calibrated ~ "calibrated iREC",
+                   marked_prop_catch_estimate == marked_prop_historic_plus ~ "historic plus",
+                   marked_prop_catch_estimate == marked_prop_creel_plus ~ "creel plus logbook", 
+                   marked_prop_catch_estimate == marked_prop_commercial ~ "commercial", 
+                   TRUE ~ "no source"))
+
+
+ggplot(Sport_mark_rate_only_by_year %>% filter(AREA=="Area 16"), aes(y=marked_prop_catch_estimate, x=month(MONTH, label=TRUE) , col=AREA, group=AREA)) +
   geom_point() + geom_line()+  facet_wrap(~YEAR) + ggtitle("Area 16") +scale_x_discrete(guide = guide_axis(angle = 90)) + 
   xlab("Month") + ylab("Proportion marked")+ theme_bw()
 ```
@@ -249,7 +277,7 @@ ggplot(Sport_mark_rate_only %>% filter(AREA=="Area 16"), aes(y=marked_prop_catch
 ### Area 17
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
-ggplot(Sport_mark_rate_only %>% filter(AREA=="Area 17"), aes(y=marked_prop_catch_estimate, x=month(MONTH, label=TRUE) , col=AREA, group=AREA)) +
+ggplot(Sport_mark_rate_only_by_year %>% filter(AREA=="Area 17"), aes(y=marked_prop_catch_estimate, x=month(MONTH, label=TRUE) , col=AREA, group=AREA)) +
   geom_point() + geom_line()+  facet_wrap(~YEAR) + ggtitle("Area 17") +scale_x_discrete(guide = guide_axis(angle = 90)) + 
   xlab("Month") + ylab("Proportion marked")+ theme_bw()
 ```
@@ -257,7 +285,7 @@ ggplot(Sport_mark_rate_only %>% filter(AREA=="Area 17"), aes(y=marked_prop_catch
 ### Area 18
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
-ggplot(Sport_mark_rate_only %>% filter(AREA=="Area 18"), aes(y=marked_prop_catch_estimate, x=month(MONTH, label=TRUE) , col=AREA, group=AREA)) +
+ggplot(Sport_mark_rate_only_by_year %>% filter(AREA=="Area 18"), aes(y=marked_prop_catch_estimate, x=month(MONTH, label=TRUE) , col=AREA, group=AREA)) +
   geom_point() + geom_line()+  facet_wrap(~YEAR) + ggtitle("Area 18") +scale_x_discrete(guide = guide_axis(angle = 90)) + 
   xlab("Month") + ylab("Proportion marked")+ theme_bw()
 ```
@@ -265,7 +293,7 @@ ggplot(Sport_mark_rate_only %>% filter(AREA=="Area 18"), aes(y=marked_prop_catch
 ### Area 19
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
-ggplot(Sport_mark_rate_only %>% filter(AREA=="Area 19"), aes(y=marked_prop_catch_estimate, x=month(MONTH, label=TRUE) , col=AREA, group=AREA)) +
+ggplot(Sport_mark_rate_only_by_year %>% filter(AREA=="Area 19"), aes(y=marked_prop_catch_estimate, x=month(MONTH, label=TRUE) , col=AREA, group=AREA)) +
   geom_point() + geom_line()+  facet_wrap(~YEAR) + ggtitle("Area 19") +scale_x_discrete(guide = guide_axis(angle = 90)) + 
   xlab("Month") + ylab("Proportion marked")+ theme_bw()
 ```
@@ -273,7 +301,7 @@ ggplot(Sport_mark_rate_only %>% filter(AREA=="Area 19"), aes(y=marked_prop_catch
 ### Area 20
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
-ggplot(Sport_mark_rate_only %>% filter(AREA=="Area 20"), aes(y=marked_prop_catch_estimate, x=month(MONTH, label=TRUE) , col=AREA, group=AREA)) +
+ggplot(Sport_mark_rate_only_by_year %>% filter(AREA=="Area 20"), aes(y=marked_prop_catch_estimate, x=month(MONTH, label=TRUE) , col=AREA, group=AREA)) +
   geom_point() + geom_line()+  facet_wrap(~YEAR) + ggtitle("Area 20") +scale_x_discrete(guide = guide_axis(angle = 90)) + 
   xlab("Month") + ylab("Proportion marked")+ theme_bw()
 
@@ -282,7 +310,7 @@ ggplot(Sport_mark_rate_only %>% filter(AREA=="Area 20"), aes(y=marked_prop_catch
 ### Area 25
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
-ggplot(Sport_mark_rate_only %>% filter(AREA=="Area 25"), aes(y=marked_prop_catch_estimate, x=month(MONTH, label=TRUE) , col=AREA, group=AREA)) +
+ggplot(Sport_mark_rate_only_by_year %>% filter(AREA=="Area 25"), aes(y=marked_prop_catch_estimate, x=month(MONTH, label=TRUE) , col=AREA, group=AREA)) +
   geom_point() + geom_line()+  facet_wrap(~YEAR) + ggtitle("Area 25") +scale_x_discrete(guide = guide_axis(angle = 90)) + 
   xlab("Month") + ylab("Proportion marked")+ theme_bw()
 ```

@@ -15,6 +15,7 @@ makecon.B
 PullAllSport.R
 Creel_iRec.txt
 *.config
+*.docx
 
 
 # Example code in package build process
