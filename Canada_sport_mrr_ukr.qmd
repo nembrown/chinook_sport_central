@@ -88,7 +88,7 @@ Take filtered data and get a by-year estimate to in fill for NAs
 Sport_mark_rate_source<- Sport_filtered_south_irec  %>%
   group_by(YEAR, AREA, MONTH, REGION2, MANAGEMENT, SOURCE, MARKS_DESC, TYPE) %>% summarise(sum=sum(VAL)) %>%
   pivot_wider(id_cols = c(YEAR, AREA, MONTH, REGION2, SOURCE, MANAGEMENT), names_from=c(MARKS_DESC, TYPE), values_from = sum) %>%
-  replace(is.na(.), 0) %>%
+ # replace(is.na(.), 0) %>%
   mutate(marked_prop_source = sum(marked_Kept,marked_Released, na.rm = TRUE)/sum(marked_Kept,marked_Released,unmarked_Kept,unmarked_Released, na.rm =TRUE)) %>%
   mutate_all(~ifelse(is.nan(.), NA, .)) %>%
   group_by(YEAR, AREA, MONTH, REGION2, MANAGEMENT) %>% summarise(marked_prop_source =mean(marked_prop_source, na.rm=TRUE)) %>%
@@ -98,7 +98,7 @@ Sport_mark_rate_source<- Sport_filtered_south_irec  %>%
 Sport_mark_rate_REGION2<- Sport_filtered_south_irec  %>%
   group_by(YEAR, REGION2, MONTH, MANAGEMENT, SOURCE, MARKS_DESC, TYPE) %>% summarise(sum=sum(VAL)) %>%
   pivot_wider(id_cols = c(YEAR, REGION2, MONTH, SOURCE, MANAGEMENT), names_from=c(MARKS_DESC, TYPE), values_from = sum) %>%
-  replace(is.na(.), 0) %>%
+#  replace(is.na(.), 0) %>%
   mutate(marked_prop_REGION2 =sum(marked_Kept,marked_Released, na.rm = TRUE)/sum(marked_Kept,marked_Released,unmarked_Kept,unmarked_Released, na.rm =TRUE))%>%
   mutate_all(~ifelse(is.nan(.), NA, .)) %>%
   select(YEAR, REGION2, MONTH, MANAGEMENT, SOURCE, marked_prop_REGION2)%>% ungroup()
@@ -108,7 +108,7 @@ Sport_mark_rate_REGION2<- Sport_filtered_south_irec  %>%
 Sport_mark_rate_REGION2_source<- Sport_filtered_south_irec  %>%
   group_by(REGION2,  MANAGEMENT, SOURCE, MARKS_DESC, TYPE) %>% summarise(sum=sum(VAL)) %>%
   pivot_wider(id_cols = c( REGION2,  SOURCE, MANAGEMENT), names_from=c(MARKS_DESC, TYPE), values_from = sum) %>%
-  replace(is.na(.), 0) %>%
+#  replace(is.na(.), 0) %>%
   mutate(marked_prop_REGION2_source =sum(marked_Kept,marked_Released, na.rm = TRUE)/sum(marked_Kept,marked_Released,unmarked_Kept,unmarked_Released, na.rm =TRUE))%>%
   mutate_all(~ifelse(is.nan(.), NA, .)) %>%
   group_by(REGION2, MANAGEMENT) %>% summarise(marked_prop_REGION2_source =mean(marked_prop_REGION2_source, na.rm=TRUE)) %>%
@@ -119,7 +119,7 @@ Sport_mark_rate_REGION2_source<- Sport_filtered_south_irec  %>%
 Sport_mark_rate_area_month<- Sport_filtered_south_irec  %>%
   group_by(AREA, MONTH, REGION2, MANAGEMENT, SOURCE, MARKS_DESC, TYPE) %>% summarise(sum=sum(VAL)) %>%
   pivot_wider(id_cols = c(AREA, MONTH, REGION2, SOURCE, MANAGEMENT), names_from=c(MARKS_DESC, TYPE), values_from = sum) %>%
-  replace(is.na(.), 0) %>%
+ # replace(is.na(.), 0) %>%
   mutate(marked_prop_area_month = sum(marked_Kept,marked_Released, na.rm = TRUE)/sum(marked_Kept,marked_Released,unmarked_Kept,unmarked_Released, na.rm =TRUE)) %>%
   mutate_all(~ifelse(is.nan(.), NA, .)) %>%
   select(AREA, MONTH, REGION2, MANAGEMENT, SOURCE, marked_prop_area_month)%>% ungroup()
@@ -128,7 +128,7 @@ Sport_mark_rate_area_month<- Sport_filtered_south_irec  %>%
 Sport_mark_rate_year<- Sport_filtered_south_irec  %>%
   group_by(YEAR, AREA, REGION2, MANAGEMENT, SOURCE, MARKS_DESC, TYPE) %>% summarise(sum=sum(VAL)) %>%
   pivot_wider(id_cols = c(YEAR, AREA, REGION2, MANAGEMENT, SOURCE), names_from=c(MARKS_DESC, TYPE), values_from = sum) %>%
-  replace(is.na(.), 0) %>%
+ # replace(is.na(.), 0) %>%
   mutate(marked_prop_year = sum(marked_Kept,marked_Released, na.rm = TRUE)/sum(marked_Kept,marked_Released,unmarked_Kept,unmarked_Released, na.rm =TRUE)) %>%
   mutate_all(~ifelse(is.nan(.), NA, .)) %>%
   select(YEAR, AREA, REGION2, MANAGEMENT, SOURCE, marked_prop_year)%>% ungroup()
@@ -137,7 +137,7 @@ Sport_mark_rate_year<- Sport_filtered_south_irec  %>%
 Sport_mark_rate_area<- Sport_filtered_south_irec  %>%
   group_by(AREA, REGION2, MANAGEMENT, SOURCE, MARKS_DESC, TYPE) %>% summarise(sum=sum(VAL)) %>%
   pivot_wider(id_cols = c(AREA, REGION2, MANAGEMENT, SOURCE), names_from=c(MARKS_DESC, TYPE), values_from = sum) %>%
-  replace(is.na(.), 0) %>%
+ # replace(is.na(.), 0) %>%
   mutate(marked_prop_area = sum(marked_Kept,marked_Released, na.rm = TRUE)/sum(marked_Kept,marked_Released,unmarked_Kept,unmarked_Released, na.rm =TRUE)) %>%
   mutate_all(~ifelse(is.nan(.), NA, .)) %>%
   select(AREA, REGION2, MANAGEMENT, SOURCE, marked_prop_area)%>% ungroup()
