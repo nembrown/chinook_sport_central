@@ -2,6 +2,7 @@
 title: "Mark rate exploration"
 author: "Norah Brown"
 format: html
+date: "2/28/2024"
 editor: visual
 toc: true
 toc-depth: 7
@@ -152,6 +153,12 @@ Sport_mark_rate_only_past<- Sport_mark_rate_only %>% filter(YEAR %in% 2014:2018)
 -   Pink borders indicate the estimate includes data from iREC, without the border is creel-only information
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
+#| label: fig-heatmap-current
+#| fig-cap: "Mark rate heatmap by management area and month. Mark rate is an average of mark rates from 2019-2023."
+#| fig-alt: "Heatmap for mark rate in different PFMAs organized by month of the year."
+#| fig-width: 10
+#| fig-height: 8
+
 library(paletteer)
 library(ggthemes)
 
@@ -173,6 +180,12 @@ MR_post2019
 ### iREC & creel data combined 2014-2018
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
+#| label: fig-heatmap-pre1029
+#| fig-cap: "Mark rate heatmap by management area and month. Mark rate is an average of mark rates from 2014-2018."
+#| fig-alt: "Heatmap for mark rate in different PFMAs organized by month of the year.Using data from 2014-2018. "
+#| fig-width: 10
+#| fig-height: 8
+
 
 MR_pre2019<-ggplot(data=Sport_mark_rate_only_past %>% filter(AREA %notin% c("Area 23"), marked_prop_source %notin% c("no source")), aes(x=month(MONTH, label=TRUE), y=as.factor(AREA), fill = marked_prop_catch_estimate, col=marked_prop_source))+
   geom_tile(linewidth=1) +
@@ -196,6 +209,16 @@ MR_pre2019
 Datasets for 2019-2023 separated out by source.
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
+#| label: fig-source
+#| fig-cap: "Mark rate heatmap by management area and month. Mark rate is an average of mark rates from 2019-2023.Mark rate is separated by data source."
+#| fig-subcap:
+#|   - "iREC data only"
+#|   - "creel data only"
+#|   - "logbook data only"
+#|   - "troll data only"
+#| layout-ncol: 2
+#| column: page
+
 
 library(patchwork)
 
@@ -256,20 +279,9 @@ Re-created these using the "best practices" combo of creel and irec
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
 
-Sport_mark_rate_only_by_year<-Sport_mark_rate_only %>% dplyr::select(YEAR, MONTH, AREA, marked_prop_lodge_log,marked_prop_creel, marked_prop_creel_plus,  marked_prop_historic_plus, marked_prop_irec_calibrated, marked_prop_commercial ) %>%  mutate(marked_prop_catch_estimate = case_when(
-                   MONTH %in% c(5:9) & (is.na(marked_prop_creel) | marked_prop_creel %in% c(0,1)) & !is.na(marked_prop_irec_calibrated) & marked_prop_irec_calibrated %notin% c(0,1) ~ as.numeric(marked_prop_irec_calibrated),
-                   MONTH %in% c(1:4,10:12) & !is.na(marked_prop_irec_calibrated) & marked_prop_irec_calibrated %notin% c(0,1) ~ as.numeric(marked_prop_irec_calibrated),
-                   (marked_prop_irec_calibrated %in% c(0,1)| is.na(marked_prop_irec_calibrated)) ~ as.numeric(marked_prop_commercial),
-                   TRUE ~ as.numeric(marked_prop_creel_plus))) %>% 
-  mutate(marked_prop_source = case_when(
-                   marked_prop_catch_estimate == marked_prop_irec_calibrated ~ "calibrated iREC",
-                   marked_prop_catch_estimate == marked_prop_historic_plus ~ "historic plus",
-                   marked_prop_catch_estimate == marked_prop_creel_plus ~ "creel plus logbook", 
-                   marked_prop_catch_estimate == marked_prop_commercial ~ "commercial", 
-                   TRUE ~ "no source"))
+Sport_mark_rate_only_by_year<-Sport_mark_rate_only %>% filter(YEAR >2013) %>% dplyr::select(YEAR, MONTH, AREA, marked_prop_lodge_log, marked_prop_creel, marked_prop_irec_calibrated, marked_prop_commercial ) %>%  pivot_longer(cols = contains("marked"), names_to = "Source", values_to = "mark_rate")
 
-
-ggplot(Sport_mark_rate_only_by_year %>% filter(AREA=="Area 16"), aes(y=marked_prop_catch_estimate, x=month(MONTH, label=TRUE) , col=AREA, group=AREA)) +
+ggplot(Sport_mark_rate_only_by_year %>% filter(AREA=="Area 16"), aes(y=mark_rate, x=month(MONTH, label=TRUE) , col=Source, group=Source)) +
   geom_point() + geom_line()+  facet_wrap(~YEAR) + ggtitle("Area 16") +scale_x_discrete(guide = guide_axis(angle = 90)) + 
   xlab("Month") + ylab("Proportion marked")+ theme_bw()
 ```
@@ -277,7 +289,7 @@ ggplot(Sport_mark_rate_only_by_year %>% filter(AREA=="Area 16"), aes(y=marked_pr
 ### Area 17
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
-ggplot(Sport_mark_rate_only_by_year %>% filter(AREA=="Area 17"), aes(y=marked_prop_catch_estimate, x=month(MONTH, label=TRUE) , col=AREA, group=AREA)) +
+ggplot(Sport_mark_rate_only_by_year %>% filter(AREA=="Area 17"), aes(y=mark_rate, x=month(MONTH, label=TRUE) , col=Source, group=Source)) +
   geom_point() + geom_line()+  facet_wrap(~YEAR) + ggtitle("Area 17") +scale_x_discrete(guide = guide_axis(angle = 90)) + 
   xlab("Month") + ylab("Proportion marked")+ theme_bw()
 ```
@@ -285,7 +297,7 @@ ggplot(Sport_mark_rate_only_by_year %>% filter(AREA=="Area 17"), aes(y=marked_pr
 ### Area 18
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
-ggplot(Sport_mark_rate_only_by_year %>% filter(AREA=="Area 18"), aes(y=marked_prop_catch_estimate, x=month(MONTH, label=TRUE) , col=AREA, group=AREA)) +
+ggplot(Sport_mark_rate_only_by_year %>% filter(AREA=="Area 18"), aes(y=mark_rate, x=month(MONTH, label=TRUE) , col=Source, group=Source))  +
   geom_point() + geom_line()+  facet_wrap(~YEAR) + ggtitle("Area 18") +scale_x_discrete(guide = guide_axis(angle = 90)) + 
   xlab("Month") + ylab("Proportion marked")+ theme_bw()
 ```
@@ -293,7 +305,7 @@ ggplot(Sport_mark_rate_only_by_year %>% filter(AREA=="Area 18"), aes(y=marked_pr
 ### Area 19
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
-ggplot(Sport_mark_rate_only_by_year %>% filter(AREA=="Area 19"), aes(y=marked_prop_catch_estimate, x=month(MONTH, label=TRUE) , col=AREA, group=AREA)) +
+ggplot(Sport_mark_rate_only_by_year %>% filter(AREA=="Area 19"), aes(y=mark_rate, x=month(MONTH, label=TRUE) , col=Source, group=Source))  +
   geom_point() + geom_line()+  facet_wrap(~YEAR) + ggtitle("Area 19") +scale_x_discrete(guide = guide_axis(angle = 90)) + 
   xlab("Month") + ylab("Proportion marked")+ theme_bw()
 ```
@@ -301,7 +313,7 @@ ggplot(Sport_mark_rate_only_by_year %>% filter(AREA=="Area 19"), aes(y=marked_pr
 ### Area 20
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
-ggplot(Sport_mark_rate_only_by_year %>% filter(AREA=="Area 20"), aes(y=marked_prop_catch_estimate, x=month(MONTH, label=TRUE) , col=AREA, group=AREA)) +
+ggplot(Sport_mark_rate_only_by_year %>% filter(AREA=="Area 20"), aes(y=mark_rate, x=month(MONTH, label=TRUE) , col=Source, group=Source))  +
   geom_point() + geom_line()+  facet_wrap(~YEAR) + ggtitle("Area 20") +scale_x_discrete(guide = guide_axis(angle = 90)) + 
   xlab("Month") + ylab("Proportion marked")+ theme_bw()
 
@@ -310,7 +322,7 @@ ggplot(Sport_mark_rate_only_by_year %>% filter(AREA=="Area 20"), aes(y=marked_pr
 ### Area 25
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
-ggplot(Sport_mark_rate_only_by_year %>% filter(AREA=="Area 25"), aes(y=marked_prop_catch_estimate, x=month(MONTH, label=TRUE) , col=AREA, group=AREA)) +
+ggplot(Sport_mark_rate_only_by_year %>% filter(AREA=="Area 25"), aes(y=mark_rate, x=month(MONTH, label=TRUE) , col=Source, group=Source))  +
   geom_point() + geom_line()+  facet_wrap(~YEAR) + ggtitle("Area 25") +scale_x_discrete(guide = guide_axis(angle = 90)) + 
   xlab("Month") + ylab("Proportion marked")+ theme_bw()
 ```
