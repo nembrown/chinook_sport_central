@@ -19,26 +19,13 @@ rm(rslt)
 Sport_filtered_south_irec<-
   estimates |>
   as_tibble() |>
+  mutate(INCLUDE_15 = case_when(
+    SOURCE != "Creel" ~ 1,
+    TRUE ~ INCLUDE_15
+  ))|>
+  filter(INCLUDE_15 ==1, YEAR<2024)|>
   filter(AREA %notin% c("Area 29 (In River)", "Campbell River", "Quinsam River", "CR-1", "CR-2", "CR-3", "CR-4", "QR-1", "QR-2", "QR-3", "QR-4")) |>
-  mutate(AREA = case_when(
-    YEAR <2020 & str_detect(AREA, "Area 20") ~ "Area 20",
-    YEAR == 2020 & MONTH < 4 & str_detect(AREA, "Area 20") ~ "Area 20",
-    YEAR <2014 & str_detect(AREA, "Area 23") ~ "Area 23",
-    YEAR == 2014  & MONTH < 4 & str_detect(AREA, "Area 23") ~ "Area 23",
-    YEAR <2014 & str_detect(AREA, "Area 19") ~ "Area 19",
-    YEAR == 2014  & MONTH < 4 & str_detect(AREA, "Area 19") ~ "Area 19",
-    YEAR <2014 & str_detect(AREA, "2E|2W") ~ "Area 2",
-    YEAR == 2014 & MONTH < 4 & str_detect(AREA, "2E|2W") ~ "Area 2",
-    TRUE ~ as.character(AREA)))|>
-  mutate(AREA = case_when(
-    AREA == "Area 20" & MONTH %in% c(1) & YEAR %in% c(2008,2009,2012) ~ "Area 20 (East)",
-    AREA == "Area 20" & MONTH %in% c(2) & YEAR %in% c(2008,2009,2011,2012,2014,2015,2018) ~ "Area 20 (East)",
-    AREA == "Area 20" & MONTH %in% c(3) & YEAR %in% c(2008,2009,2010,2011,2012,2013,2015,2016,2017,2018) ~ "Area 20 (East)",
-    AREA == "Area 20" & MONTH %in% c(4) & YEAR %in% c(2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019) ~ "Area 20 (East)",
-    AREA == "Area 20" & MONTH %in% c(5) & YEAR %in% c(2009,2010,2011,2012,2014,2015,2016,2018) ~ "Area 20 (East)",
-    AREA == "Area 20" & MONTH %in% c(10) & YEAR %in% c(2015,2017,2018, 2019) ~ "Area 20 (East)",
-    AREA == "Area 20" & MONTH %in% c(11) & YEAR %in% c(2008,2009,2011) ~ "Area 20 (East)",
-    AREA == "Area 20" & MONTH %in% c(12) & YEAR %in% c(2008,2009,2011) ~ "Area 20 (East)",
+   mutate(AREA = case_when(
     AREA== "Area 29 (Marine)" ~ "Area 29",
     TRUE ~ as.character(AREA))) |>
   filter(SUB_TYPE == "LEGAL") |>
@@ -164,10 +151,8 @@ Sport_mark_rate<- Sport_filtered_south_irec  %>%
     TRUE ~ as.numeric(creel_plus))) %>%
   ungroup()
 
-
-
-
 #presumably this is now the correct data at the PFMA level ...
+
 # Now we need to sum up to the appropriate finescale fishery level, and do a calculation of how much more irec gets us.
 #Need to split the finescale fisheries now
 Sport_mark_rate_finescale<-
@@ -185,7 +170,7 @@ Sport_mark_rate_finescale<-
     AREA%in%c("Area 25", "Area 26", "Area 27") & MONTH%in%c(1:4) ~ "WCVI AABM S SPRING",
     AREA%in%c("Area 25", "Area 26", "Area 27") & MONTH%in%c(5:6) ~ "WCVI AABM S SUMMER",
 
-    AREA%in%c("Area 121", "Area 123", "Area 124", "Area 125", "Area 126", "Area 127") & MANAGEMENT=="ISBM" & MONTH%in%c(7:12) ~ "WCVI ISBM S SUMMER",
+    AREA%in%c("Area 121", "Area 123", "Area 124", "Area 125", "Area 126", "Area 127") & MANAGEMENT=="ISBM" & MONTH%in%c(7:9) ~ "WCVI ISBM S SUMMER",
     AREA%in%c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal)") & MONTH%in%c(8,9) ~ "WCVI ISBM S SUMMER",
     AREA%in%c("Area 25", "Area 26", "Area 27") & MONTH%in%c(7,8,9) ~ "WCVI ISBM S SUMMER",
 
@@ -279,7 +264,7 @@ Sport_mark_rate_finescale<- Sport_mark_rate_finescale %>% ungroup %>%
       finescale_fishery_old == "CA JDF S" & MONTH %in% c(4) & YEAR != 2020 ~ "yes",
       finescale_fishery_old == "JNST S" & MONTH %in% c(6) & YEAR != 2020 ~ "yes",
       finescale_fishery_old == "NGS S" & MONTH %in% c(6) & YEAR != 2020 ~ "yes",
-      finescale_fishery_old == "SGS S" & MONTH %in% c(4) & YEAR %notin% c(2020) ~ "yes",
+      finescale_fishery_old == "SGS S" & MONTH %in% c(4,5) & YEAR %notin% c(2016, 2020) ~ "yes",
       finescale_fishery_old == "WCVI AABM S" & MONTH %in% c(6)& YEAR != 2020 ~ "yes",
       finescale_fishery_old == "CBC S" & MONTH %in% c(6) ~ "yes",
       finescale_fishery_old == "NBC AABM S" & MONTH %in% c(6) ~ "yes",
@@ -370,8 +355,6 @@ library(car)
 library(lme4)
 library(bbmle)
 
-### Summer plots
-
 
 #Summer model
 
@@ -387,19 +370,120 @@ Summer_model2<- glmmTMB(formula = catch_estimate ~ creel_plus_summer*finescale_f
                        data = Summer_south)
 summary(Summer_model2)
 
-AIC(Summer_model2, Summer_model)
+Summer_model3<- glmmTMB(formula = catch_estimate ~ creel_plus_summer*status,
+                        family = gaussian,
+                        data = Summer_south)
+summary(Summer_model3)
 
+Summer_model4<- glmmTMB(formula = catch_estimate ~ creel_plus_summer,
+                        family = gaussian,
+                        data = Summer_south)
+summary(Summer_model4)
+
+AIC(Summer_model2, Summer_model, Summer_model3, Summer_model4)
+
+## plots
+ggplot(Summer_south, aes(x=creel_plus_summer, y= catch_estimate, col=status, fill=status))+geom_point()+geom_abline(slope=1)+
+  geom_smooth(method="lm") + facet_wrap(~finescale_fishery, scales="free") + ggtitle("Summer") + theme_bw() + scale_colour_viridis_d() + scale_fill_viridis_d()
+
+ggplot(Summer_south, aes(x=creel_plus_summer, y= catch_estimate))+geom_point()+geom_abline(slope=1)+
+  geom_smooth(method="lm") + facet_wrap(~finescale_fishery, scales="free") + ggtitle("Summer") + theme_bw() + scale_colour_viridis_d() + scale_fill_viridis_d()
 
 ggplot(Summer_south, aes(x=creel_plus_summer, y= catch_estimate, col=status, fill=status))+geom_point()+geom_abline(slope=1)+
-  geom_smooth(method="lm") + facet_wrap(~finescale_fishery, scales="free") + ggtitle("CA JDF S Summer") + theme_bw() + scale_colour_viridis_d() + scale_fill_viridis_d()
+  geom_smooth(method="lm") + facet_wrap(~status, scales="free") + ggtitle("Summer") + theme_bw() + scale_colour_viridis_d() + scale_fill_viridis_d()
 
 
+#Adding predicted data
 Summer_south_old<- Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2005:2012), finescale_fishery %in% c("CA JDF S SUMMER","JNST S SUMMER",  "NGS S SUMMER", "SGS S SUMMER", "TCA JDF S SUMMER", "TJOHN ST S SUMMER", "TNGS S SUMMER", "TSGS S SUMMER", "TWCVI S SUMMER", "WCVI AABM S SUMMER", "WCVI ISBM S SUMMER")) %>% ungroup() %>%  dplyr::select(YEAR, status, finescale_fishery_old, finescale_fishery, creel_plus_summer)
-
-
 Summer_south_old_new<-predict(Summer_model, newdata =  Summer_south_old)
-
 Summer_south_old_new_2<-Summer_south_old %>%   mutate(creel_estimate_predicted = Summer_south_old_new)
+
+###### Spring model
+#spring model
+Spring_south<- Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2013:2023), finescale_fishery %in% c("CA JDF S SPRING","JNST S SPRING",  "NGS S SPRING", "SGS S SPRING",  "WCVI AABM S SPRING"))
+
+Spring_model<- glmmTMB(formula = catch_estimate ~ creel_plus_spring*status*finescale_fishery,
+                       family = gaussian,
+                       data = Spring_south)
+summary(Spring_model)
+
+Spring_model2<- glmmTMB(formula = catch_estimate ~ creel_plus_spring*finescale_fishery,
+                        family = gaussian,
+                        data = Spring_south)
+summary(Spring_model2)
+
+Spring_model3<- glmmTMB(formula = catch_estimate ~ creel_plus_spring,
+                        family = gaussian,
+                        data = Spring_south)
+summary(Spring_model3)
+
+Spring_model4<- glmmTMB(formula = catch_estimate ~ creel_plus_summer*finescale_fisher,
+                        family = gaussian,
+                        data = Spring_south)
+summary(Spring_model4)
+
+
+AIC(Spring_model2, Spring_model, Spring_model3)
+
+#spring plots
+
+ggplot(Spring_south, aes(x=creel_plus_spring, y= catch_estimate, col=status, fill=status))+geom_point()+
+  geom_smooth(method="glm", method.args = list(family = "gaussian")) + facet_wrap(~finescale_fishery+status, scales="free") + ggtitle("Spring") + theme_bw() + scale_colour_viridis_d() + scale_fill_viridis_d()
+
+ggplot(Spring_south, aes(x=creel_plus_summer, y= catch_estimate))+geom_point()+
+  geom_smooth(method="glm", method.args = list(family = "gaussian")) + facet_wrap(~finescale_fishery, scales="free") + ggtitle("Spring") + theme_bw() + scale_colour_viridis_d() + scale_fill_viridis_d()
+
+
+ggplot(Spring_south, aes(x=creel_plus_spring, y= catch_estimate))+geom_point()+
+  geom_smooth(method="glm", method.args = list(family = "gaussian")) + facet_wrap(~finescale_fishery, scales="free") + ggtitle("Spring") + theme_bw() + scale_colour_viridis_d() + scale_fill_viridis_d()
+
+#Adding predicted data
+#keep model 1
+Spring_south_old<- Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2005:2012), finescale_fishery %in% c("CA JDF S SPRING","JNST S SPRING",  "NGS S SPRING", "SGS S SPRING",  "WCVI AABM S SPRING")) %>% ungroup() %>%  dplyr::select(YEAR, status, finescale_fishery_old, finescale_fishery, creel_plus_spring)
+Spring_south_old_new<-predict(Spring_model, newdata =  Spring_south_old)
+Spring_south_old_new_2<-Spring_south_old %>%   mutate(creel_estimate_predicted = Spring_south_old_new)
+
+
+###### Fall model
+#fall model
+fall_south<- Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2013:2023), finescale_fishery %in% c("CA JDF S FALL","JNST S FALL",  "NGS S FALL", "SGS S FALL",  "WCVI AABM S FALL", "TJOHN ST S FALL", "TNGS S FALL", "TSGS S FALL"))
+
+fall_model<- glmmTMB(formula = catch_estimate ~ creel_plus_fall*status*finescale_fishery,
+                       family = gaussian,
+                       data = fall_south)
+summary(fall_model)
+
+fall_model2<- glmmTMB(formula = catch_estimate ~ creel_plus_fall*finescale_fishery,
+                        family = gaussian,
+                        data = fall_south)
+summary(fall_model2)
+
+fall_model3<- glmmTMB(formula = catch_estimate ~ creel_plus_fall*status,
+                        family = gaussian,
+                        data = fall_south)
+summary(fall_model3)
+
+fall_model4<- glmmTMB(formula = catch_estimate ~ creel_plus_fall,
+                        family = gaussian,
+                        data = fall_south)
+summary(fall_model4)
+
+
+AIC(fall_model2, fall_model)
+
+#fall plots
+
+ggplot(fall_south, aes(x=creel_plus_fall, y= catch_estimate, col=status, fill=status))+geom_point()+
+  geom_smooth(method="glm", method.args = list(family = "gaussian")) + facet_wrap(~finescale_fishery+status, scales="free") + ggtitle("fall") + theme_bw() + scale_colour_viridis_d() + scale_fill_viridis_d()
+ggplot(fall_south, aes(x=creel_plus_fall, y= catch_estimate))+geom_point()+
+  geom_smooth(method="glm", method.args = list(family = "gaussian")) + facet_wrap(~finescale_fishery, scales="free") + ggtitle("fall") + theme_bw() + scale_colour_viridis_d() + scale_fill_viridis_d()
+
+#Adding predicted data
+#keep model 1
+fall_south_old<- Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2005:2012), finescale_fishery %in% c("CA JDF S fall","JNST S fall",  "NGS S fall", "SGS S fall",  "WCVI AABM S fall")) %>% ungroup() %>%  dplyr::select(YEAR, status, finescale_fishery_old, finescale_fishery, creel_plus_fall)
+fall_south_old_new<-predict(fall_model, newdata =  fall_south_old)
+fall_south_old_new_2<-fall_south_old %>%   mutate(creel_estimate_predicted = fall_south_old_new)
+
 
 
 
