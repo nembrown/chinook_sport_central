@@ -354,84 +354,82 @@ Sport_mark_rate_finescale_combined<-Sport_mark_rate_finescale_combined %>% mutat
   TRUE ~ "Released"
 ))
 
+
 #### Modelling
 library(glmmTMB)
 library(DHARMa)
  library(fitdistrplus)
 # #library(MASS)
 # library(car)
-# library(lme4)
+ library(lme4)
 library(bbmle)
+library(SuppDists)
 
 
 #Summer model
 
-#collect summer data
-Summer_south<- Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2013:2023), finescale_fishery %in% c("CA JDF S SUMMER","JNST S SUMMER",  "NGS S SUMMER", "SGS S SUMMER", "TCA JDF S SUMMER", "TJOHN ST S SUMMER", "TNGS S SUMMER", "TSGS S SUMMER", "TWCVI S SUMMER", "WCVI AABM S SUMMER", "WCVI ISBM S SUMMER"))
+#splitting terminal out.
+#Year can not be included
 
-#full model with logged catch - better with log catch than untransformed catch
-Summer_model_full_log<- glmmTMB(formula = (log(catch_estimate+1)) ~ creel_plus_summer*mark_status*kept_status*finescale_fishery,family = gaussian, data = Summer_south)
-summary(Summer_model_full_log)
+#collect summer data, split into terminal and non terminal fisheries bc they are using the same data so can't be in the same model - not independent
+Summer_south<- Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2013:2023), finescale_fishery %in% c("CA JDF S SUMMER","JNST S SUMMER",  "NGS S SUMMER", "SGS S SUMMER", "WCVI AABM S SUMMER", "WCVI ISBM S SUMMER"))
+Summer_south_terminal<- Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2013:2023), finescale_fishery %in% c("TCA JDF S SUMMER", "TJOHN ST S SUMMER", "TNGS S SUMMER", "TSGS S SUMMER", "TWCVI S SUMMER"))
 
-Summer_model_full<- glmmTMB(formula = catch_estimate ~ creel_plus_summer*mark_status*kept_status*finescale_fishery,family = gaussian, data = Summer_south)
+#Random effects - don't have enough levels of each of the predictors to use random effects: see Ben Bolker's discussion: https://bbolker.github.io/mixedmodels-misc/glmmFAQ.html#should-i-treat-factor-xxx-as-fixed-or-random, need at least 5 or 6 and >10 is best
+#therefore use glm=gaussian for normal and glm=other family to testing other families
+
+#Test 1 - Check distributions check if normal, poisson or gamma distribution is best fitted.
+#gaussian
+Summer_model_full<- glm(formula = catch_estimate ~creel_plus_summer*mark_status*kept_status*finescale_fishery,  family=gaussian, data = Summer_south)
 summary(Summer_model_full)
+res <- simulateResiduals(Summer_model_full, plot = T, quantreg=T)
 
-res <- simulateResiduals(Summer_model_kept_full, plot = T)
-res <- simulateResiduals(Summer_model_kept_full_log, plot = T)
+#inverse gaussian
+Summer_model_full_inv<- glm(formula = catch_estimate ~creel_plus_summer*mark_status*kept_status*finescale_fishery,  family=inverse.gaussian(link = "log"), data = Summer_south)
+summary(Summer_model_full_inv)
+res_inv <- simulateResiduals(Summer_model_full_inv, plot = T, quantreg=T)
 
+#poisson
+Summer_model_full_poisson<- glm(formula = catch_estimate ~creel_plus_summer*mark_status*kept_status*finescale_fishery,  family=poisson, data = Summer_south)
+res_pois <- simulateResiduals(Summer_model_full_poisson, plot = T, quantreg=T)
+summary(Summer_model_full_poisson)
 
-#simplifications of model
+#gamma
+Summer_model_full_gamma<- glm(formula = catch_estimate ~creel_plus_summer*mark_status*kept_status*finescale_fishery,  family=Gamma(link = "log"), data = Summer_south)
+res_gam <- simulateResiduals(Summer_model_full_gamma, plot = T, quantreg=T)
+summary(Summer_model_full_gamma)
 
-Summer_model_kept_full_log_1<- update(Summer_model_full_log, ~ creel_plus_summer*(finescale_fishery+kept_status+mark_status))
-summary(Summer_model_kept_full_log_1)
+AICtab(Summer_model_full,Summer_model_full_poisson, Summer_model_full_gamma, Summer_model_full_inv)
+#gamma is the best, poisson doesn't converge
 
+#Test 2 - Change the model specification, full model vs. dropped effect of kept which is not significant
+#testing simplified models
 
-Summer_model_kept_full_2parts<- glmmTMB(formula = catch_estimate ~ creel_plus_summer*finescale_fishery*(kept_status+mark_status),family = gaussian, data = Summer_south)
-summary(Summer_model_kept_full_2parts)
+Summer_model_gamma_dropkept<- glm(formula = catch_estimate ~creel_plus_summer*mark_status*finescale_fishery,  family=Gamma(link = "log"), data = Summer_south)
+res_gam <- simulateResiduals(Summer_model_gamma_dropkept, plot = T, quantreg=T)
+summary(Summer_model_gamma_dropkept)
 
-Summer_model_kept_fish<- glmmTMB(formula = catch_estimate ~ creel_plus_summer*kept_status*finescale_fishery,family = gaussian, data = Summer_south)
-summary(Summer_model_kept_fish)
-
-Summer_model_mark_fish<- glmmTMB(formula = catch_estimate ~ creel_plus_summer*mark_status*finescale_fishery,family = gaussian, data = Summer_south)
-summary(Summer_model_mark_fish)
-
-Summer_model_fishery<- glmmTMB(formula = catch_estimate ~ creel_plus_summer*finescale_fishery,family = gaussian, data = Summer_south)
-summary(Summer_model_fishery)
-
-Summer_model_kept<- glmmTMB(formula = catch_estimate ~ creel_plus_summer*kept_status,family = gaussian, data = Summer_south)
-summary(Summer_model_kept)
-
-Summer_model_mark<- glmmTMB(formula = catch_estimate ~ creel_plus_summer*mark_status,family = gaussian, data = Summer_south)
-summary(Summer_model_mark)
-
-#mark vs. kept status --> kept status improves the model.
-AICtab(Summer_model_kept_full_log,Summer_model_kept_full_2parts, Summer_model_full_mark_kept,Summer_model_kept_full,Summer_model_kept, Summer_model_mark, Summer_model_fishery, Summer_model_kept_fish, Summer_model_mark_fish)
-
-#try adding mark rate back as random to kept model
-Summer_model_kept_fish_random<- glmmTMB(formula = catch_estimate ~ creel_plus_summer*kept_status*finescale_fishery + (1|mark_status),family = gaussian, data = Summer_south)
-summary(Summer_model_kept_fish_random)
-
-Summer_model_fish_random<- glmmTMB(formula = catch_estimate ~ creel_plus_summer*finescale_fishery + (1|status),family = gaussian, data = Summer_south)
-summary(Summer_model_fish_random)
-
-#yes mark status as random improves the model.
-AICtab(Summer_model_kept_fish, Summer_model_kept_fish_random, Summer_model_fish_random)
-
-res <- simulateResiduals(Summer_model_kept_full, plot = T)
-res <- simulateResiduals(Summer_model_kept_fish, plot = T)
-
+AICtab(Summer_model_full_gamma, Summer_model_gamma_dropkept)
+#full Gamma is better.
 
 ## plots
-
-#with kept status
-ggplot(Summer_south, aes(x=creel_plus_summer, y= log(catch_estimate+1), col=kept_status, fill=kept_status))+geom_point()+geom_abline(slope=1)+
-  geom_smooth(method="lm") + facet_wrap(~finescale_fishery, scales="free") + ggtitle("Summer") + theme_bw() + scale_colour_viridis_d() + scale_fill_viridis_d()
-
+ggplot(Summer_south, aes(x=creel_plus_summer, y= catch_estimate, col=status, fill=status))+geom_point()+geom_abline(slope=1)+
+  geom_smooth(method="glm", family= Gamma(link = "log")) + facet_wrap(~finescale_fishery, scales="free") + ggtitle("Summer") + theme_bw() + scale_colour_viridis_d() + scale_fill_viridis_d()
 
 #Adding predicted data
-Summer_south_old<- Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2005:2012), finescale_fishery %in% c("CA JDF S SUMMER","JNST S SUMMER",  "NGS S SUMMER", "SGS S SUMMER", "TCA JDF S SUMMER", "TJOHN ST S SUMMER", "TNGS S SUMMER", "TSGS S SUMMER", "TWCVI S SUMMER", "WCVI AABM S SUMMER", "WCVI ISBM S SUMMER")) %>% ungroup() %>%  dplyr::select(YEAR, status, finescale_fishery_old, finescale_fishery, mark_status, kept_status, creel_plus_summer)
-Summer_south_old_new<-predict(Summer_model_kept_fish_random, newdata =  Summer_south_old)
+Summer_south_old<- Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2005:2012), finescale_fishery %in% c("CA JDF S SUMMER","JNST S SUMMER",  "NGS S SUMMER", "SGS S SUMMER",  "WCVI AABM S SUMMER", "WCVI ISBM S SUMMER")) %>% ungroup() %>%  dplyr::select(YEAR, status, finescale_fishery_old, finescale_fishery, mark_status, kept_status, status, creel_plus_summer)
+Summer_south_old_new<-predict.glm(Summer_model_full_gamma, newdata =  Summer_south_old, type = "response")
 Summer_south_old_new_2<-Summer_south_old %>%   mutate(creel_estimate_predicted = Summer_south_old_new)
+
+
+#terminal model start here
+
+
+
+
+
+
+
 
 ###### Spring model
 #spring model
