@@ -77,7 +77,7 @@ allobs3 <- tidyr::expand(Sport_filtered_south_irec_mr, nesting(AREA, REGION2, MA
 
 #Add in commercial
 
-Commercial_mr1<- read.csv(here::here("commercial_mark_rate.csv")) %>% as_tibble() %>% group_by(YEAR, AREA, MONTH) %>%  mutate(marked_prop_commercial=ADCLIP_OBS/ADCLIP_SAMPLE) %>% dplyr::select(YEAR, AREA, MONTH, marked_prop_commercial, ADCLIP_SAMPLE) %>% filter(AREA %notin% c("Area 1", "Area 101", "Area 142", "Area 2", "Area 8", "Area 3", "Area 4")) %>% filter(ADCLIP_SAMPLE>100)
+Commercial_mr1<- read.csv(here::here("commercial_mark_rate.csv")) %>% as_tibble()  %>% filter(AREA %notin% c("Area 1", "Area 101", "Area 142", "Area 2", "Area 8", "Area 3", "Area 4")) %>% group_by(YEAR, AREA, MONTH) %>% summarise_if(is.numeric, sum, na.rm = TRUE) %>% mutate(marked_prop_commercial=ADCLIP_OBS/ADCLIP_SAMPLE) %>% filter(ADCLIP_SAMPLE>100)
 
 
 ```
@@ -117,7 +117,7 @@ Sport_mark_rate_only<- Sport_filtered_south_irec_mr  %>%
     mutate_all(~ifelse(is.nan(.), NA, .)) %>%
   left_join(Commercial_mr1)
   
-Sport_mark_rate_only_recent<- Sport_mark_rate_only %>% filter(YEAR %in% 2019:2023) %>% dplyr::select(YEAR, MONTH, AREA, marked_prop_lodge_log,marked_prop_creel, marked_prop_creel_plus,  marked_prop_historic_plus, marked_prop_irec_calibrated, marked_prop_commercial ) %>% group_by(MONTH, AREA) %>%  summarise_if(is.numeric, mean, na.rm = TRUE) %>%  mutate(marked_prop_catch_estimate = case_when(
+Sport_mark_rate_only_recent<- Sport_mark_rate_only %>% filter(YEAR %in% 2021:2023) %>% dplyr::select(YEAR, MONTH, AREA, marked_prop_lodge_log,marked_prop_creel, marked_prop_creel_plus,  marked_prop_historic_plus, marked_prop_irec_calibrated, marked_prop_commercial ) %>% group_by(MONTH, AREA) %>%  summarise_if(is.numeric, mean, na.rm = TRUE) %>%  mutate(marked_prop_catch_estimate = case_when(
                    MONTH %in% c(5:9) & (is.na(marked_prop_creel) | marked_prop_creel %in% c(0,1)) & !is.na(marked_prop_irec_calibrated) & marked_prop_irec_calibrated %notin% c(0,1) ~ as.numeric(marked_prop_irec_calibrated),
                    MONTH %in% c(1:4,10:12) & !is.na(marked_prop_irec_calibrated) & marked_prop_irec_calibrated %notin% c(0,1) ~ as.numeric(marked_prop_irec_calibrated),
                    (marked_prop_irec_calibrated %in% c(0,1)| is.na(marked_prop_irec_calibrated)) ~ as.numeric(marked_prop_commercial),
@@ -130,7 +130,7 @@ Sport_mark_rate_only_recent<- Sport_mark_rate_only %>% filter(YEAR %in% 2019:202
                    TRUE ~ "no source"))
 
 
-Sport_mark_rate_only_past<- Sport_mark_rate_only %>% filter(YEAR %in% 2014:2018) %>% dplyr::select(YEAR, MONTH, AREA, marked_prop_lodge_log,marked_prop_creel, marked_prop_creel_plus,  marked_prop_historic_plus, marked_prop_irec_calibrated, marked_prop_commercial ) %>% group_by(MONTH, AREA) %>%  summarise_if(is.numeric, mean, na.rm = TRUE) %>%  mutate(marked_prop_catch_estimate = case_when(
+Sport_mark_rate_only_past<- Sport_mark_rate_only %>% filter(YEAR %in% 2016:2020) %>% dplyr::select(YEAR, MONTH, AREA, marked_prop_lodge_log,marked_prop_creel, marked_prop_creel_plus,  marked_prop_historic_plus, marked_prop_irec_calibrated, marked_prop_commercial ) %>% group_by(MONTH, AREA) %>%  summarise_if(is.numeric, mean, na.rm = TRUE) %>%  mutate(marked_prop_catch_estimate = case_when(
                    MONTH %in% c(5:9) & (is.na(marked_prop_creel) | marked_prop_creel %in% c(0,1)) & !is.na(marked_prop_irec_calibrated) & marked_prop_irec_calibrated %notin% c(0,1) ~ as.numeric(marked_prop_irec_calibrated),
                    MONTH %in% c(1:4,10:12) & !is.na(marked_prop_irec_calibrated) & marked_prop_irec_calibrated %notin% c(0,1) ~ as.numeric(marked_prop_irec_calibrated),
                    (marked_prop_irec_calibrated %in% c(0,1)| is.na(marked_prop_irec_calibrated)) ~ as.numeric(marked_prop_commercial),
@@ -148,7 +148,7 @@ Sport_mark_rate_only_past<- Sport_mark_rate_only %>% filter(YEAR %in% 2014:2018)
 
 ## Heat Map
 
-### iREC & creel data combined 2019-current
+### iREC & creel data combined 2021-current
 
 -   Pink borders indicate the estimate includes data from iREC, without the border is creel-only information
 
@@ -164,7 +164,7 @@ library(ggthemes)
 
 MR_post2019<-ggplot(data=Sport_mark_rate_only_recent %>% filter(AREA %notin% c("Area 23"), marked_prop_source %notin% c("no source")), aes(x=month(MONTH, label=TRUE), y=as.factor(AREA), fill = marked_prop_catch_estimate, col=marked_prop_source))+
   geom_tile(linewidth=1) +
-  scale_colour_manual(values = c("pink", "#1C00ff00", "#1C00ff00"))+
+  scale_colour_manual(values = c("pink", "pink4", "#1C00ff00"))+
   geom_text(aes(label=round(marked_prop_catch_estimate*100, 0)), col="black")+
   scale_fill_paletteer_c("ggthemes::Blue-Teal", direction=1, na.value="#1C00ff00", limits=c(0,1))+
    scale_y_discrete(limits=rev)+
@@ -177,7 +177,7 @@ MR_post2019<-ggplot(data=Sport_mark_rate_only_recent %>% filter(AREA %notin% c("
 MR_post2019
 ```
 
-### iREC & creel data combined 2014-2018
+### iREC & creel data combined 2016-2020
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
 #| label: fig-heatmap-pre1029
@@ -206,7 +206,7 @@ MR_pre2019
 
 ### Individual data sets
 
-Datasets for 2019-2023 separated out by source.
+Datasets for 2021-2023 separated out by source.
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
 #| label: fig-source

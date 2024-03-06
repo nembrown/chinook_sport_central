@@ -1,0 +1,67 @@
+---
+title: "Mark_rate_northern_troll"
+author: "Norah Brown"
+format: html
+date: "3/4/2024"
+editor: visual
+toc: true
+toc-depth: 7
+embed-resources: true
+---
+
+## 
+
+# Methods
+
+-   We summed sample sizes and observed adclip totals in a given year, month, and area. Then calculated mark rate based on this summed value.
+-   We can visualize this as a three year average from 2021-2023:
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+#load packages
+library(tidyverse)
+library(odbc)
+library(lubridate)
+library(ggnewscale)
+
+#utils
+"%notin%" <- Negate("%in%")
+
+#Pull sport data from CREST
+
+Commercial_mr2<- read.csv(here::here("commercial_mark_rate.csv")) %>% as_tibble()  %>% filter(AREA %in% c("Area 1", "Area 101", "Area 142", "Area 2", "Area 102")) %>% group_by(YEAR, AREA, MONTH) %>% summarise_if(is.numeric, sum, na.rm = TRUE) %>% mutate(marked_prop_commercial=ADCLIP_OBS/ADCLIP_SAMPLE) 
+
+Commercial_markrate_recent<- Commercial_mr2 %>% filter(YEAR %in% 2021:2023) %>% dplyr::select(YEAR, MONTH, AREA, marked_prop_commercial ) %>% group_by(MONTH, AREA) %>%  summarise_if(is.numeric, mean, na.rm = TRUE)
+
+```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+library(paletteer)
+library(ggthemes)
+
+MR_commercial_post2021<-ggplot(Commercial_markrate_recent, aes(x=month(MONTH, label=TRUE), y=as.factor(AREA), fill = marked_prop_commercial))+
+  geom_tile(linewidth=1) +
+  scale_colour_manual(values = c("#1C00ff00"))+
+  geom_text(aes(label=round(marked_prop_commercial*100, 0)), col="black")+
+  scale_fill_paletteer_c("ggthemes::Blue-Teal", direction=1, na.value="#1C00ff00", limits=c(0,1))+
+   scale_y_discrete(limits=rev)+
+  scale_x_discrete(position = "top")+
+  labs(title = "Mark rate by PFMA",
+       x = "Month", y = "PFMA") +
+  theme_bw() + theme_minimal()+ guides(
+                                       fill = guide_colourbar("Mark rate"))
+
+MR_commercial_post2021
+```
+
+## Plot over time
+
+-   We can visualize this as mark rate over time in different years and areas.
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+
+ggplot(Commercial_mr2, aes(y=marked_prop_commercial, x=month(MONTH, label=TRUE), col=AREA, group=AREA)) +
+  geom_point() + geom_line()+  facet_wrap(~YEAR) + ggtitle("Northen Troll") +scale_x_discrete(guide = guide_axis(angle = 90)) + 
+  xlab("Month") + ylab("Proportion marked")+ theme_bw()
+```
