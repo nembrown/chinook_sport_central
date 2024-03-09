@@ -28,7 +28,7 @@ library(ggnewscale)
 
 #Pull sport data from CREST
 
-Commercial_mr2<- read.csv(here::here("commercial_mark_rate.csv")) %>% as_tibble()  %>% filter(AREA %in% c("Area 1", "Area 101", "Area 142", "Area 2", "Area 102")) %>% group_by(YEAR, AREA, MONTH) %>% summarise_if(is.numeric, sum, na.rm = TRUE) %>% mutate(marked_prop_commercial=ADCLIP_OBS/ADCLIP_SAMPLE) 
+Commercial_mr2<- read.csv(here::here("commercial_mark_rate.csv")) %>% as_tibble()  %>% filter(AREA %in% c("Area 1", "Area 101", "Area 142", "Area 2", "Area 102"), SAMPLE_STATUS %notin% c(4,5)) %>% group_by(YEAR, AREA, MONTH) %>% summarise_if(is.numeric, sum, na.rm = TRUE) %>% mutate(marked_prop_commercial=ADCLIP_OBS/ADCLIP_SAMPLE) 
 
 Commercial_markrate_recent<- Commercial_mr2 %>% filter(YEAR %in% 2021:2023) %>% dplyr::select(YEAR, MONTH, AREA, marked_prop_commercial ) %>% group_by(MONTH, AREA) %>%  summarise_if(is.numeric, mean, na.rm = TRUE)
 
