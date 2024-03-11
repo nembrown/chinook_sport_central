@@ -1,14 +1,17 @@
 ---
-title: "MRR_UKR"
+title: "Canadian Sport Data revisions"
 author: "Norah Brown"
-format: html
-html:
-  code-fold: true
-  code-tools: true
+format:
+  html:
+    code-fold: true
+    code-summary: "Show the code"
 editor: visual
 toc: true
 toc-depth: 7
 embed-resources: true
+execute: 
+  warning: false
+  cache: true
 ---
 
 # Methods
@@ -17,7 +20,7 @@ embed-resources: true
 
 -   We pulled raw recreational catch data from CREST database: data sources include creel, iREC, lodge and log-book data. Data is typically in number of marked and unmarked fish kept and released.
 
-```{r Pulling from CREST, echo=FALSE, message=FALSE, warning=FALSE}
+```{r Pulling from CREST}
 
 #load packages
 library(tidyverse)
@@ -54,7 +57,7 @@ rm(rslt)
 
 -   We also expanded the dataset to include all combinations of area, year, month, mark status, kept status and source -\> adding NAs where no data was collected
 
-```{r Aligning creel and irec, echo=FALSE, message=FALSE, warning=FALSE}
+```{r Aligning creel and irec}
 Sport_filtered_south_irec<-
   estimates |>
   as_tibble() |>
@@ -107,7 +110,7 @@ Sport_filtered_south_irec<-
     6.  Monthly area average across years - Mark rate calculated for a given source within a given month, area, and across years
     7.  Monthly regional average across years- Mark rate calculated for a given source within a given month, region, and across years
 
-```{r Mark rates by category, echo=FALSE, message=FALSE, warning=FALSE}
+```{r Mark rates by category}
 
 #2. Mark rate averaged across source
 Sport_mark_rate_source<- Sport_filtered_south_irec  %>%
@@ -159,14 +162,14 @@ Sport_mark_rate_region_month<- Sport_filtered_south_irec  %>%
   dplyr::select(MONTH, season, REGION2, MANAGEMENT, SOURCE, marked_prop_region_month) %>% ungroup()
 ```
 
-```{r expanding to all combinations, echo=FALSE, message=FALSE, warning=FALSE}
+```{r expanding to all combinations}
 allobs2 <- tidyr::expand(Sport_filtered_south_irec, nesting(AREA, REGION2, MANAGEMENT), YEAR, nesting(MONTH, season), MARKS_DESC, TYPE, SOURCE)
 
 ```
 
 -   We joined the various calculations of mark rate to the catch data and expanded unchecked kept and released into marked and unmarked of those categories using the best available chosen mark rate
 
-```{r Allocating unchecked catch, echo=FALSE, message=FALSE, warning=FALSE}
+```{r Allocating unchecked catch}
 Sport_mark_rate<- Sport_filtered_south_irec  %>%
   group_by(YEAR, MONTH, season, AREA, REGION2, MANAGEMENT, SOURCE, MARKS_DESC, TYPE) %>% summarise(sum=sum(VAL), sum_VARIANCE=sum(VARIANCE)) %>%
   ungroup() %>%
@@ -213,23 +216,47 @@ Sport_mark_rate<- Sport_filtered_south_irec  %>%
 
 -   This calculation was grouped ignoring mark and kept status, so that true zeros for one category of catch wouldn't influence the other categories inclusion.
 
-```{r calculating catch estimate, echo=FALSE, message=FALSE, warning=FALSE}
-Sport_mark_rate2<-Sport_mark_rate %>% 
-dplyr::select(YEAR, MONTH, season, AREA, REGION2, MANAGEMENT, SOURCE, marked_Kept_total, unmarked_Kept_total, marked_Released_total, unmarked_Released_total) %>%
-                 pivot_longer(cols=c(contains("total")), names_to = "status", values_to = "value") %>%
-                 pivot_wider(id_cols = c(YEAR, MONTH, season, AREA, REGION2, MANAGEMENT, status), names_from = SOURCE, values_from = value) %>%
-                 mutate_all(~ifelse(is.nan(.), NA, .)) %>%
-                 rowwise() %>%
-  group_by(YEAR, MONTH, season, AREA, REGION2, MANAGEMENT, status) %>% 
-                 mutate(creel_plus = sum(creel,lodge_log, na.rm=TRUE),
-                        historic_plus = sum(historic,lodge_log, na.rm=TRUE)) %>%
-  group_by(YEAR, MONTH, season, AREA, REGION2, MANAGEMENT) %>% 
-                 mutate(catch_estimate = case_when(
-                   YEAR > 2012 & MONTH %in% c(5:9) & (is.na(creel) | creel==0) ~ as.numeric(irec_calibrated),
-                   YEAR > 2012 & MONTH %in% c(1:4,10:12) ~ as.numeric(irec_calibrated),
-                   YEAR < 2013 & (is.na(creel_plus) | creel_plus==0) ~ as.numeric(historic_plus),
-                   TRUE ~ as.numeric(creel_plus))) %>% 
-                ungroup()
+```{r calculating catch estimate}
+Sport_mark_rate2<-Sport_mark_rate %>%
+  dplyr::select(YEAR, MONTH, season, AREA, REGION2, MANAGEMENT, SOURCE, marked_Kept_total, unmarked_Kept_total, marked_Released_total, unmarked_Released_total) %>%
+  pivot_longer(cols=c(contains("total")), names_to = "status", values_to = "value") %>%
+  group_by(YEAR, MONTH, season, AREA, REGION2, MANAGEMENT, SOURCE) %>%
+  summarise_if(is.numeric, sum, na.rm = TRUE) %>%
+  pivot_wider(id_cols = c(YEAR, MONTH, season, AREA, REGION2, MANAGEMENT), names_from = SOURCE, values_from = value) %>%
+  mutate_all(~ifelse(is.nan(.), NA, .)) %>%
+  rowwise() %>%
+  group_by(YEAR, MONTH, season, AREA, REGION2, MANAGEMENT) %>%
+  mutate(creel_plus = sum(creel,lodge_log, na.rm=TRUE),
+         historic_plus = sum(historic,lodge_log, na.rm=TRUE)) %>%
+  group_by(YEAR, MONTH, season, AREA, REGION2, MANAGEMENT) %>%
+  mutate(catch_estimate_cat = case_when(
+    YEAR > 2012 & MONTH %in% c(5:9) & (is.na(creel) | creel==0) ~ "use irec",
+    YEAR > 2012 & MONTH %in% c(1:4,10:12) ~ "use irec",
+    YEAR < 2013 & (is.na(creel_plus) | creel_plus==0) ~ "use historic",
+    TRUE ~ "use creel plus")) %>%
+  ungroup() %>% dplyr::select(YEAR, MONTH, season, AREA, REGION2, MANAGEMENT, catch_estimate_cat)
+
+
+
+Sport_mark_rate3<-Sport_mark_rate %>%
+  dplyr::select(YEAR, MONTH, season, AREA, REGION2, MANAGEMENT, SOURCE, marked_Kept_total, unmarked_Kept_total, marked_Released_total, unmarked_Released_total) %>%
+  pivot_longer(cols=c(contains("total")), names_to = "status", values_to = "value") %>%
+  pivot_wider(id_cols = c(YEAR, MONTH, season, AREA, REGION2, MANAGEMENT, status), names_from = SOURCE, values_from = value) %>%
+  mutate_all(~ifelse(is.nan(.), NA, .)) %>%
+  rowwise() %>%
+  group_by(YEAR, MONTH, season, AREA, REGION2, MANAGEMENT, status) %>%
+  mutate(creel_plus = sum(creel,lodge_log, na.rm=TRUE),
+         historic_plus = sum(historic,lodge_log, na.rm=TRUE)) %>%
+  group_by(YEAR, MONTH, season, AREA, REGION2, MANAGEMENT) %>%
+  left_join(Sport_mark_rate2) %>%
+  mutate(catch_estimate = case_when(
+    catch_estimate_cat == "use irec" ~ as.numeric(irec_calibrated),
+    catch_estimate_cat == "use historic" ~  as.numeric(historic_plus),
+    catch_estimate_cat == "use creel plus" ~ as.numeric(creel_plus))) %>%
+  ungroup() %>%
+  relocate(catch_estimate_cat, .after=status)
+
+
 
 ```
 
@@ -253,9 +280,9 @@ dplyr::select(YEAR, MONTH, season, AREA, REGION2, MANAGEMENT, SOURCE, marked_Kep
 
         -   TWCVI S is only months 8 to 12, so that fishery stays the same and gets called a single period - FALL, no summer or spring category
 
-```{r Assigning finescale fisheries, echo=FALSE, message=FALSE, warning=FALSE}
+```{r Assigning finescale fisheries}
 Sport_mark_rate_finescale<-
-  Sport_mark_rate2%>% ungroup %>%
+  Sport_mark_rate3%>% ungroup %>%
   mutate(finescale_fishery = case_when(
     AREA%in%c("Area 121", "Area 123", "Area 124", "Area 125", "Area 126", "Area 127") & MANAGEMENT=="AABM" & season=="fall" ~ "WCVI AABM S FALL",
     AREA%in%c("Area 121", "Area 123", "Area 124", "Area 125", "Area 126", "Area 127") & MANAGEMENT=="AABM" & season=="spring" ~ "WCVI AABM S SPRING",
@@ -354,7 +381,7 @@ Sport_mark_rate_finescale<-
 
     -   The fall coverage period includes any of months 9:12 that are consistent throughout the time series, and if not the latest available month (e.g. month 8 for several fisheries).
 
-```{r Assigning seasonal coverage, echo=FALSE, message=FALSE, warning=FALSE}
+```{r Assigning seasonal coverage}
  Sport_mark_rate_finescale<- Sport_mark_rate_finescale %>% ungroup %>% 
    mutate(summer_coverage_tf = case_when(
                                                                 finescale_fishery_old == "CA JDF S" & MONTH %in% c(6:8) & YEAR != 2020 ~ "yes",
@@ -405,7 +432,7 @@ Sport_mark_rate_finescale<-
 
 -   We sum up catch by mark and kept status for each year and new finescale fishery of the defined coverage periods for creel and for the previously calculated catch estimate. This is the data used in the modelling exercise described below.
 
-```{r combining seasons and terminal, echo=FALSE, message=FALSE, warning=FALSE}
+```{r combining seasons and terminal}
 Sport_mark_rate_finescale_sum<- Sport_mark_rate_finescale %>%
   filter(!is.na(finescale_fishery)) %>%
   group_by(YEAR, status, finescale_fishery_old, finescale_fishery) %>%
@@ -477,7 +504,7 @@ Sport_mark_rate_finescale_combined<-Sport_mark_rate_finescale_combined %>% mutat
 
 -   Alternatively, we can add up the catch to get total catch estimates across fisheries by month.
 
-```{r summarizing by old finescale fishery, echo=FALSE, message=FALSE, warning=FALSE}
+```{r summarizing by old finescale fishery}
 yearMonth <- plyr::ddply(Sport_mark_rate_finescale, c( "YEAR", "MONTH", "finescale_fishery_old"), summarise,
                          sum_creel = sum(creel, na.rm = TRUE), sum= sum(creel_plus, na.rm = TRUE), sum_historic= sum(historic_plus, na.rm = TRUE), sum_catch_estimate = sum(catch_estimate, na.rm = TRUE), sum_irec = sum(irec_calibrated, na.rm = TRUE)) %>% filter(finescale_fishery_old!="NA") %>% mutate(across(where(is.numeric), ~na_if(., 0))) 
 
@@ -608,54 +635,33 @@ ggplot()+
 
         -   We selected the model with the lowest AIC and best visual diagnostics.
 
-```{r, echo=FALSE, message=FALSE, warning=FALSE}
+## Southern BC Summer fisheries
 
+-   The best model is the full model with a Gamma distribution
 
-#### Modelling
-library(glmmTMB)
+-   
+
+```{r Modelling Summer BC fisheries}
+
+#### modelling packages
 library(DHARMa)
- library(fitdistrplus)
-# #library(MASS)
-# library(car)
- library(lme4)
+library(lme4)
 library(bbmle)
 library(SuppDists)
 
 #Summer model
-
-#splitting terminal out.
-#Year can not be included as random effect since we use it later
-
-#collect summer data, split into terminal and non terminal fisheries bc they are using the same data so can't be in the same model - not independent
 Summer_south<- Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2013:2023), finescale_fishery %in% c("CA JDF S SUMMER","JNST S SUMMER",  "NGS S SUMMER", "SGS S SUMMER", "WCVI AABM S SUMMER", "WCVI ISBM S SUMMER"))
-Summer_south_terminal<- Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2013:2023), finescale_fishery %in% c("TCA JDF S SUMMER", "TJOHN ST S SUMMER", "TNGS S SUMMER", "TSGS S SUMMER", "TWCVI S SUMMER"))
 
-#Random effects - don't have enough levels of each of the predictors to use random effects: see Ben Bolker's discussion: https://bbolker.github.io/mixedmodels-misc/glmmFAQ.html#should-i-treat-factor-xxx-as-fixed-or-random, need at least 5 or 6 and >10 is best
-#therefore use glm=gaussian for normal and glm=other family to testing other families
+# See modelling script: chosen model is: summer model full Gamma 
 
-#Test 1 - Check distributions check if normal, poisson or gamma distribution is best fitted.
-#gaussian
-Summer_model_full<- glm(formula = catch_estimate ~creel_plus_summer*mark_status*kept_status*finescale_fishery,  family=gaussian, data = Summer_south)
-summary(Summer_model_full)
-res <- simulateResiduals(Summer_model_full, plot = T, quantreg=T)
-
-#inverse gaussian
-Summer_model_full_inv<- glm(formula = catch_estimate ~creel_plus_summer*mark_status*kept_status*finescale_fishery,  family=inverse.gaussian(link = "log"), data = Summer_south)
-summary(Summer_model_full_inv)
-res_inv <- simulateResiduals(Summer_model_full_inv, plot = T, quantreg=T)
-
-#poisson
-Summer_model_full_poisson<- glm(formula = catch_estimate ~creel_plus_summer*mark_status*kept_status*finescale_fishery,  family=poisson, data = Summer_south)
-res_pois <- simulateResiduals(Summer_model_full_poisson, plot = T, quantreg=T)
-summary(Summer_model_full_poisson)
-
-#gamma
 Summer_model_full_gamma<- glm(formula = catch_estimate ~creel_plus_summer*mark_status*kept_status*finescale_fishery,  family=Gamma(link = "log"), data = Summer_south)
-res_gam <- simulateResiduals(Summer_model_full_gamma, plot = T, quantreg=T)
-summary(Summer_model_full_gamma)
 
-AICtab(Summer_model_full,Summer_model_full_poisson, Summer_model_full_gamma, Summer_model_full_inv)
-#gamma is the best, poisson doesn't converge
+res_gam <- simulateResiduals(Summer_model_full_gamma, plot = T, quantreg=T)
+#summary(Summer_model_full_gamma)
+
+
+ggplot(Summer_south, aes(x=creel_plus_summer, y= catch_estimate, col=status, fill=status))+geom_point()+geom_abline(slope=1)+
+  geom_smooth(method="glm", family= Gamma(link = "log")) + facet_wrap(~finescale_fishery, scales="free") + ggtitle("Summer") + theme_bw() + scale_colour_viridis_d() + scale_fill_viridis_d()
 
 ```
 
@@ -1022,9 +1028,7 @@ NBC_1+NBC_2+ plot_layout(guides = "collect")
 ### Northern BC - NBC ISBM
 
 -   Missing a lot of data both before and after 2012.
-
-<!-- -->
-
+-   
 -   Data appears to be 5:8 only, irec expands to all year
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}

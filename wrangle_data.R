@@ -147,6 +147,27 @@ Sport_mark_rate<- Sport_filtered_south_irec  %>%
 Sport_mark_rate2<-Sport_mark_rate %>%
   dplyr::select(YEAR, MONTH, season, AREA, REGION2, MANAGEMENT, SOURCE, marked_Kept_total, unmarked_Kept_total, marked_Released_total, unmarked_Released_total) %>%
   pivot_longer(cols=c(contains("total")), names_to = "status", values_to = "value") %>%
+  group_by(YEAR, MONTH, season, AREA, REGION2, MANAGEMENT, SOURCE) %>%
+  summarise_if(is.numeric, sum, na.rm = TRUE) %>%
+  pivot_wider(id_cols = c(YEAR, MONTH, season, AREA, REGION2, MANAGEMENT), names_from = SOURCE, values_from = value) %>%
+  mutate_all(~ifelse(is.nan(.), NA, .)) %>%
+  rowwise() %>%
+  group_by(YEAR, MONTH, season, AREA, REGION2, MANAGEMENT) %>%
+  mutate(creel_plus = sum(creel,lodge_log, na.rm=TRUE),
+         historic_plus = sum(historic,lodge_log, na.rm=TRUE)) %>%
+  group_by(YEAR, MONTH, season, AREA, REGION2, MANAGEMENT) %>%
+  mutate(catch_estimate_cat = case_when(
+    YEAR > 2012 & MONTH %in% c(5:9) & (is.na(creel) | creel==0) ~ "use irec",
+    YEAR > 2012 & MONTH %in% c(1:4,10:12) ~ "use irec",
+    YEAR < 2013 & (is.na(creel_plus) | creel_plus==0) ~ "use historic",
+    TRUE ~ "use creel plus")) %>%
+  ungroup() %>% dplyr::select(YEAR, MONTH, season, AREA, REGION2, MANAGEMENT, catch_estimate_cat)
+
+
+
+Sport_mark_rate3<-Sport_mark_rate %>%
+  dplyr::select(YEAR, MONTH, season, AREA, REGION2, MANAGEMENT, SOURCE, marked_Kept_total, unmarked_Kept_total, marked_Released_total, unmarked_Released_total) %>%
+  pivot_longer(cols=c(contains("total")), names_to = "status", values_to = "value") %>%
   pivot_wider(id_cols = c(YEAR, MONTH, season, AREA, REGION2, MANAGEMENT, status), names_from = SOURCE, values_from = value) %>%
   mutate_all(~ifelse(is.nan(.), NA, .)) %>%
   rowwise() %>%
@@ -154,18 +175,21 @@ Sport_mark_rate2<-Sport_mark_rate %>%
   mutate(creel_plus = sum(creel,lodge_log, na.rm=TRUE),
          historic_plus = sum(historic,lodge_log, na.rm=TRUE)) %>%
   group_by(YEAR, MONTH, season, AREA, REGION2, MANAGEMENT) %>%
+  left_join(Sport_mark_rate2) %>%
   mutate(catch_estimate = case_when(
-    YEAR > 2012 & MONTH %in% c(5:9) & (is.na(creel) | creel==0) ~ as.numeric(irec_calibrated),
-    YEAR > 2012 & MONTH %in% c(1:4,10:12) ~ as.numeric(irec_calibrated),
-    YEAR < 2013 & (is.na(creel_plus) | creel_plus==0) ~ as.numeric(historic_plus),
-    TRUE ~ as.numeric(creel_plus))) %>%
-  ungroup()
+    catch_estimate_cat == "use irec" ~ as.numeric(irec_calibrated),
+    catch_estimate_cat == "use historic" ~  as.numeric(historic_plus),
+    catch_estimate_cat == "use creel plus" ~ as.numeric(creel_plus))) %>%
+  ungroup() %>%
+  relocate(catch_estimate_cat, .after=status)
+
+
 #presumably this is now the correct data at the PFMA level ...
 
 # Now we need to sum up to the appropriate finescale fishery level, and do a calculation of how much more irec gets us.
 #Need to split the finescale fisheries now
 Sport_mark_rate_finescale<-
-  Sport_mark_rate2%>% ungroup %>%
+  Sport_mark_rate3%>% ungroup %>%
   mutate(finescale_fishery = case_when(
     AREA%in%c("Area 121", "Area 123", "Area 124", "Area 125", "Area 126", "Area 127") & MANAGEMENT=="AABM" & season=="fall" ~ "WCVI AABM S FALL",
     AREA%in%c("Area 121", "Area 123", "Area 124", "Area 125", "Area 126", "Area 127") & MANAGEMENT=="AABM" & season=="spring" ~ "WCVI AABM S SPRING",
@@ -449,12 +473,19 @@ AICtab(Summer_model_full_gamma, Summer_model_gamma_dropkept, Summer_model_gamma_
 
 ## plots
 ggplot(Summer_south, aes(x=creel_plus_summer, y= catch_estimate, col=status, fill=status))+geom_point()+geom_abline(slope=1)+
-  geom_smooth(method="glm", family= Gamma(link = "log")) + facet_wrap(~finescale_fishery, scales="free") + ggtitle("Summer") + theme_bw() + scale_colour_viridis_d() + scale_fill_viridis_d()
+  geom_smooth(method="glm", method.args = list(family= Gamma(link = "log"))) + facet_wrap(~finescale_fishery, scales="free") + ggtitle("Summer") + theme_bw() + scale_colour_viridis_d() + scale_fill_viridis_d()
 
 #Adding predicted data
-Summer_south_old<- Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2005:2012), finescale_fishery %in% c("CA JDF S SUMMER","JNST S SUMMER",  "NGS S SUMMER", "SGS S SUMMER",  "WCVI AABM S SUMMER", "WCVI ISBM S SUMMER")) %>% ungroup() %>%  dplyr::select(YEAR, status, finescale_fishery_old, finescale_fishery, mark_status, kept_status, status, creel_plus_summer)
+Summer_south_old<- Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2005:2012), finescale_fishery %in% c("CA JDF S SUMMER","JNST S SUMMER",  "NGS S SUMMER", "SGS S SUMMER",  "WCVI AABM S SUMMER", "WCVI ISBM S SUMMER")) %>% ungroup() %>% mutate(pred_cat = "predicted")
 Summer_south_old_new<-predict.glm(Summer_model_full_gamma, newdata =  Summer_south_old, type = "response")
-Summer_south_old_new_2<-Summer_south_old %>%   mutate(creel_estimate_predicted = Summer_south_old_new)
+Summer_south_old_new_2<-Summer_south_old %>%   mutate(catch_estimate_predicted = Summer_south_old_new)
+
+Summer_south2<-Summer_south %>% mutate(catch_estimate_predicted = catch_estimate, pred_cat= "observed")
+
+Summer_south_combined<- rbind(Summer_south_old_new_2, Summer_south2)
+
+ggplot(Summer_south_combined, aes(x=creel_plus_summer, y= catch_estimate_predicted, col=finescale_fishery, fill=finescale_fishery, shape=pred_cat))+geom_point(aes(size=1))+geom_abline(slope=1)+
+  geom_smooth(method="glm", method.args = list(family= Gamma(link = "log"))) + facet_wrap(~status+finescale_fishery, scales="free") + ggtitle("Summer") + theme_bw() + scale_colour_viridis_d() + scale_fill_viridis_d()
 
 
 #terminal model start here
