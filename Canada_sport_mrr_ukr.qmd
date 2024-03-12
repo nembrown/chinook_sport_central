@@ -639,9 +639,7 @@ ggplot()+
 
 -   The best model is the full model with a Gamma distribution
 
--   
-
-```{r Modelling Summer BC fisheries}
+```{r Modelling Summer BC fisheries, message=FALSE, warning=FALSE}
 
 #### modelling packages
 library(DHARMa)
@@ -652,7 +650,7 @@ library(SuppDists)
 #Summer model
 Summer_south<- Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2013:2023), finescale_fishery %in% c("CA JDF S SUMMER","JNST S SUMMER",  "NGS S SUMMER", "SGS S SUMMER", "WCVI AABM S SUMMER", "WCVI ISBM S SUMMER"))
 
-# See modelling script: chosen model is: summer model full Gamma 
+# See modelling script for full model results: chosen model is: summer model full Gamma 
 
 Summer_model_full_gamma<- glm(formula = catch_estimate ~creel_plus_summer*mark_status*kept_status*finescale_fishery,  family=Gamma(link = "log"), data = Summer_south)
 
@@ -660,180 +658,177 @@ res_gam <- simulateResiduals(Summer_model_full_gamma, plot = T, quantreg=T)
 #summary(Summer_model_full_gamma)
 
 
-ggplot(Summer_south, aes(x=creel_plus_summer, y= catch_estimate, col=status, fill=status))+geom_point()+geom_abline(slope=1)+
-  geom_smooth(method="glm", family= Gamma(link = "log")) + facet_wrap(~finescale_fishery, scales="free") + ggtitle("Summer") + theme_bw() + scale_colour_viridis_d() + scale_fill_viridis_d()
+#Adding predicted data
+Summer_south_old<- Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2005:2012), finescale_fishery %in% c("CA JDF S SUMMER","JNST S SUMMER",  "NGS S SUMMER", "SGS S SUMMER",  "WCVI AABM S SUMMER", "WCVI ISBM S SUMMER")) %>% ungroup() %>% mutate(pred_cat = "predicted")
+Summer_south_old_new<-predict.glm(Summer_model_full_gamma, newdata =  Summer_south_old, type = "response")
+Summer_south_old_new_2<-Summer_south_old %>%   mutate(catch_estimate_predicted = Summer_south_old_new)
+
+Summer_south2<-Summer_south %>% mutate(catch_estimate_predicted = catch_estimate, pred_cat= "observed")
+
+Summer_south_combined<- rbind(Summer_south_old_new_2, Summer_south2)
 
 ```
 
-## by Finescale fishery
+```{r summarizing by finescale fishery }
+yearMonth2 <- plyr::ddply(Sport_mark_rate_finescale, c( "YEAR", "MONTH", "finescale_fishery"), summarise,
+                         sum_creel = sum(creel, na.rm = TRUE), sum= sum(creel_plus, na.rm = TRUE), sum_historic= sum(historic_plus, na.rm = TRUE), sum_catch_estimate = sum(catch_estimate, na.rm = TRUE), sum_irec = sum(irec_calibrated, na.rm = TRUE)) %>% filter(finescale_fishery!="NA") %>% mutate(across(where(is.numeric), ~na_if(., 0))) 
 
-### Juan de Fuca Strait - CA JDF S
 
--   Before 2012: good coverage creel 4-9,
--   irec bumps out to whole year, although decent coverage before then
--   Take out 2020 from creel-irec calibration
+yearMonth_catch_estimate_2<-yearMonth2 %>% filter(sum_catch_estimate!=sum,sum_catch_estimate!=sum_historic, sum_catch_estimate!=sum_irec)
 
-```{r, echo=FALSE, message=FALSE, warning=FALSE}
+yearMonth_irec_2<-yearMonth2 %>% filter(sum_catch_estimate==sum_irec)
+
+# terminal 
+yearMonth_term2 <- plyr::ddply(Sport_mark_rate_finescale, c( "YEAR", "MONTH", "finescale_fishery_term"), summarise,
+                         sum_creel = sum(creel, na.rm = TRUE), sum= sum(creel_plus, na.rm = TRUE), sum_historic= sum(historic_plus, na.rm = TRUE), sum_catch_estimate = sum(catch_estimate, na.rm = TRUE), sum_irec = sum(irec_calibrated, na.rm = TRUE)) %>% filter(finescale_fishery_term!="NA") %>% mutate(across(where(is.numeric), ~na_if(., 0))) 
+
+
+yearMonth_catch_estimate_2_term<-yearMonth_term2 %>% filter(sum_catch_estimate!=sum,sum_catch_estimate!=sum_historic, sum_catch_estimate!=sum_irec)
+
+yearMonth_irec_2_term<-yearMonth_term2 %>% filter(sum_catch_estimate==sum_irec)
+
+```
+
+### Juan de Fuca Strait Summer - CA JDF S SUMMER
+
+-   Before 2013: good coverage creel 6-8, iREC fills in areas not creeled
+-   Marked releases generally at lower end of prediction interval
+
+```{r plot JDF Summer, echo=FALSE, message=FALSE, warning=FALSE}
 library(patchwork)
 
-
 CA_JDF_1<-ggplot()+
-  geom_tile(data=yearMonth %>% filter(finescale_fishery_old=="CA JDF S"), aes(x=YEAR, y=as.factor(MONTH), fill = sum),colour = "white") +
+  geom_tile(data=yearMonth2 %>% filter(finescale_fishery=="CA JDF S SUMMER"), aes(x=YEAR, y=as.factor(MONTH), fill = sum),colour = "white") +
   scale_y_discrete(limits=rev)+
-  geom_tile(data=yearMonth  %>% filter(finescale_fishery_old=="CA JDF S"), aes(x=YEAR, y=as.factor(MONTH), fill = sum_historic),colour = "white") +
+  geom_tile(data=yearMonth2  %>% filter(finescale_fishery=="CA JDF S SUMMER", MONTH %in% c(6:8)), aes(x=YEAR, y=as.factor(MONTH), fill = sum_historic),colour = "white") +
   guides(fill=guide_legend(title="creel and logbook estimates")) +
   scale_fill_gradient(low = col1, high = col2, na.value = colclear)+
-  labs(title = "Coverage for CA JDF S",
+  labs(title = "Coverage for CA JDF S SUMMER",
        x = "Year", y = "Month") +
-  theme_bw() + theme_minimal() + geom_vline(xintercept = 2012)
+  theme_bw() + theme_minimal() + geom_vline(xintercept = 2013)
 
 CA_JDF_2<-ggplot()+
-  geom_tile(data=yearMonth %>% filter(finescale_fishery_old=="CA JDF S"), aes(x=YEAR, y=as.factor(MONTH), fill = sum),colour = "white") +
+  geom_tile(data=yearMonth2 %>% filter(finescale_fishery=="CA JDF S SUMMER"), aes(x=YEAR, y=as.factor(MONTH), fill = sum),colour = "white") +
   scale_fill_gradient(low = col1, high = col2, na.value = colclear) +
   scale_y_discrete(limits=rev)+
   guides(fill=guide_legend(title="creel and logbook estimates")) +
-  geom_tile(data=yearMonth%>% filter(finescale_fishery_old=="CA JDF S"), aes(x=YEAR, y=as.factor(MONTH), fill = sum_historic),colour = "white") +
+  geom_tile(data=yearMonth2%>% filter(finescale_fishery=="CA JDF S SUMMER"), aes(x=YEAR, y=as.factor(MONTH), fill = sum_historic),colour = "white") +
   scale_fill_gradient(low = col1, high = col2, na.value = colclear) +
   new_scale_fill() +
-  geom_tile(data=yearMonth_catch_estimate_1%>% filter(finescale_fishery_old=="CA JDF S"), aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
+  geom_tile(data=yearMonth_catch_estimate_2%>% filter(finescale_fishery=="CA JDF SUMMER"), aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
   scale_fill_gradient(low = col3, high = col4, na.value = colclear)+
   guides(fill=guide_legend(title="creel plus irec estimates")) +
   new_scale_fill() +
-  geom_tile(data=yearMonth_irec_1%>% filter(finescale_fishery_old=="CA JDF S"), aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
+  geom_tile(data=yearMonth_irec_2%>% filter(finescale_fishery=="CA JDF S SUMMER"), aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
   scale_fill_gradient(low = col5, high = col6, na.value = colclear)+
   guides(fill=guide_legend(title="irec estimates")) +
   labs(
        x = "Year", y = "Month") +
-  theme_bw() + theme_minimal() + geom_vline(xintercept = 2012)
+  theme_bw() + theme_minimal() + geom_vline(xintercept = 2013)
 
 
 CA_JDF_1+CA_JDF_2+ plot_layout(guides = "collect")
 
-CA_JDF_Spring_Summer<-ggplot(Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2013:2023), finescale_fishery=="CA JDF S SPRING"), aes(x=creel_plus_summer, y= catch_estimate, col=status, fill=status))+geom_point()+geom_abline(slope=1)+
-  geom_smooth(method="lm") + facet_wrap(~status, scales="free") + ggtitle("CA JDF S Spring") + theme_bw() + scale_colour_viridis_d() + scale_fill_viridis_d()
-
-### spring
-CA_JDF_Spring_Spring<-ggplot(Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2013:2023), finescale_fishery=="CA JDF S SPRING"), aes(x=creel_plus_spring, y= catch_estimate, col=status, fill=status))+geom_point()+geom_abline(slope=1)+
-  geom_smooth(method="lm") + facet_wrap(~status, scales="free") + ggtitle("CA JDF S Spring") + theme_bw() + scale_colour_viridis_d() + scale_fill_viridis_d()
-
-CA_JDF_Spring_Spring + CA_JDF_Spring_Summer+ plot_layout(guides = "collect")
-
-### fall
-CA_JDF_Fall_Summer<-ggplot(Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2013:2023), finescale_fishery=="CA JDF S FALL"), aes(x=creel_plus_summer, y= catch_estimate, col=status, fill=status))+geom_point()+geom_abline(slope=1)+
-  geom_smooth(method="lm") + facet_wrap(~status, scales="free") + ggtitle("CA JDF S FALL") + theme_bw() + scale_colour_viridis_d() + scale_fill_viridis_d()
-
-### fall
-CA_JDF_Fall_Fall<-ggplot(Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2013:2023), finescale_fishery=="CA JDF S FALL"), aes(x=creel_plus_fall, y= catch_estimate, col=status, fill=status))+geom_point()+geom_abline(slope=1)+
-  geom_smooth(method="lm") + facet_wrap(~status, scales="free") + ggtitle("CA JDF S FALL") + theme_bw() + scale_colour_viridis_d() + scale_fill_viridis_d()
-
-CA_JDF_Fall_Fall + CA_JDF_Fall_Summer+ plot_layout(guides = "collect")
-
+#Predicted model plot
+ggplot(Summer_south_combined %>% filter(finescale_fishery=="CA JDF S SUMMER"), aes(x=creel_plus_summer, y= catch_estimate_predicted, col=status, fill=status, shape=pred_cat))+geom_point(size=2.5)+geom_abline(slope=1)+
+  geom_smooth(method="glm", method.args = list(family= Gamma(link = "log"))) + facet_wrap(~status, scales="free") + ggtitle("CA JDF S SUMMER") + theme_bw() + scale_colour_viridis_d() + scale_fill_viridis_d()
 
 
 ```
 
-Modelling
+### Johnstone Strait - JNST S Summer 
 
-```{r, echo=FALSE, message=FALSE, warning=FALSE}
+-   Before 2013: good coverage creel 6-8, irec fills in Areas not creeled
 
-```
+-   Marked kept fish has a few points on the higher end of prediction interval
 
-### Johnstone Strait - JNST S
-
--   Months 6:8 only for creel
-
--   irec bumps out by a couple months but not whole year consistently
+-   All categories have some predicted points at low end of interval
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
 
 CA_JNST_1<-ggplot()+
-  geom_tile(data=yearMonth %>% filter(finescale_fishery_old=="JNST S"), aes(x=YEAR, y=as.factor(MONTH), fill = sum),colour = "white") +
+  geom_tile(data=yearMonth2 %>% filter(finescale_fishery=="JNST S SUMMER"), aes(x=YEAR, y=as.factor(MONTH), fill = sum),colour = "white") +
   scale_y_discrete(limits=rev)+
-  geom_tile(data=yearMonth  %>% filter(finescale_fishery_old=="JNST S"), aes(x=YEAR, y=as.factor(MONTH), fill = sum_historic),colour = "white") +
+  geom_tile(data=yearMonth2  %>% filter(finescale_fishery=="JNST S SUMMER"), aes(x=YEAR, y=as.factor(MONTH), fill = sum_historic),colour = "white") +
   guides(fill=guide_legend(title="creel and logbook estimates")) +
   scale_fill_gradient(low = col1, high = col2, na.value = colclear)+
-  labs(title = "Coverage for JNST S",
+  labs(title = "Coverage for JNST S SUMMER",
        x = "Year", y = "Month") +
-  theme_bw() + theme_minimal() + geom_vline(xintercept = 2012)
+  theme_bw() + theme_minimal() + geom_vline(xintercept = 2013)
 
 CA_JNST_2<-ggplot()+
-  geom_tile(data=yearMonth %>% filter(finescale_fishery_old=="JNST S"), aes(x=YEAR, y=as.factor(MONTH), fill = sum),colour = "white") +
+  geom_tile(data=yearMonth2 %>% filter(finescale_fishery=="JNST S SUMMER"), aes(x=YEAR, y=as.factor(MONTH), fill = sum),colour = "white") +
   scale_fill_gradient(low = col1, high = col2, na.value = colclear) +
   scale_y_discrete(limits=rev)+
   guides(fill=guide_legend(title="creel and logbook estimates")) +
-  geom_tile(data=yearMonth%>% filter(finescale_fishery_old=="JNST S"), aes(x=YEAR, y=as.factor(MONTH), fill = sum_historic),colour = "white") +
+  geom_tile(data=yearMonth2 %>% filter(finescale_fishery=="JNST S SUMMER"), aes(x=YEAR, y=as.factor(MONTH), fill = sum_historic),colour = "white") +
   scale_fill_gradient(low = col1, high = col2, na.value = colclear) +
   new_scale_fill() +
-  geom_tile(data=yearMonth_catch_estimate_1%>% filter(finescale_fishery_old=="JNST S"), aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
+  geom_tile(data=yearMonth_catch_estimate_2%>% filter(finescale_fishery=="JNST S SUMMER"), aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
   scale_fill_gradient(low = col3, high = col4, na.value = colclear)+
   guides(fill=guide_legend(title="creel plus irec estimates")) +
   new_scale_fill() +
-  geom_tile(data=yearMonth_irec_1%>% filter(finescale_fishery_old=="JNST S"), aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
+  geom_tile(data=yearMonth_irec_2%>% filter(finescale_fishery=="JNST S SUMMER"), aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
   scale_fill_gradient(low = col5, high = col6, na.value = colclear)+
   guides(fill=guide_legend(title="irec estimates")) +
   labs(
        x = "Year", y = "Month") +
-  theme_bw() + theme_minimal() + geom_vline(xintercept = 2012)
+  theme_bw() + theme_minimal() + geom_vline(xintercept = 2013)
 
 CA_JNST_1+CA_JNST_2+ plot_layout(guides = "collect")
 
 
-JNST_Spring_Summer<-ggplot(Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2013:2023), finescale_fishery=="JNST S SPRING"), aes(x=creel_plus_summer, y= catch_estimate, col=status, fill=status))+geom_point()+geom_abline(slope=1)+
-  geom_smooth(method="lm") + facet_wrap(~status, scales="free") + ggtitle("JNST S SPRING") + theme_bw() + scale_colour_viridis_d() + scale_fill_viridis_d()
 
-### spring
-JNST_Spring_Spring<-ggplot(Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2013:2023), finescale_fishery=="JNST S SPRING"), aes(x=creel_plus_spring, y= catch_estimate, col=status, fill=status))+geom_point()+geom_abline(slope=1)+
-  geom_smooth(method="lm") + facet_wrap(~status, scales="free") + ggtitle("JNST S SPRING") + theme_bw() + scale_colour_viridis_d() + scale_fill_viridis_d()
+#Predicted model plot
+ggplot(Summer_south_combined %>% filter(finescale_fishery=="JNST S SUMMER"), aes(x=creel_plus_summer, y= catch_estimate_predicted, col=status, fill=status, shape=pred_cat))+geom_point(size=2.5)+geom_abline(slope=1)+
+  geom_smooth(method="glm", method.args = list(family= Gamma(link = "log"))) + facet_wrap(~status, scales="free") + ggtitle("JNST S SUMMER") + theme_bw() + scale_colour_viridis_d() + scale_fill_viridis_d()
 
-JNST_Spring_Spring + JNST_Spring_Summer+ plot_layout(guides = "collect")
 
-### fall
-JNST_Fall_Summer<-ggplot(Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2013:2023), finescale_fishery=="JNST S FALL"), aes(x=creel_plus_summer, y= catch_estimate, col=status, fill=status))+geom_point()+geom_abline(slope=1)+
-  geom_smooth(method="lm") + facet_wrap(~status, scales="free") + ggtitle("JNST S FALL") + theme_bw() + scale_colour_viridis_d() + scale_fill_viridis_d()
-
-### fall
-JNST_Fall_Fall<-ggplot(Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2013:2023), finescale_fishery=="JNST S FALL"), aes(x=creel_plus_fall, y= catch_estimate, col=status, fill=status))+geom_point()+geom_abline(slope=1)+
-  geom_smooth(method="lm") + facet_wrap(~status, scales="free") + ggtitle("JNST S FALL") + theme_bw() + scale_colour_viridis_d() + scale_fill_viridis_d()
-
-JNST_Fall_Fall + JNST_Fall_Summer+ plot_layout(guides = "collect")
 ```
 
-### North Georgia Strait - NGS S
+### North Georgia Strait - NGS S SUMMER
 
--   Good coverage 6:9, could maybe include 5 before 2012, but not consistent after
+-   Good coverage 6:8,
 
--   irec bumps out to the whole year
+-   All categories of catch both much lower than prediction interval -- catch in NGS has increased dramatically. ds
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
 CA_NGS_1<-ggplot()+
-  geom_tile(data=yearMonth %>% filter(finescale_fishery_old=="NGS S"), aes(x=YEAR, y=as.factor(MONTH), fill = sum),colour = "white") +
+  geom_tile(data=yearMonth2 %>% filter(finescale_fishery=="NGS S SUMMER"), aes(x=YEAR, y=as.factor(MONTH), fill = sum),colour = "white") +
   scale_y_discrete(limits=rev)+
-  geom_tile(data=yearMonth  %>% filter(finescale_fishery_old=="NGS S"), aes(x=YEAR, y=as.factor(MONTH), fill = sum_historic),colour = "white") +
+  geom_tile(data=yearMonth2  %>% filter(finescale_fishery=="NGS S SUMMER"), aes(x=YEAR, y=as.factor(MONTH), fill = sum_historic),colour = "white") +
   guides(fill=guide_legend(title="creel and logbook estimates")) +
   scale_fill_gradient(low = col1, high = col2, na.value = colclear)+
-  labs(title = "Coverage for NGS S",
+  labs(title = "Coverage for NGS S SUMMER",
        x = "Year", y = "Month") +
-  theme_bw() + theme_minimal() + geom_vline(xintercept = 2012)
+  theme_bw() + theme_minimal() + geom_vline(xintercept = 2013)
 
 CA_NGS_2<-ggplot()+
-  geom_tile(data=yearMonth %>% filter(finescale_fishery_old=="NGS S"), aes(x=YEAR, y=as.factor(MONTH), fill = sum),colour = "white") +
+  geom_tile(data=yearMonth2 %>% filter(finescale_fishery=="NGS S SUMMER"), aes(x=YEAR, y=as.factor(MONTH), fill = sum),colour = "white") +
   scale_fill_gradient(low = col1, high = col2, na.value = colclear) +
   scale_y_discrete(limits=rev)+
   guides(fill=guide_legend(title="creel and logbook estimates")) +
-  geom_tile(data=yearMonth%>% filter(finescale_fishery_old=="NGS S"), aes(x=YEAR, y=as.factor(MONTH), fill = sum_historic),colour = "white") +
+  geom_tile(data=yearMonth2 %>% filter(finescale_fishery=="NGS S SUMMER"), aes(x=YEAR, y=as.factor(MONTH), fill = sum_historic),colour = "white") +
   scale_fill_gradient(low = col1, high = col2, na.value = colclear) +
   new_scale_fill() +
-  geom_tile(data=yearMonth_catch_estimate_1%>% filter(finescale_fishery_old=="NGS S"), aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
+  geom_tile(data=yearMonth_catch_estimate_2%>% filter(finescale_fishery=="NGS S SUMMER"), aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
   scale_fill_gradient(low = col3, high = col4, na.value = colclear)+
   guides(fill=guide_legend(title="creel plus irec estimates")) +
   new_scale_fill() +
-  geom_tile(data=yearMonth_irec_1%>% filter(finescale_fishery_old=="NGS S"), aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
+  geom_tile(data=yearMonth_irec_2%>% filter(finescale_fishery=="NGS S SUMMER"), aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
   scale_fill_gradient(low = col5, high = col6, na.value = colclear)+
   guides(fill=guide_legend(title="irec estimates")) +
-  labs(x = "Year", y = "Month") +
-  theme_bw() + theme_minimal() + geom_vline(xintercept = 2012)
+  labs(
+       x = "Year", y = "Month") +
+  theme_bw() + theme_minimal() + geom_vline(xintercept = 2013)
 
 CA_NGS_1+CA_NGS_2+ plot_layout(guides = "collect")
+
+
+#Predicted model plot
+ggplot(Summer_south_combined %>% filter(finescale_fishery=="NGS S SUMMER"), aes(x=creel_plus_summer, y= catch_estimate_predicted, col=status, fill=status, shape=pred_cat))+geom_point(size=2.5)+geom_abline(slope=1)+
+  geom_smooth(method="glm", method.args = list(family= Gamma(link = "log"))) + facet_wrap(~status, scales="free") + ggtitle("NGS S SUMMER") + theme_bw() + scale_colour_viridis_d() + scale_fill_viridis_d()
+
 ```
 
 ### South Georgia Strait - SGS S

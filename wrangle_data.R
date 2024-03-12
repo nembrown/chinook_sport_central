@@ -484,7 +484,7 @@ Summer_south2<-Summer_south %>% mutate(catch_estimate_predicted = catch_estimate
 
 Summer_south_combined<- rbind(Summer_south_old_new_2, Summer_south2)
 
-ggplot(Summer_south_combined, aes(x=creel_plus_summer, y= catch_estimate_predicted, col=finescale_fishery, fill=finescale_fishery, shape=pred_cat))+geom_point(aes(size=1))+geom_abline(slope=1)+
+ggplot(Summer_south_combined, aes(x=creel_plus_summer, y= catch_estimate_predicted, col=finescale_fishery, fill=finescale_fishery, shape=pred_cat))+geom_point(size=2)+geom_abline(slope=1)+
   geom_smooth(method="glm", method.args = list(family= Gamma(link = "log"))) + facet_wrap(~status+finescale_fishery, scales="free") + ggtitle("Summer") + theme_bw() + scale_colour_viridis_d() + scale_fill_viridis_d()
 
 
