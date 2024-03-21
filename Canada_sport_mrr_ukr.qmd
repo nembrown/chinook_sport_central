@@ -1,20 +1,17 @@
 ---
 title: "Canadian Sport Data revisions"
 author: "Norah Brown"
+date: today
 
 editor: visual
 execute: 
   warning: false
-  cache: true
-  
+
 theme: litera
  
 format:
   html:
     page-layout: full
-    grid:
-      sidebar-width: 350px
-      body-width: 1500px
     embed-resources: true
     code-fold: true
     code-summary: "Show the code"
@@ -25,20 +22,36 @@ toc-location: left
 
 # Methods
 
-## Pulling and filtering data
-
--   We pulled raw recreational catch data from CREST database: data sources include creel, iREC, lodge and log-book data. Data is typically in number of marked and unmarked fish kept and released.
-
-```{r Pulling from CREST}
-
+```{r Loading packages, echo=FALSE}
 #load packages
 library(tidyverse)
 library(odbc)
 library(lubridate)
 library(ggnewscale)
+library(patchwork)
+library(DHARMa)
+library(lme4)
+library(bbmle)
+library(SuppDists)
 
 #utils
 "%notin%" <- Negate("%in%")
+
+col1 = "#d8e1cf"
+col2 = "#438484"
+col3 = "lightblue"
+col4 = "lightblue4"
+col5 = "pink"
+col6 = "darkred"
+colclear= "#1C00ff00"
+
+```
+
+## Pulling and filtering data
+
+-   We pulled raw recreational catch data from CREST database: data sources include creel, irec, lodge and log-book data. Data is typically in number of marked and unmarked fish kept and released.
+
+```{r Pulling from CREST, cache=TRUE}
 
 #Pull sport data from CREST
 source("PullAllSport.R")
@@ -47,7 +60,6 @@ rslt <- PullAllSport(2005)
 quality_report <- rslt[[1]]
 estimates <- rslt[[2]]
 rm(rslt)
-
 ```
 
 -   Filtered data for marine estimates only
@@ -66,7 +78,7 @@ rm(rslt)
 
 -   We also expanded the dataset to include all combinations of area, year, month, mark status, kept status and source -\> adding NAs where no data was collected
 
-```{r Aligning creel and irec}
+```{r Aligning creel and irec, cache=TRUE}
 Sport_filtered_south_irec<-
   estimates |>
   as_tibble() |>
@@ -103,7 +115,7 @@ Sport_filtered_south_irec<-
 
 ```
 
-## Extrapolating unchecked catch to marked and unmarked using mark rate
+## Extrapolating unchecked catch
 
 -   We also expanded the dataset to include all combinations of area, year, month, mark status, kept status and source -\> adding NAs where no data was collected
 
@@ -111,15 +123,15 @@ Sport_filtered_south_irec<-
 
 -   We calculated mark rate in a number of different ways and prioritize the assignment of mark rate in the following order:
 
-    1.  Monthly area calculation - Mark rate calculated for a given source (iREC, creel, or logbook) within a given year, month, and area
+    1.  Monthly area calculation - Mark rate calculated for a given source (irec, creel, or logbook) within a given year, month, and area
     2.  Monthly average by source - Mark rate calculated within a given year, month, and area, averaged across sources
     3.  Monthly regional average - Mark rate calculated for a given source within a given year, month, and region (averaged across areas within a region)
-    4.  Seasonal area average - Mark rate calculated for a given source (iREC, creel, or logbook) within a given year, season, and area
+    4.  Seasonal area average - Mark rate calculated for a given source (irec, creel, or logbook) within a given year, season, and area
     5.  Seasonal regional average -Mark rate calculated for a given source within a given year, season, and region
     6.  Monthly area average across years - Mark rate calculated for a given source within a given month, area, and across years
     7.  Monthly regional average across years- Mark rate calculated for a given source within a given month, region, and across years
 
-```{r Mark rates by category}
+```{r Mark rates by category, cache=TRUE}
 
 #2. Mark rate averaged across source
 Sport_mark_rate_source<- Sport_filtered_south_irec  %>%
@@ -171,14 +183,14 @@ Sport_mark_rate_region_month<- Sport_filtered_south_irec  %>%
   dplyr::select(MONTH, season, REGION2, MANAGEMENT, SOURCE, marked_prop_region_month) %>% ungroup()
 ```
 
-```{r expanding to all combinations}
+```{r expanding to all combinations, cache=TRUE}
 allobs2 <- tidyr::expand(Sport_filtered_south_irec, nesting(AREA, REGION2, MANAGEMENT), YEAR, nesting(MONTH, season), MARKS_DESC, TYPE, SOURCE)
 
 ```
 
 -   We joined the various calculations of mark rate to the catch data and expanded unchecked kept and released into marked and unmarked of those categories using the best available chosen mark rate
 
-```{r Allocating unchecked catch}
+```{r Allocating unchecked catch, cache=TRUE}
 Sport_mark_rate<- Sport_filtered_south_irec  %>%
   group_by(YEAR, MONTH, season, AREA, REGION2, MANAGEMENT, SOURCE, MARKS_DESC, TYPE) %>% summarise(sum=sum(VAL), sum_VARIANCE=sum(VARIANCE)) %>%
   ungroup() %>%
@@ -219,13 +231,13 @@ Sport_mark_rate<- Sport_filtered_south_irec  %>%
 
 -   We then chose the correct catch estimate from a variety of sources as follows:
 
-    -   In months 5-9 use creel+ lodge if that data exists, otherwise use calibrated iREC
+    -   In months 5-9 use creel+ lodge if that data exists, otherwise use calibrated irec
 
-    -   In months outside of 5-9 use calibrated iREC
+    -   In months outside of 5-9 use calibrated irec
 
 -   This calculation was grouped ignoring mark and kept status, so that true zeros for one category of catch wouldn't influence the other categories inclusion.
 
-```{r calculating catch estimate}
+```{r calculating catch estimate, cache=TRUE}
 Sport_mark_rate2<-Sport_mark_rate %>%
   dplyr::select(YEAR, MONTH, season, AREA, REGION2, MANAGEMENT, SOURCE, marked_Kept_total, unmarked_Kept_total, marked_Released_total, unmarked_Released_total) %>%
   pivot_longer(cols=c(contains("total")), names_to = "status", values_to = "value") %>%
@@ -289,7 +301,7 @@ Sport_mark_rate3<-Sport_mark_rate %>%
 
         -   TWCVI S is only months 8 to 12, so that fishery stays the same and gets called a single period - FALL, no summer or spring category
 
-```{r Assigning finescale fisheries}
+```{r Assigning finescale fisheries, cache=TRUE}
 Sport_mark_rate_finescale<-
   Sport_mark_rate3%>% ungroup %>%
   mutate(finescale_fishery = case_when(
@@ -297,7 +309,7 @@ Sport_mark_rate_finescale<-
     AREA%in%c("Area 121", "Area 123", "Area 124", "Area 125", "Area 126", "Area 127") & MANAGEMENT=="AABM" & season=="spring" ~ "WCVI AABM S SPRING",
     AREA%in%c("Area 121", "Area 123", "Area 124", "Area 125", "Area 126", "Area 127") & MANAGEMENT=="AABM" & season=="summer" ~ "WCVI AABM S SUMMER",
 
-    AREA%in%c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal)")  & season=="fall" ~ "WCVI AABM S FALL",
+    AREA%in%c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal)")  & MONTH%in%c(10:12) ~ "WCVI AABM S FALL",
     AREA%in%c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal)")  & season=="spring" ~ "WCVI AABM S SPRING",
     AREA%in%c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal)")  & MONTH%in%c(6:7) ~ "WCVI AABM S SUMMER",
 
@@ -382,7 +394,7 @@ Sport_mark_rate_finescale<-
 
     -   This is where there is consistent data throughout the time series (from 2005 to 2023) from the creel + logbook data
 
-    -   This consistent chunk of data will be used to predict the estimated catch in the section of the time series where we don't have iREC estimates.
+    -   This consistent chunk of data will be used to predict the estimated catch in the section of the time series where we don't have i.
 
     -   The summer coverage period included all months within 6:8 that are consistent through the timeseries.
 
@@ -408,6 +420,8 @@ Sport_mark_rate_finescale<-
                                                              finescale_fishery_old_term == "TJOHN ST S" & MONTH %in% c(6:8) & YEAR != 2020 ~ "yes",
                                                              finescale_fishery_old_term == "TNGS S" & MONTH %in% c(6:8) & YEAR != 2020 ~ "yes",
                                                              finescale_fishery_old_term == "TSGS S" & MONTH %in% c(6,8) & YEAR %notin% c(2016, 2020) ~ "yes",
+                                                                 finescale_fishery_old_term == "TWCVI S" & MONTH %in% c(6:8) & YEAR %notin% c(2020) ~ "yes",
+
                                                              TRUE ~ "no")) %>% mutate(spring_coverage_tf = case_when(
                                                                 finescale_fishery_old == "CA JDF S" & MONTH %in% c(6) & YEAR != 2020 ~ "yes",
                                                                 finescale_fishery_old == "JNST S" & MONTH %in% c(6) & YEAR != 2020 ~ "yes",
@@ -488,8 +502,8 @@ Sport_creel_finescale_term_fall<- Sport_mark_rate_finescale %>%
 #Year, finescale fishery
 Sport_creel_summer<- bind_rows(Sport_creel_finescale_term_summer, Sport_creel_finescale_summer)
 Sport_creel_fall<- bind_rows(Sport_creel_finescale_term_fall, Sport_creel_finescale_fall)
-Sport_creel_all_seasons <- left_join(Sport_creel_summer, Sport_creel_fall)
-Sport_creel_all_seasons<-left_join(Sport_creel_all_seasons,Sport_creel_finescale_spring)
+Sport_creel_all_seasons <- full_join(Sport_creel_summer, Sport_creel_fall)
+Sport_creel_all_seasons<-full_join(Sport_creel_all_seasons,Sport_creel_finescale_spring)
 
 
 Sport_mark_rate_finescale_combined<-bind_rows(Sport_mark_rate_finescale_term_sum, Sport_mark_rate_finescale_sum)
@@ -529,94 +543,68 @@ yearMonth_catch_estimate_1_term<-yearMonth_term %>% filter(sum_catch_estimate!=s
 
 yearMonth_irec_1_term<-yearMonth_term %>% filter(sum_catch_estimate==sum_irec)
 
+
+#Combining
+
+yearMonth_term<-yearMonth_term %>% rename(finescale_fishery_old= finescale_fishery_old_term)
+yearMonth_catch_estimate_1_term<-yearMonth_catch_estimate_1_term%>% rename(finescale_fishery_old= finescale_fishery_old_term)
+yearMonth_irec_1_term<-yearMonth_irec_1_term %>% rename(finescale_fishery_old= finescale_fishery_old_term)
+
+yearMonth_all<-rbind(yearMonth, yearMonth_term)
+yearMonth_catch_estimate_1_all<-rbind(yearMonth_catch_estimate_1, yearMonth_catch_estimate_1_term)
+yearMonth_irec_1_all<-rbind(yearMonth_irec_1, yearMonth_irec_1_term)
+
 ```
 
 -   We can visualize this as creel and logbook only information and look for where there are gaps in coverage
 
-```{r plotting coverage of creel and logbook only, echo=FALSE, message=FALSE, warning=FALSE}
-col1 = "#d8e1cf"
-col2 = "#438484"
-col3 = "lightblue"
-col4 = "lightblue4"
-col5 = "pink"
-col6 = "darkred"
-colclear= "#1C00ff00"
+```{r plotting coverage of creel and logbook only, echo=FALSE, message=FALSE, warning=FALSE, fig.height=8, fig.width=10}
 
-ggplot()+
-  geom_tile(data=yearMonth, aes(x=YEAR, y=as.factor(MONTH), fill = sum),colour = "white") +
+g1<-ggplot()+
+  geom_tile(data=yearMonth_all, aes(x=YEAR, y=as.factor(MONTH), fill = sum),colour = "white") +
   scale_y_discrete(limits=rev)+
   guides(fill=guide_legend(title="creel and logbook estimates")) +
-  geom_tile(data=yearMonth, aes(x=YEAR, y=as.factor(MONTH), fill = sum_historic),colour = "white") +
-  scale_fill_gradient(low = col1, high = col2, na.value = colclear)+
+  geom_tile(data=yearMonth_all, aes(x=YEAR, y=as.factor(MONTH), fill = sum_historic),colour = "white") +
+  scale_fill_gradient(low = col1, high = col2, na.value = colclear, limits=c(0,50000))+
     facet_wrap(~finescale_fishery_old)+
   labs(title = "Coverage by finescale fishery",
        x = "Year", y = "Month") +
   theme_bw() + theme_minimal() + geom_vline(xintercept = 2013)
 
-
-ggplot()+
-  geom_tile(data=yearMonth_term, aes(x=YEAR, y=as.factor(MONTH), fill = sum),colour = "white") +
-  scale_y_discrete(limits=rev)+
-  guides(fill=guide_legend(title="creel and logbook estimates")) +
-  geom_tile(data=yearMonth_term, aes(x=YEAR, y=as.factor(MONTH), fill = sum_historic),colour = "white") +
-  scale_fill_gradient(low = col1, high = col2, na.value = colclear)+
-    facet_wrap(~finescale_fishery_old_term)+
-  labs(title = "Coverage by terminal finescale fishery",
-       x = "Year", y = "Month") +
-  theme_bw() + theme_minimal() + geom_vline(xintercept = 2013)
-
+g1
 
 ```
 
--   We can then add on iREC data to see where iREC adds information
+-   We can then add on irec data to see where irec adds information
 
--   We see that almost always a creel- iREC combination (blue) or iREC (red) on its own will be chosen as the best estimate for the whole month.
+-   We see that almost always a creel- irec combination (blue) or irec (red) on its own will be chosen as the best estimate for the whole month. This is because there are typically a few PFMAs in the larger fishery that are not creeled in each month.
 
-```{r plotting coverage including iREC, echo=FALSE, message=FALSE, warning=FALSE}
+```{r plotting coverage including irec, echo=FALSE, message=FALSE, warning=FALSE, fig.height=8, fig.width=10}
 
-
-ggplot()+
-  geom_tile(data=yearMonth, aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
-  scale_fill_gradient(low = col1, high = col2,  na.value = colclear) +
+g3<-ggplot()+
+  geom_tile(data=yearMonth_all, aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
+  scale_fill_gradient(low = col1, high = col2,  na.value = colclear, limits=c(0,90000)) +
   scale_y_discrete(limits=rev)+
   guides(fill=guide_legend(title="creel or logbook estimates")) +
   new_scale_fill() +
-  geom_tile(data=yearMonth_catch_estimate_1, aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
-  scale_fill_gradient(low = col3, high = col4,  na.value = colclear)+
-  guides(fill=guide_legend(title="creel plus irec estimates")) +
+  geom_tile(data=yearMonth_catch_estimate_1_all, aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
+  scale_fill_gradient(low = col3, high = col4,  na.value = colclear, limits=c(0,90000))+
+  guides(fill=guide_legend(title="creel plus iREC estimates")) +
   new_scale_fill() +
-  geom_tile(data=yearMonth_irec_1, aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
-  scale_fill_gradient(low = col5, high = col6,  na.value = colclear)+
+  geom_tile(data=yearMonth_irec_1_all, aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
+  scale_fill_gradient(low = col5, high = col6,  na.value = colclear, limits=c(0,90000))+
   facet_wrap(~finescale_fishery_old)+
-  guides(fill=guide_legend(title="irec estimates")) +
+  guides(fill=guide_legend(title="iREC estimates")) +
   labs(title = "Coverage by finescale fishery",
        x = "Year", y = "Month") +
-  theme_bw() + theme_minimal() + geom_vline(xintercept = 2012)
+  theme_bw() + theme_minimal() + geom_vline(xintercept = 2013)
 
-
-#terminal 
-ggplot()+
-  geom_tile(data=yearMonth_term, aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
-  scale_fill_gradient(low = col1, high = col2,  na.value = colclear) +
-  scale_y_discrete(limits=rev)+
-  guides(fill=guide_legend(title="creel or logbook estimates")) +
-  new_scale_fill() +
-  geom_tile(data=yearMonth_catch_estimate_1_term, aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
-  scale_fill_gradient(low = col3, high = col4,  na.value = colclear)+
-  guides(fill=guide_legend(title="creel plus irec estimates")) +
-  new_scale_fill() +
-  geom_tile(data=yearMonth_irec_1_term, aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
-  scale_fill_gradient(low = col5, high = col6,  na.value = colclear)+
-  facet_wrap(~finescale_fishery_old_term)+
-  guides(fill=guide_legend(title="irec estimates")) +
-  labs(title = "Coverage by finescale fishery",
-       x = "Year", y = "Month") +
-  theme_bw() + theme_minimal() + geom_vline(xintercept = 2012)
+g3
 ```
 
 # Modelling
 
--   Now we take the chunks of summer, spring, fall consistently creeled or logbooked data between 2013 and 2023 and establish a relationship via a model with the iREC based catch estimate.
+-   Now we take the chunks of summer, spring, fall consistently creeled or logbooked data between 2013 and 2023 and establish a relationship via a model with the irec based catch estimate.
 
 -   We investigate various models using a systematic approach:
 
@@ -642,17 +630,11 @@ ggplot()+
 
         -   We selected the model with the lowest AIC and best visual diagnostics.
 
-## Southern BC Summer fisheries
+## Summer fisheries
 
 -   The best model is the full model with a Gamma distribution
 
-```{r Modelling Summer BC fisheries, message=FALSE, warning=FALSE}
-
-#### modelling packages
-library(DHARMa)
-library(lme4)
-library(bbmle)
-library(SuppDists)
+```{r Modelling Summer BC fisheries, message=FALSE, warning=FALSE, results='hold'}
 
 #Summer model
 Summer_south<- Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2013:2023), finescale_fishery %in% c("CA JDF S SUMMER","JNST S SUMMER",  "NGS S SUMMER", "SGS S SUMMER", "WCVI AABM S SUMMER", "WCVI ISBM S SUMMER"))
@@ -662,8 +644,6 @@ Summer_south<- Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2013:20
 Summer_model_full_gamma<- glm(formula = catch_estimate ~creel_plus_summer*mark_status*kept_status*finescale_fishery,  family=Gamma(link = "log"), data = Summer_south)
 
 res_gam <- simulateResiduals(Summer_model_full_gamma, plot = T, quantreg=T)
-#summary(Summer_model_full_gamma)
-
 
 #Adding predicted data
 Summer_south_old<- Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2005:2012), finescale_fishery %in% c("CA JDF S SUMMER","JNST S SUMMER",  "NGS S SUMMER", "SGS S SUMMER",  "WCVI AABM S SUMMER", "WCVI ISBM S SUMMER")) %>% ungroup() %>% mutate(pred_cat = "predicted")
@@ -678,7 +658,7 @@ Summer_south_combined<- rbind(Summer_south_old_new_2, Summer_south2)
 
 -   Summarizing data by finsescale fishery for coverage plots
 
-```{r summarizing by finescale fishery }
+```{r summarizing by finescale fishery}
 yearMonth2 <- plyr::ddply(Sport_mark_rate_finescale, c( "YEAR", "MONTH", "finescale_fishery"), summarise,
                          sum_creel = sum(creel, na.rm = TRUE), sum= sum(creel_plus, na.rm = TRUE), sum_historic= sum(historic_plus, na.rm = TRUE), sum_catch_estimate = sum(catch_estimate, na.rm = TRUE), sum_irec = sum(irec_calibrated, na.rm = TRUE)) %>% filter(finescale_fishery!="NA") %>% mutate(across(where(is.numeric), ~na_if(., 0))) 
 
@@ -687,20 +667,27 @@ yearMonth_catch_estimate_2<-yearMonth2 %>% filter(sum_catch_estimate!=sum,sum_ca
 
 yearMonth_irec_2<-yearMonth2 %>% filter(sum_catch_estimate==sum_irec)
 
+resize <- function(g, fig_width=NA, fig_height=NA) {
+  
+  g_deparsed <- paste0(deparse(function() g), collapse = '')
+  sub_chunk <- paste0("`","``{r sub_chunk_", floor(runif(1) * 10000), ", fig.height=", fig_height, ", fig.width=", fig_width, ", warning=FALSE, echo=FALSE}","\n(", g_deparsed, ")()","\n`","``")
+  cat(knitr::knit(text = knitr::knit_expand(text = sub_chunk), quiet = TRUE))
+  
+}
+
 
 ```
 
--   Forloop script for printing out all summer plots
-
-```{r forloop summer, results='asis'}
+```{r forloop summer, results='asis', echo=FALSE}
 
 yearMonth2_summer<- yearMonth2 %>% filter(str_detect(finescale_fishery, "SUMMER")) %>% filter(!str_detect(finescale_fishery, "CBC|NBC"))
 fishery_name<- unique(yearMonth2_summer$finescale_fishery)
+
   
 for (i in 1:length(fishery_name)){
  
-  cat("\n")
-  cat("### ", paste0("", fishery_name[fishery_name== fishery_name[i]], ""),"\n\n") 
+  cat("\n\n")
+  cat("### ", paste0("", fishery_name[fishery_name== fishery_name[i]], " "),"\n\n") 
   
 p1<-ggplot()+
   geom_tile(data=yearMonth2 %>% filter(finescale_fishery==fishery_name[i]), aes(x=YEAR, y=as.factor(MONTH), fill = sum),colour = "white") +
@@ -710,7 +697,7 @@ p1<-ggplot()+
   scale_fill_gradient(low = col1, high = col2, na.value = colclear)+
   labs(title = paste("Coverage for", fishery_name[i]),
        x = "Year", y = "Month") +
-  theme_bw() + theme_minimal() + geom_vline(xintercept = 2013)
+  theme_bw() + theme_minimal() + geom_vline(xintercept = 2013) 
 
 p2<-ggplot()+
   geom_tile(data=yearMonth2 %>% filter(finescale_fishery==fishery_name[i]), aes(x=YEAR, y=as.factor(MONTH), fill = sum),colour = "white") +
@@ -722,30 +709,50 @@ p2<-ggplot()+
   new_scale_fill() +
   geom_tile(data=yearMonth_catch_estimate_2%>% filter(finescale_fishery==fishery_name[i]), aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
   scale_fill_gradient(low = col3, high = col4, na.value = colclear)+
-  guides(fill=guide_legend(title="creel plus irec estimates")) +
+  guides(fill=guide_legend(title="creel plus iREC estimates")) +
   new_scale_fill() +
   geom_tile(data=yearMonth_irec_2%>% filter(finescale_fishery==fishery_name[i]), aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
   scale_fill_gradient(low = col5, high = col6, na.value = colclear)+
-  guides(fill=guide_legend(title="irec estimates")) +
+  guides(fill=guide_legend(title="iREC estimates")) +
   labs(
        x = "Year", y = "Month") +
   theme_bw() + theme_minimal() + geom_vline(xintercept = 2013)
 
 
-p<-p1+p2+ plot_layout(guides = "collect")
-print(p)
+p<-p1+p2 + plot_layout(guides = "collect") & theme(legend.position = 'none')
+
+cat("\n\n")
+resize(p, 6, 3)
 
 #Predicted model plot
 g<-ggplot(Summer_south_combined %>% filter(finescale_fishery==fishery_name[i]), aes(x=creel_plus_summer, y= catch_estimate_predicted, col=status, fill=status, shape=pred_cat))+geom_point(size=2.5)+geom_abline(slope=1)+
   geom_smooth(method="glm", method.args = list(family= Gamma(link = "log")), fullrange=TRUE) + facet_wrap(~status, scales="free") + ggtitle(paste(fishery_name[i])) + theme_bw() + scale_colour_viridis_d() + scale_fill_viridis_d()
 
-  print(g)
+cat("\n\n")
+ resize(g, 7, 4)
+ 
+ 
+ m<-ggplot(Summer_south_combined %>% filter(finescale_fishery==fishery_name[i])) +
+    geom_point(size=2.5,  aes(y=creel_plus, x=YEAR,col=status, fill=status, shape=pred_cat))+
+    geom_line(aes(y=creel_plus, x=YEAR,col=status, linetype = "Creel and logbook only"))+ 
+    scale_shape_manual(values=c(1,1))+
+    new_scale("shape")+
+    scale_colour_viridis_d()+
+    geom_point(size=2.5, aes(y=catch_estimate_predicted, x=YEAR,col=status, fill=status, shape=pred_cat))+
+    geom_line(aes(y=catch_estimate_predicted, x=YEAR,col=status, linetype = "iREC included"))+ 
+    scale_shape_manual(values=c(16,17))+
+    scale_linetype_manual(values=c(2,1))+
+    facet_wrap(~status, scales="free") + ggtitle(paste(fishery_name[i])) + theme_bw()
+ 
+cat("\n\n") 
+resize(m, 7, 4)
+ cat("\n\n\n")
+}
 
-  cat("\n")
-  }
+
 ```
 
-## Southern BC Spring fisheries
+## Spring fisheries
 
 -   The best model was the model without kept status:
 
@@ -778,15 +785,13 @@ Spring_south_combined<- rbind(Spring_south_old_new_2, Spring_south2)
 
 ```
 
--   forloop
-
-```{r forloop Spring, results='asis'}
+```{r forloop Spring, results='asis', echo=FALSE}
 yearMonth2_spring<- yearMonth2 %>% filter(str_detect(finescale_fishery, "SPRING")) %>% filter(!str_detect(finescale_fishery, "CBC|NBC"))
 fishery_name<- unique(yearMonth2_spring$finescale_fishery)
   
 for (i in 1:length(fishery_name)){
  
-  cat("\n")
+  cat("\n\n")
   cat("### ", paste0("", fishery_name[fishery_name== fishery_name[i]], ""),"\n\n") 
   
 p1<-ggplot()+
@@ -809,32 +814,50 @@ p2<-ggplot()+
   new_scale_fill() +
   geom_tile(data=yearMonth_catch_estimate_2%>% filter(finescale_fishery==fishery_name[i]), aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
   scale_fill_gradient(low = col3, high = col4, na.value = colclear)+
-  guides(fill=guide_legend(title="creel plus irec estimates")) +
+  guides(fill=guide_legend(title="creel plus iREC estimates")) +
   new_scale_fill() +
   geom_tile(data=yearMonth_irec_2%>% filter(finescale_fishery==fishery_name[i]), aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
   scale_fill_gradient(low = col5, high = col6, na.value = colclear)+
-  guides(fill=guide_legend(title="irec estimates")) +
+  guides(fill=guide_legend(title="iREC estimates")) +
   labs(
        x = "Year", y = "Month") +
   theme_bw() + theme_minimal() + geom_vline(xintercept = 2013)
 
 
-p<-p1+p2+ plot_layout(guides = "collect")
-print(p)
+p<-p1+p2+ plot_layout(guides = "collect")& theme(legend.position = 'none')
+cat("\n\n")
+resize(p, 6, 3)
+
 
 #Predicted model plot
 g<-ggplot(Spring_south_combined %>% filter(finescale_fishery==fishery_name[i]), aes(x=creel_plus_summer, y= catch_estimate_predicted+1, col=mark_status, fill=mark_status, shape=pred_cat))+geom_point(size=2.5)+
   geom_smooth(method="glm", method.args = list(family= Gamma(link = "log")), fullrange=TRUE) + facet_wrap(~mark_status, scales="free") + ggtitle(paste(fishery_name[i])) + theme_bw() + scale_colour_viridis_d(option = "turbo") + scale_fill_viridis_d(option = "turbo")
 
-  print(g)
+cat("\n\n")
+ resize(g, 7, 4)
+ 
+  m<-ggplot(Spring_south_combined %>% filter(finescale_fishery==fishery_name[i])) +
+    geom_point(size=2.5,  aes(y=creel_plus, x=YEAR,col=status, fill=status, shape=pred_cat))+
+    geom_line(aes(y=creel_plus, x=YEAR,col=status, linetype = "Creel and logbook only"))+ 
+    scale_shape_manual(values=c(1,1))+
+    new_scale("shape")+
+    scale_colour_viridis_d()+
+    geom_point(size=2.5, aes(y=catch_estimate_predicted, x=YEAR,col=status, fill=status, shape=pred_cat))+
+    geom_line(aes(y=catch_estimate_predicted, x=YEAR,col=status, linetype = "iREC included"))+ 
+    scale_shape_manual(values=c(16,17))+
+    scale_linetype_manual(values=c(2,1))+
+    facet_wrap(~status, scales="free") + ggtitle(paste(fishery_name[i])) + theme_bw()
+ 
+cat("\n\n") 
+resize(m, 7, 4)
+  cat("\n\n\n")
+}
 
-  cat("\n")
-  }
 ```
 
-## Southern BC Fall fisheries
+## Fall fisheries
 
--   The best model was the model without kept status, but with the the "fall" month (month 9 or 8 if 9 wasn't available)
+-   The best model was the model without kept status, and summer as best predictor
 
 ```{r Modelling Fall BC fisheries, message=FALSE, warning=FALSE}
 
@@ -843,7 +866,7 @@ Fall_south<- Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2013:2023
 
 # See modelling script for full model results: chosen model is: fall model drop kept Gamma 
 
-Fall_model_gamma_dropkept<- glm(formula = (catch_estimate+2) ~creel_plus_fall*mark_status*finescale_fishery,  family=Gamma(link = "log"), data = Fall_south)
+Fall_model_gamma_dropkept<- glm(formula = (catch_estimate+2) ~creel_plus_summer*mark_status*finescale_fishery,  family=Gamma(link = "log"), data = Fall_south)
 res_gam_dropkept <- simulateResiduals(Fall_model_gamma_dropkept, plot = T, quantreg=T)
 #summary(Fall_model_gamma_dropkept)
 
@@ -857,15 +880,13 @@ Fall_south2<-Fall_south %>% mutate(catch_estimate_predicted = catch_estimate, pr
 Fall_south_combined<- rbind(Fall_south_old_new_2, Fall_south2)
 ```
 
--   forloop
-
-```{r forloop Fall, results='asis'}
+```{r forloop Fall, results='asis', echo=FALSE}
 yearMonth2_fall<- yearMonth2 %>% filter(str_detect(finescale_fishery, "FALL")) %>% filter(!str_detect(finescale_fishery, "CBC|NBC"))
 fishery_name<- unique(yearMonth2_fall$finescale_fishery)
   
 for (i in 1:length(fishery_name)){
  
-  cat("\n")
+  cat("\n\n")
   cat("### ", paste0("", fishery_name[fishery_name== fishery_name[i]], ""),"\n\n") 
   
 p1<-ggplot()+
@@ -888,25 +909,45 @@ p2<-ggplot()+
   new_scale_fill() +
   geom_tile(data=yearMonth_catch_estimate_2%>% filter(finescale_fishery==fishery_name[i]), aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
   scale_fill_gradient(low = col3, high = col4, na.value = colclear)+
-  guides(fill=guide_legend(title="creel plus irec estimates")) +
+  guides(fill=guide_legend(title="creel plus iREC estimates")) +
   new_scale_fill() +
   geom_tile(data=yearMonth_irec_2%>% filter(finescale_fishery==fishery_name[i]), aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
   scale_fill_gradient(low = col5, high = col6, na.value = colclear)+
-  guides(fill=guide_legend(title="irec estimates")) +
+  guides(fill=guide_legend(title="iREC estimates")) +
   labs(
        x = "Year", y = "Month") +
   theme_bw() + theme_minimal() + geom_vline(xintercept = 2013)
 
 
-p<-p1+p2+ plot_layout(guides = "collect")
-print(p)
+p<-p1+p2+ plot_layout(guides = "collect")& theme(legend.position = 'none')
+
+cat("\n\n")
+resize(p, 6, 3)
+
 
 #Predicted model plot
 g<-ggplot(Fall_south_combined %>% filter(finescale_fishery==fishery_name[i]), aes(x=creel_plus_fall, y= catch_estimate_predicted+1, col=mark_status, fill=mark_status, shape=pred_cat))+geom_point(size=2.5)+
   geom_smooth(method="glm", method.args = list(family= Gamma(link = "log")), fullrange=TRUE) + facet_wrap(~mark_status, scales="free") + ggtitle(paste(fishery_name[i])) + theme_bw() + scale_colour_viridis_d(option = "turbo") + scale_fill_viridis_d(option = "turbo")
-  print(g)
 
-  cat("\n")
+cat("\n\n")
+ resize(g, 7, 4)
+ 
+   m<-ggplot(Fall_south_combined %>% filter(finescale_fishery==fishery_name[i])) +
+    geom_point(size=2.5,  aes(y=creel_plus, x=YEAR,col=status, fill=status, shape=pred_cat))+
+    geom_line(aes(y=creel_plus, x=YEAR,col=status, linetype = "Creel and logbook only"))+ 
+    scale_shape_manual(values=c(1,1))+
+    new_scale("shape")+
+    scale_colour_viridis_d()+
+    geom_point(size=2.5, aes(y=catch_estimate_predicted, x=YEAR,col=status, fill=status, shape=pred_cat))+
+    geom_line(aes(y=catch_estimate_predicted, x=YEAR,col=status, linetype = "iREC included"))+ 
+    scale_shape_manual(values=c(16,17))+
+    scale_linetype_manual(values=c(2,1))+
+    facet_wrap(~status, scales="free") + ggtitle(paste(fishery_name[i])) + theme_bw()
+ 
+ 
+cat("\n\n") 
+resize(m, 7, 4)
+  cat("\n\n\n")
   }
 ```
 
@@ -916,7 +957,7 @@ g<-ggplot(Fall_south_combined %>% filter(finescale_fishery==fishery_name[i]), ae
 
 ```{r Modelling Terminal Summer BC fisheries, message=FALSE, warning=FALSE}
 
-Summer_terminal<- Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2013:2023), finescale_fishery %in% c("TCA JDF S SUMMER", "TJOHN ST S SUMMER", "TNGS S SUMMER", "TSGS S SUMMER", "TWCVI S SUMMER"))
+Summer_terminal<- Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2013:2023), finescale_fishery %in% c("TCA JDF S SUMMER", "TJOHN ST S SUMMER", "TNGS S SUMMER", "TSGS S SUMMER"))
 
 #Gamma full model is the best 
 Summer_terminal_model_full_gamma<- glm(formula = catch_estimate ~creel_plus_summer*mark_status*kept_status*finescale_fishery,  family=Gamma(link = "log"), data = Summer_terminal)
@@ -924,7 +965,7 @@ res_gam <- simulateResiduals(Summer_terminal_model_full_gamma, plot = T, quantre
 #summary(Summer_terminal_model_full_gamma)
 
 #Adding predicted data
-Summer_terminal_old<- Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2005:2012), finescale_fishery %in% c("TCA JDF S SUMMER", "TJOHN ST S SUMMER", "TNGS S SUMMER", "TSGS S SUMMER", "TWCVI S SUMMER")) %>% ungroup() %>% mutate(pred_cat = "predicted") 
+Summer_terminal_old<- Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2005:2012), finescale_fishery %in% c("TCA JDF S SUMMER", "TJOHN ST S SUMMER", "TNGS S SUMMER", "TSGS S SUMMER")) %>% ungroup() %>% mutate(pred_cat = "predicted") 
 Summer_terminal_old_new<-predict.glm(Summer_terminal_model_full_gamma, newdata =  Summer_terminal_old, type = "response")
 Summer_terminal_old_new_2<-Summer_terminal_old %>%   mutate(catch_estimate_predicted = Summer_terminal_old_new)
 
@@ -947,15 +988,13 @@ yearMonth_catch_estimate_2_term<-yearMonth_term2 %>% filter(sum_catch_estimate!=
 yearMonth_irec_2_term<-yearMonth_term2 %>% filter(sum_catch_estimate==sum_irec)
 ```
 
--   Forloop summer terminal
-
-```{r forloop Summer terminal, results='asis' }
+```{r forloop Summer terminal,  results='asis', echo=FALSE}
 yearMonth2_summer_term<- yearMonth_term2 %>% filter(str_detect(finescale_fishery_term, "SUMMER")) %>% filter(!str_detect(finescale_fishery_term, "CBC|NBC"))
 fishery_name<- unique(yearMonth2_summer_term$finescale_fishery_term)
  
 for (i in 1:length(fishery_name)){
  
-  cat("\n")
+  cat("\n\n")
   cat("### ", paste0("", fishery_name[fishery_name== fishery_name[i]], ""),"\n\n") 
   
 p1<-ggplot()+
@@ -978,26 +1017,44 @@ p2<-ggplot()+
   new_scale_fill() +
   geom_tile(data=yearMonth_catch_estimate_2_term%>% filter(finescale_fishery_term==fishery_name[i]), aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
   scale_fill_gradient(low = col3, high = col4, na.value = colclear)+
-  guides(fill=guide_legend(title="creel plus irec estimates")) +
+  guides(fill=guide_legend(title="creel plus iREC estimates")) +
   new_scale_fill() +
   geom_tile(data=yearMonth_irec_2_term%>% filter(finescale_fishery_term==fishery_name[i]), aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
   scale_fill_gradient(low = col5, high = col6, na.value = colclear)+
-  guides(fill=guide_legend(title="irec estimates")) +
+  guides(fill=guide_legend(title="iREC estimates")) +
   labs(
        x = "Year", y = "Month") +
   theme_bw() + theme_minimal() + geom_vline(xintercept = 2013)
 
 
-p<-p1+p2+ plot_layout(guides = "collect")
-print(p)
+p<-p1+p2+ plot_layout(guides = "collect")& theme(legend.position = 'none')
 
+cat("\n\n")
+resize(p, 6, 3)
+ 
 #Predicted model plot
 g<-ggplot(Summer_terminal_combined %>% filter(finescale_fishery==fishery_name[i]), aes(x=creel_plus_summer, y= catch_estimate_predicted, col=status, fill=status, shape=pred_cat))+geom_point(size=2.5)+geom_abline(slope=1)+
   geom_smooth(method="glm", method.args = list(family= Gamma(link = "log")), fullrange=TRUE) + facet_wrap(~status, scales="free") + ggtitle(paste(fishery_name[i])) + theme_bw() + scale_colour_viridis_d() + scale_fill_viridis_d()
 
-  print(g)
-
-  cat("\n")
+cat("\n\n")
+  resize(g, 7, 4)
+  
+  m<-ggplot(Summer_terminal_combined %>% filter(finescale_fishery==fishery_name[i])) +
+    geom_point(size=2.5,  aes(y=creel_plus, x=YEAR,col=status, fill=status, shape=pred_cat))+
+    geom_line(aes(y=creel_plus, x=YEAR,col=status, linetype = "Creel and logbook only"))+ 
+    scale_shape_manual(values=c(1,1))+
+    new_scale("shape")+
+    scale_colour_viridis_d()+
+    geom_point(size=2.5, aes(y=catch_estimate_predicted, x=YEAR,col=status, fill=status, shape=pred_cat))+
+    geom_line(aes(y=catch_estimate_predicted, x=YEAR,col=status, linetype = "iREC included"))+ 
+    scale_shape_manual(values=c(16,17))+
+    scale_linetype_manual(values=c(2,1))+
+    facet_wrap(~status, scales="free") + ggtitle(paste(fishery_name[i])) + theme_bw()
+ 
+ 
+cat("\n\n") 
+resize(m, 7, 4)
+  cat("\n\n\n")
   }
 
 ```
@@ -1011,12 +1068,12 @@ g<-ggplot(Summer_terminal_combined %>% filter(finescale_fishery==fishery_name[i]
 Fall_terminal<- Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2013:2023), finescale_fishery %in% c("TCA JDF S FALL", "TJOHN ST S FALL", "TNGS S FALL", "TSGS S FALL", "TWCVI S FALL"))
 
 #Gamma full model is the best 
-Fall_terminal_model_full_gamma<- glm(formula = (catch_estimate + 1) ~creel_plus_fall*mark_status*kept_status*finescale_fishery,  family=Gamma(link = "log"), data = Fall_terminal)
+Fall_terminal_model_full_gamma<- glm(formula = (catch_estimate + 1) ~creel_plus_summer*mark_status*kept_status*finescale_fishery,  family=Gamma(link = "log"), data = Fall_terminal)
 res_gam <- simulateResiduals(Fall_terminal_model_full_gamma, plot = T, quantreg=T)
 #summary(Fall_terminal_model_full_gamma)
 
 #Adding predicted data
-Fall_terminal_old<- Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2005:2012), finescale_fishery %in% c("TCA JDF S FALL", "TJOHN ST S FALL", "TNGS S FALL", "TSGS S FALL", "TWCVI S FALL")) %>% ungroup() %>% mutate(pred_cat = "predicted") 
+Fall_terminal_old<- Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2005:2012), finescale_fishery %in% c("TCA JDF S FALL", "TJOHN ST S FALL", "TNGS S FALL", "TSGS S FALL",  "TWCVI S FALL")) %>% ungroup() %>% mutate(pred_cat = "predicted") 
 Fall_terminal_old_new<-predict.glm(Fall_terminal_model_full_gamma, newdata =  Fall_terminal_old, type = "response")
 Fall_terminal_old_new_2<-Fall_terminal_old %>%   mutate(catch_estimate_predicted = Fall_terminal_old_new)
 
@@ -1025,17 +1082,15 @@ Fall_terminal2<-Fall_terminal %>% mutate(catch_estimate_predicted = catch_estima
 Fall_terminal_combined<- rbind(Fall_terminal_old_new_2, Fall_terminal2)
 ```
 
--   forloop fall terminal
-
-```{r forloop Fall terminal, results='asis' }
+```{r forloop Fall terminal, results='asis', echo=FALSE}
 yearMonth2_fall_term<- yearMonth_term2 %>% filter(str_detect(finescale_fishery_term, "FALL")) %>% filter(!str_detect(finescale_fishery_term, "CBC|NBC"))
 fishery_name<- unique(yearMonth2_fall_term$finescale_fishery_term)
  
 for (i in 1:length(fishery_name)){
  
-  cat("\n")
+  cat("\n\n")
   cat("### ", paste0("", fishery_name[fishery_name== fishery_name[i]], ""),"\n\n") 
-  
+    
 p1<-ggplot()+
   geom_tile(data=yearMonth_term2 %>% filter(finescale_fishery_term==fishery_name[i]), aes(x=YEAR, y=as.factor(MONTH), fill = sum),colour = "white") +
   scale_y_discrete(limits=rev)+
@@ -1056,26 +1111,43 @@ p2<-ggplot()+
   new_scale_fill() +
   geom_tile(data=yearMonth_catch_estimate_2_term%>% filter(finescale_fishery_term==fishery_name[i]), aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
   scale_fill_gradient(low = col3, high = col4, na.value = colclear)+
-  guides(fill=guide_legend(title="creel plus irec estimates")) +
+  guides(fill=guide_legend(title="creel plus iREC estimates")) +
   new_scale_fill() +
   geom_tile(data=yearMonth_irec_2_term%>% filter(finescale_fishery_term==fishery_name[i]), aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
   scale_fill_gradient(low = col5, high = col6, na.value = colclear)+
-  guides(fill=guide_legend(title="irec estimates")) +
+  guides(fill=guide_legend(title="iREC estimates")) +
   labs(
        x = "Year", y = "Month") +
   theme_bw() + theme_minimal() + geom_vline(xintercept = 2013)
 
 
-p<-p1+p2+ plot_layout(guides = "collect")
-print(p)
+p<-p1+p2+ plot_layout(guides = "collect")& theme(legend.position = 'none')
 
+cat("\n\n")
+resize(p, 6, 3)
+ 
 #Predicted model plot
 g<-ggplot(Fall_terminal_combined %>% filter(finescale_fishery==fishery_name[i]), aes(x=creel_plus_fall, y= catch_estimate_predicted+1, col=status, fill=status, shape=pred_cat))+geom_point(size=2.5)+
   geom_smooth(method="glm", method.args = list(family= Gamma(link = "log")), fullrange=TRUE) + facet_wrap(~status, scales="free") + ggtitle(paste(fishery_name[i])) + theme_bw() + scale_colour_viridis_d() + scale_fill_viridis_d()
 
-  print(g)
+cat("\n\n")
+resize(g, 7, 4)
 
-  cat("\n")
+m<-ggplot(Fall_terminal_combined %>% filter(finescale_fishery==fishery_name[i])) +
+    geom_point(size=2.5,  aes(y=creel_plus, x=YEAR,col=status, fill=status, shape=pred_cat))+
+    geom_line(aes(y=creel_plus, x=YEAR,col=status, linetype = "Creel and logbook only"))+ 
+    scale_shape_manual(values=c(1,1))+
+    new_scale("shape")+
+    scale_colour_viridis_d()+
+    geom_point(size=2.5, aes(y=catch_estimate_predicted, x=YEAR,col=status, fill=status, shape=pred_cat))+
+    geom_line(aes(y=catch_estimate_predicted, x=YEAR,col=status, linetype = "iREC included"))+ 
+    scale_shape_manual(values=c(16,17))+
+    scale_linetype_manual(values=c(2,1))+
+    facet_wrap(~status, scales="free") + ggtitle(paste(fishery_name[i])) + theme_bw()
+ 
+cat("\n\n") 
+resize(m, 7, 4)
+  cat("\n\n\n")
   }
 
 ```
@@ -1097,7 +1169,7 @@ CBC_1<-ggplot()+
   facet_wrap(~finescale_fishery_old)+
   labs(title = "Coverage for CBC S",
        x = "Year", y = "Month") +
-  theme_bw() + theme_minimal() + geom_vline(xintercept = 2012)
+  theme_bw() + theme_minimal() + geom_vline(xintercept = 2013)
 
 CBC_2<-ggplot()+
   geom_tile(data=yearMonth %>% filter(finescale_fishery_old=="CBC S"), aes(x=YEAR, y=as.factor(MONTH), fill = sum_historic),colour = "white") +
@@ -1107,14 +1179,14 @@ CBC_2<-ggplot()+
   new_scale_fill() +
   geom_tile(data=yearMonth_catch_estimate_1%>% filter(finescale_fishery_old=="CBC S"), aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
   scale_fill_gradient(low = col3, high = col4, na.value = colclear)+
-  guides(fill=guide_legend(title="creel plus irec estimates")) +
+  guides(fill=guide_legend(title="creel plus iREC estimates")) +
   new_scale_fill() +
   geom_tile(data=yearMonth_irec_1%>% filter(finescale_fishery_old=="CBC S"), aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
   scale_fill_gradient(low = col5, high = col6, na.value = colclear)+
-  guides(fill=guide_legend(title="irec estimates")) +
+  guides(fill=guide_legend(title="iREC estimates")) +
   labs(
        x = "Year", y = "Month") +
-  theme_bw() + theme_minimal() + geom_vline(xintercept = 2012)
+  theme_bw() + theme_minimal() + geom_vline(xintercept = 2013)
 
 CBC_1+CBC_2+ plot_layout(guides = "collect")
 ```
@@ -1133,7 +1205,7 @@ NBC_1<-ggplot()+
   facet_wrap(~finescale_fishery_old)+
   labs(title = "Coverage for NBC S",
        x = "Year", y = "Month") +
-  theme_bw() + theme_minimal() + geom_vline(xintercept = 2012)
+  theme_bw() + theme_minimal() + geom_vline(xintercept = 2013)
 
 NBC_2<-ggplot()+
   geom_tile(data=yearMonth %>% filter(finescale_fishery_old=="NBC AABM S"), aes(x=YEAR, y=as.factor(MONTH), fill = sum_historic),colour = "white") +
@@ -1143,13 +1215,13 @@ NBC_2<-ggplot()+
   new_scale_fill() +
   geom_tile(data=yearMonth_catch_estimate_1%>% filter(finescale_fishery_old=="NBC AABM S"), aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
   scale_fill_gradient(low = col3, high = col4, na.value = colclear)+
-  guides(fill=guide_legend(title="creel plus irec estimates")) +
+  guides(fill=guide_legend(title="creel plus iREC estimates")) +
   new_scale_fill() +
   geom_tile(data=yearMonth_irec_1%>% filter(finescale_fishery_old=="NBC AABM S"), aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
   scale_fill_gradient(low = col5, high = col6, na.value = colclear)+
-  guides(fill=guide_legend(title="irec estimates")) +
+  guides(fill=guide_legend(title="iREC estimates")) +
   labs( x = "Year", y = "Month") +
-  theme_bw() + theme_minimal() + geom_vline(xintercept = 2012)
+  theme_bw() + theme_minimal() + geom_vline(xintercept = 2013)
 
 NBC_1+NBC_2+ plot_layout(guides = "collect")
 ```
@@ -1168,7 +1240,7 @@ NBC_ISBM1<-ggplot()+
   facet_wrap(~finescale_fishery_old)+
   labs(title = "Coverage for NBC S",
        x = "Year", y = "Month") +
-  theme_bw() + theme_minimal() + geom_vline(xintercept = 2012)
+  theme_bw() + theme_minimal() + geom_vline(xintercept = 2013)
 
 NBC_ISBM2<-ggplot()+
   geom_tile(data=yearMonth %>% filter(finescale_fishery_old=="NBC ISBM S"), aes(x=YEAR, y=as.factor(MONTH), fill = sum_historic),colour = "white") +
@@ -1178,13 +1250,13 @@ NBC_ISBM2<-ggplot()+
   new_scale_fill() +
   geom_tile(data=yearMonth_catch_estimate_1%>% filter(finescale_fishery_old=="NBC ISBM S"), aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
   scale_fill_gradient(low = col3, high = col4, na.value = colclear)+
-  guides(fill=guide_legend(title="creel plus irec estimates")) +
+  guides(fill=guide_legend(title="creel plus iREC estimates")) +
   new_scale_fill() +
   geom_tile(data=yearMonth_irec_1%>% filter(finescale_fishery_old=="NBC ISBM S"), aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
   scale_fill_gradient(low = col5, high = col6, na.value = colclear)+
-  guides(fill=guide_legend(title="irec estimates")) +
+  guides(fill=guide_legend(title="iREC estimates")) +
   labs( x = "Year", y = "Month") +
-  theme_bw() + theme_minimal() + geom_vline(xintercept = 2012)
+  theme_bw() + theme_minimal() + geom_vline(xintercept = 2013)
 
 NBC_ISBM1+NBC_ISBM2+ plot_layout(guides = "collect")
 ```
