@@ -14,6 +14,9 @@ rslt <- PullAllSport(2005)
 quality_report <- rslt[[1]]
 estimates <- rslt[[2]]
 rm(rslt)
+
+
+
 Sport_filtered_south_irec<-
   estimates |>
   as_tibble() |>
@@ -210,9 +213,9 @@ Sport_mark_rate_finescale<-
     (AREA %in%c("Area 13", "Area 14", "Area 15", "Area 16") |REGION2== "GSN")& season=="summer" ~ "NGS S SUMMER",
 
 
-    (AREA %in%c("Area 17", "Area 18", "Area 19", "Area 19 (GS)", "Area 28", "Area 29") |REGION2== "GSS")& season=="fall" ~ "SGS S FALL", #this captures 19
-    (AREA %in%c("Area 17", "Area 18", "Area 19", "Area 19 (GS)", "Area 28", "Area 29") |REGION2== "GSS")& season=="spring" ~ "SGS S SPRING",
-    (AREA %in%c("Area 17", "Area 18", "Area 19", "Area 19 (GS)", "Area 28", "Area 29") |REGION2== "GSS")& season=="summer" ~ "SGS S SUMMER",
+    (AREA %in%c("Area 17", "Area 18", "Area 19 (GS)", "Area 28", "Area 29") |REGION2== "GSS")& season=="fall" ~ "SGS S FALL", #this captures 19
+    (AREA %in%c("Area 17", "Area 18", "Area 19 (GS)", "Area 28", "Area 29") |REGION2== "GSS")& season=="spring" ~ "SGS S SPRING",
+    (AREA %in%c("Area 17", "Area 18", "Area 19 (GS)", "Area 28", "Area 29") |REGION2== "GSS")& season=="summer" ~ "SGS S SUMMER",
 
 
     (AREA %in% c("Area 11", "Area 111", "Area 12") | REGION2 == "JST") & season=="fall" ~ "JNST S FALL",
@@ -235,19 +238,19 @@ Sport_mark_rate_finescale<-
     AREA %in% c( "Area 103", "Area 104", "Area 105", "Area 3", "Area 4", "Area 5")& season=="summer"  ~ "NBC ISBM S SUMMER",
 
 
-    (AREA %in% c("Area 19", "Area 19 (JDF)", "Area 20", "Area 20 (East)", "Area 20 (West)") | REGION2 == "JDF") & season=="spring"  ~ "CA JDF S SPRING", #this captures 19
-    (AREA %in% c("Area 19", "Area 19 (JDF)", "Area 20", "Area 20 (East)", "Area 20 (West)") | REGION2 == "JDF") & season=="fall"  ~ "CA JDF S FALL",
-    (AREA %in% c("Area 19", "Area 19 (JDF)", "Area 20", "Area 20 (East)", "Area 20 (West)") | REGION2 == "JDF") & season=="summer"  ~ "CA JDF S SUMMER")) %>%
+    (AREA %in% c( "Area 19 (JDF)", "Area 20", "Area 20 (East)", "Area 20 (West)") | REGION2 == "JDF") & season=="spring"  ~ "CA JDF S SPRING", #this captures 19
+    (AREA %in% c( "Area 19 (JDF)", "Area 20", "Area 20 (East)", "Area 20 (West)") | REGION2 == "JDF") & season=="fall"  ~ "CA JDF S FALL",
+    (AREA %in% c( "Area 19 (JDF)", "Area 20", "Area 20 (East)", "Area 20 (West)") | REGION2 == "JDF") & season=="summer"  ~ "CA JDF S SUMMER")) %>%
 
   mutate(finescale_fishery_term = case_when(
     AREA%in%c("Area 123", "Area 23 (Barkley)", "Area 23 (Alberni Canal)")  & MONTH%in%c(8:12) ~ "TWCVI S FALL",
     AREA %in%  c("Area 11", "Area 111", "Area 12") & MONTH%in%c(9:12) ~ "TJOHN ST S FALL",
     AREA %in%  c("Area 11", "Area 111", "Area 12") & MONTH%in%c(5:8) ~ "TJOHN ST S SUMMER",
-    (AREA%in% c("Area 17", "Area 18", "Area 19", "Area 19 (GS)", "Area 28", "Area 29")  |  REGION2 == "GSS") & MONTH%in%c(9:12) ~ "TSGS S FALL",
-    (AREA%in% c("Area 17", "Area 18", "Area 19", "Area 19 (GS)", "Area 28", "Area 29")  |  REGION2 == "GSS") & MONTH%in%c(5:8) ~ "TSGS S SUMMER",
+    (AREA%in% c("Area 17", "Area 18", "Area 19 (GS)", "Area 28", "Area 29")  |  REGION2 == "GSS") & MONTH%in%c(9:12) ~ "TSGS S FALL",
+    (AREA%in% c("Area 17", "Area 18", "Area 19 (GS)", "Area 28", "Area 29")  |  REGION2 == "GSS") & MONTH%in%c(5:8) ~ "TSGS S SUMMER",
     (AREA%in% c("Area 13", "Area 14", "Area 15", "Area 16") |  REGION2 == "GSN") & MONTH%in%c(9:12) ~ "TNGS S FALL",
     (AREA%in% c("Area 13", "Area 14", "Area 15", "Area 16") |  REGION2 == "GSN") & MONTH%in%c(5:8) ~ "TNGS S SUMMER",
-    (AREA %in%c("Area 19", "Area 19 (JDF)", "Area 20", "Area 20 (East)", "Area 20 (West)")  | REGION2 == "JDF") & MONTH%in%c(5:8) ~ "TCA JDF S SUMMER")) %>%
+    (AREA %in%c("Area 19 (JDF)", "Area 20", "Area 20 (East)", "Area 20 (West)")  | REGION2 == "JDF") & MONTH%in%c(5:8) ~ "TCA JDF S SUMMER")) %>%
 
   mutate(finescale_fishery_old = case_when(
     AREA%in%c("Area 121", "Area 123", "Area 124", "Area 125", "Area 126", "Area 127") & MANAGEMENT=="AABM" & MONTH%in%c(1:12) ~ "WCVI AABM S",
@@ -267,9 +270,9 @@ Sport_mark_rate_finescale<-
   mutate(finescale_fishery_old_term = case_when(
     AREA%in%c("Area 123", "Area 23 (Barkley)", "Area 23 (Alberni Canal)")  & MONTH%in%c(8:12) ~ "TWCVI S",
     AREA %in%  c("Area 11", "Area 111", "Area 12") & MONTH%in%c(5:12) ~ "TJOHN ST S",
-    (AREA%in% c("Area 17", "Area 18", "Area 19", "Area 19 (GS)", "Area 28", "Area 29")  |  REGION2 == "GSS") & MONTH%in%c(5:12) ~ "TSGS S",
+    (AREA%in% c("Area 17", "Area 18", "Area 19 (GS)", "Area 28", "Area 29")  |  REGION2 == "GSS") & MONTH%in%c(5:12) ~ "TSGS S",
     (AREA%in% c("Area 13", "Area 14", "Area 15", "Area 16") |  REGION2 == "GSN") & MONTH%in%c(5:12) ~ "TNGS S",
-    (AREA %in%c("Area 19", "Area 19 (JDF)", "Area 20", "Area 20 (East)", "Area 20 (West)")  | REGION2 == "JDF") & MONTH%in%c(5:8) ~ "TCA JDF S"))
+    (AREA %in%c( "Area 19 (JDF)", "Area 20", "Area 20 (East)", "Area 20 (West)")  | REGION2 == "JDF") & MONTH%in%c(5:8) ~ "TCA JDF S"))
 
 
 Sport_mark_rate_finescale<- Sport_mark_rate_finescale %>% ungroup %>%
