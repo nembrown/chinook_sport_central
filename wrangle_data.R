@@ -192,21 +192,27 @@ Sport_mark_rate3<-Sport_mark_rate %>%
 Sport_mark_rate_finescale<-
   Sport_mark_rate3%>% ungroup %>%
   mutate(finescale_fishery = case_when(
-    AREA%in%c("Area 121", "Area 123", "Area 124", "Area 125", "Area 126", "Area 127") & MANAGEMENT=="AABM" & season=="fall" ~ "WCVI AABM S FALL",
-    AREA%in%c("Area 121", "Area 123", "Area 124", "Area 125", "Area 126", "Area 127") & MANAGEMENT=="AABM" & season=="spring" ~ "WCVI AABM S SPRING",
-    AREA%in%c("Area 121", "Area 123", "Area 124", "Area 125", "Area 126", "Area 127") & MANAGEMENT=="AABM" & season=="summer" ~ "WCVI AABM S SUMMER",
+    AREA%in%c( "Area 125", "Area 126", "Area 127") & MANAGEMENT=="AABM" & season=="fall" ~ "NWCVI AABM S FALL",
+    AREA%in%c( "Area 125", "Area 126", "Area 127") & MANAGEMENT=="AABM" & season=="spring" ~ "NWCVI AABM S SPRING",
+    AREA%in%c( "Area 125", "Area 126", "Area 127") & MANAGEMENT=="AABM" & season=="summer" ~ "NWCVI AABM S SUMMER",
 
-    AREA%in%c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal)")  & MONTH%in%c(10:12) ~ "WCVI AABM S FALL",
-    AREA%in%c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal)")  & season=="spring" ~ "WCVI AABM S SPRING",
-    AREA%in%c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal)")  & MONTH%in%c(6:7) ~ "WCVI AABM S SUMMER",
+    AREA%in%c("Area 121", "Area 123", "Area 124") & MANAGEMENT=="AABM" & season=="fall" ~ "SWCVI AABM S FALL",
+    AREA%in%c("Area 121", "Area 123", "Area 124") & MANAGEMENT=="AABM" & season=="spring" ~ "SWCVI AABM S SPRING",
+    AREA%in%c("Area 121", "Area 123", "Area 124") & MANAGEMENT=="AABM" & season=="summer" ~ "SWCVI AABM S SUMMER",
 
-    AREA%in%c("Area 25", "Area 26", "Area 27") & MONTH%in%c(10:12) ~ "WCVI AABM S FALL",
-    AREA%in%c("Area 25", "Area 26", "Area 27") & season=="spring" ~ "WCVI AABM S SPRING",
-    AREA%in%c("Area 25", "Area 26", "Area 27") & MONTH%in%c(6) ~ "WCVI AABM S SUMMER",
+    AREA%in%c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal)")  & MONTH%in%c(10:12) ~ "SWCVI AABM S FALL",
+    AREA%in%c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal)")  & season=="spring" ~ "SWCVI AABM S SPRING",
+    AREA%in%c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal)")  & MONTH%in%c(6:7) ~ "SWCVI AABM S SUMMER",
 
-    AREA%in%c("Area 121", "Area 123", "Area 124", "Area 125", "Area 126", "Area 127") & MANAGEMENT=="ISBM" & MONTH%in%c(7:9) ~ "WCVI ISBM S SUMMER",
-    AREA%in%c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal)") & MONTH%in%c(8,9) ~ "WCVI ISBM S SUMMER",
-    AREA%in%c("Area 25", "Area 26", "Area 27") & MONTH%in%c(7,8,9) ~ "WCVI ISBM S SUMMER",
+    AREA%in%c("Area 25", "Area 26", "Area 27") & MONTH%in%c(10:12) ~ "NWCVI AABM S FALL",
+    AREA%in%c("Area 25", "Area 26", "Area 27") & season=="spring" ~ "NWCVI AABM S SPRING",
+    AREA%in%c("Area 25", "Area 26", "Area 27") & MONTH%in%c(6) ~ "NWCVI AABM S SUMMER",
+
+    AREA%in%c("Area 121", "Area 123", "Area 124") & MANAGEMENT=="ISBM" & MONTH%in%c(7:9) ~ "SWCVI ISBM S SUMMER",
+    AREA%in%c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal)") & MONTH%in%c(8,9) ~ "SWCVI ISBM S SUMMER",
+
+    AREA%in%c("Area 125", "Area 126", "Area 127") & MANAGEMENT=="ISBM" & MONTH%in%c(7:9) ~ "NWCVI ISBM S SUMMER",
+    AREA%in%c("Area 25", "Area 26", "Area 27") & MONTH%in%c(7,8,9) ~ "NWCVI ISBM S SUMMER",
 
     (AREA %in%c("Area 13", "Area 14", "Area 15", "Area 16") |REGION2== "GSN")& season=="fall" ~ "NGS S FALL",
     (AREA %in%c("Area 13", "Area 14", "Area 15", "Area 16") |REGION2== "GSN")& season=="spring" ~ "NGS S SPRING",
