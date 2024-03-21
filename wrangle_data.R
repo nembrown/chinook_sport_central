@@ -46,9 +46,9 @@ Sport_filtered_south_irec<-
   group_by(YEAR, MONTH, AREA, REGION2, MANAGEMENT, SOURCE, MARKS_DESC, TYPE) |>
   summarise(VARIANCE=sum(VARIANCE), VAL=sum(ESTIMATE)) |> ungroup()|>
   mutate(season = case_when(
-    MONTH %in% c(1:5) ~ "spring",
-    MONTH %in% c(6:8) ~ "summer",
-    MONTH %in% c(9:12) ~ "fall"
+    MONTH %in% c(1:4) ~ "spring",
+    MONTH %in% c(5:9) ~ "summer",
+    MONTH %in% c(10:12) ~ "fall"
   ))
 
 
@@ -248,15 +248,6 @@ Sport_mark_rate_finescale<-
     (AREA %in% c( "Area 19 (JDF)", "Area 20", "Area 20 (East)", "Area 20 (West)") | REGION2 == "JDF") & season=="fall"  ~ "CA JDF S FALL",
     (AREA %in% c( "Area 19 (JDF)", "Area 20", "Area 20 (East)", "Area 20 (West)") | REGION2 == "JDF") & season=="summer"  ~ "CA JDF S SUMMER")) %>%
 
-  mutate(finescale_fishery_term = case_when(
-    AREA%in%c("Area 123", "Area 23 (Barkley)", "Area 23 (Alberni Canal)")  & MONTH%in%c(8:12) ~ "TWCVI S FALL",
-    AREA %in%  c("Area 11", "Area 111", "Area 12") & MONTH%in%c(9:12) ~ "TJOHN ST S FALL",
-    AREA %in%  c("Area 11", "Area 111", "Area 12") & MONTH%in%c(5:8) ~ "TJOHN ST S SUMMER",
-    (AREA%in% c("Area 17", "Area 18", "Area 19 (GS)", "Area 28", "Area 29")  |  REGION2 == "GSS") & MONTH%in%c(9:12) ~ "TSGS S FALL",
-    (AREA%in% c("Area 17", "Area 18", "Area 19 (GS)", "Area 28", "Area 29")  |  REGION2 == "GSS") & MONTH%in%c(5:8) ~ "TSGS S SUMMER",
-    (AREA%in% c("Area 13", "Area 14", "Area 15", "Area 16") |  REGION2 == "GSN") & MONTH%in%c(9:12) ~ "TNGS S FALL",
-    (AREA%in% c("Area 13", "Area 14", "Area 15", "Area 16") |  REGION2 == "GSN") & MONTH%in%c(5:8) ~ "TNGS S SUMMER",
-    (AREA %in%c("Area 19 (JDF)", "Area 20", "Area 20 (East)", "Area 20 (West)")  | REGION2 == "JDF") & MONTH%in%c(5:8) ~ "TCA JDF S SUMMER")) %>%
 
   mutate(finescale_fishery_old = case_when(
     AREA%in%c("Area 121", "Area 123", "Area 124", "Area 125", "Area 126", "Area 127") & MANAGEMENT=="AABM" & MONTH%in%c(1:12) ~ "WCVI AABM S",
@@ -271,14 +262,7 @@ Sport_mark_rate_finescale<-
     AREA %in% c("Area 10", "Area 106", "Area 110", "Area 6", "Area 7", "Area 8", "Area 9", "Area 130", "Area 108", "Area 109", "Area 107")& MONTH%in%c(1:12)  ~ "CBC S",
     AREA %in% c("Area 2","Area 1", "Area 101", "Area 102",  "Area 142", "Area 2E", "Area 2W")& MONTH%in%c(1:12)  ~ "NBC AABM S",
     AREA %in% c( "Area 103", "Area 104", "Area 105", "Area 3", "Area 4", "Area 5")& MONTH%in%c(1:12)  ~ "NBC ISBM S",
-    (AREA %in% c("Area 19", "Area 19 (JDF)", "Area 20", "Area 20 (East)", "Area 20 (West)") | REGION2 == "JDF") & MONTH%in%c(1:12) ~ "CA JDF S")) %>%
-
-  mutate(finescale_fishery_old_term = case_when(
-    AREA%in%c("Area 123", "Area 23 (Barkley)", "Area 23 (Alberni Canal)")  & MONTH%in%c(8:12) ~ "TWCVI S",
-    AREA %in%  c("Area 11", "Area 111", "Area 12") & MONTH%in%c(5:12) ~ "TJOHN ST S",
-    (AREA%in% c("Area 17", "Area 18", "Area 19 (GS)", "Area 28", "Area 29")  |  REGION2 == "GSS") & MONTH%in%c(5:12) ~ "TSGS S",
-    (AREA%in% c("Area 13", "Area 14", "Area 15", "Area 16") |  REGION2 == "GSN") & MONTH%in%c(5:12) ~ "TNGS S",
-    (AREA %in%c( "Area 19 (JDF)", "Area 20", "Area 20 (East)", "Area 20 (West)")  | REGION2 == "JDF") & MONTH%in%c(5:8) ~ "TCA JDF S"))
+    (AREA %in% c("Area 19", "Area 19 (JDF)", "Area 20", "Area 20 (East)", "Area 20 (West)") | REGION2 == "JDF") & MONTH%in%c(1:12) ~ "CA JDF S"))
 
 
 Sport_mark_rate_finescale<- Sport_mark_rate_finescale %>% ungroup %>%
@@ -292,15 +276,7 @@ Sport_mark_rate_finescale<- Sport_mark_rate_finescale %>% ungroup %>%
     finescale_fishery_old == "CBC S" & MONTH %in% c(6:8) ~ "yes",
     finescale_fishery_old == "NBC AABM S" & MONTH %in% c(6:8) ~ "yes",
     finescale_fishery_old == "NBC ISBM S" & MONTH %in% c(6:8) ~ "yes",
-    .default = "no")) %>%
-  mutate(summer_coverage_tf_term = case_when(
-    finescale_fishery_old_term == "TCA JDF S" & MONTH %in% c(6:8) & YEAR != 2020 ~ "yes",
-    finescale_fishery_old_term == "TJOHN ST S" & MONTH %in% c(6:8) & YEAR != 2020 ~ "yes",
-    finescale_fishery_old_term == "TNGS S" & MONTH %in% c(6:8) & YEAR != 2020 ~ "yes",
-    finescale_fishery_old_term == "TSGS S" & MONTH %in% c(6,8) & YEAR %notin% c(2016, 2020) ~ "yes",
-    finescale_fishery_old_term == "TWCVI S" & MONTH %in% c(8) ~ "yes",
-
-    TRUE ~ "no"))
+    .default = "no"))
 
 
 Sport_mark_rate_finescale_sum<- Sport_mark_rate_finescale %>%
@@ -314,29 +290,9 @@ Sport_creel_finescale_summer<- Sport_mark_rate_finescale %>%
   summarise_at(vars(creel_plus), sum, na.rm=TRUE) %>%
   rename(creel_plus_summer=creel_plus)
 
-Sport_mark_rate_finescale_term_sum<- Sport_mark_rate_finescale %>%
-  filter(!is.na(finescale_fishery_old_term)) %>%
-  group_by(YEAR, status, finescale_fishery_old_term, finescale_fishery_term) %>%
-  summarise_at(vars(creel:catch_estimate), sum, na.rm=TRUE) %>%
-  rename(finescale_fishery = finescale_fishery_term,
-         finescale_fishery_old = finescale_fishery_old_term)
-
-Sport_creel_finescale_term_summer<- Sport_mark_rate_finescale %>%
-  filter(!is.na(finescale_fishery_old_term), summer_coverage_tf_term=="yes") %>%
-  group_by(YEAR, status, finescale_fishery_old_term) %>%
-  summarise_at(vars(creel_plus), sum, na.rm=TRUE) %>%
-  rename(creel_plus_summer=creel_plus) %>%
-  rename(finescale_fishery_old = finescale_fishery_old_term)
-
 
 #Year, finescale fishery
-Sport_creel_summer<- bind_rows(Sport_creel_finescale_term_summer, Sport_creel_finescale_summer)
-Sport_creel_all_seasons <- Sport_creel_summer
-
-Sport_mark_rate_finescale_combined<-bind_rows(Sport_mark_rate_finescale_term_sum, Sport_mark_rate_finescale_sum)
-
-Sport_mark_rate_finescale_combined<-left_join(Sport_mark_rate_finescale_combined, Sport_creel_all_seasons)
-
+Sport_mark_rate_finescale_combined<-left_join(Sport_mark_rate_finescale_sum, Sport_creel_finescale_summer)
 
 Sport_mark_rate_finescale_combined<-Sport_mark_rate_finescale_combined %>% mutate(mark_status = case_when(
   status %in% c("marked_Kept_total", "marked_Released_total") ~ "marked",
@@ -364,7 +320,7 @@ library(SuppDists)
 library(MuMIn)
 
 ## Seasonal model without terminal
-Season_south<-Sport_mark_rate_finescale_combined%>% filter(YEAR %in% c(2013:2023), finescale_fishery %notin% c("TCA JDF S SUMMER", "TJOHN ST S SUMMER", "TNGS S SUMMER", "TSGS S SUMMER", "TWCVI S FALL", "TJOHN ST S FALL", "TNGS S FALL", "TSGS S FALL"))
+Season_south<-Sport_mark_rate_finescale_combined%>% filter(YEAR %in% c(2013:2023))
 
 Season_model_full<- glm(formula = catch_estimate ~creel_plus_summer*mark_status*kept_status*finescale_fishery_old*season,  family=gaussian, data = Season_south)
 summary(Season_model_full)
@@ -448,119 +404,6 @@ summary(Season_model_gamma_dropall_ns)
 
 AICtab(Season_model_full_gamma, Season_model_gamma_dropkept, Season_model_gamma_dropmark, Season_model_gamma_dropmarkkept, Season_model_gamma_dropfishery, Season_model_gamma_dropfisherykept, Season_model_gamma_dropfisherymark, Season_model_gamma_dropall,
        Season_model_full_gamma_ns, Season_model_gamma_dropkept_ns, Season_model_gamma_dropmark_ns, Season_model_gamma_dropmarkkept_ns, Season_model_gamma_dropfishery_ns, Season_model_gamma_dropfisherykept_ns, Season_model_gamma_dropfisherymark_ns, Season_model_gamma_dropall_ns)
-
-
-
-
-#terminal model start here
-Season_terminal<- Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2013:2023), finescale_fishery %in% c("TCA JDF S SUMMER", "TJOHN ST S SUMMER", "TNGS S SUMMER", "TSGS S SUMMER", "TCA JDF S FALL", "TJOHN ST S FALL", "TNGS S FALL", "TSGS S FALL", "TWCVI S FALL"))
-
-#Test 1 - Check distributions check if normal, poisson or gamma distribution is best fitted.
-#gaussian
-Season_terminal_model_full<- glm(formula = catch_estimate ~creel_plus_summer*mark_status*kept_status*finescale_fishery_old*season,  family=gaussian, data = Season_terminal)
-summary(Season_terminal_model_full)
-res <- simulateResiduals(Season_terminal_model_full, plot = T, quantreg=T)
-
-#poisson
-Season_terminal_model_full_poisson<- glm(formula = catch_estimate ~creel_plus_summer*mark_status*kept_status*finescale_fishery_old*season,  family=poisson, data = Season_terminal)
-res_pois <- simulateResiduals(Season_terminal_model_full_poisson, plot = T, quantreg=T)
-summary(Season_terminal_model_full_poisson)
-
-#gamma
-Season_terminal_model_full_gamma<- glm(formula = catch_estimate + 1 ~creel_plus_summer*mark_status*kept_status*finescale_fishery_old*season,  family=Gamma(link = "log"), data = Season_terminal)
-res_gam <- simulateResiduals(Season_terminal_model_full_gamma, plot = T, quantreg=T)
-summary(Season_terminal_model_full_gamma)
-
-AICtab(Season_terminal_model_full,Season_terminal_model_full_poisson, Season_terminal_model_full_gamma)
-#gamma is the best, poisson doesn't converge
-
-#Test 2 - Change the model specification, full model vs. dropped effect of kept which is not significant
-#testing simplified models
-Season_terminal_model_gamma_dropkept<- glm(formula = catch_estimate+1 ~creel_plus_summer*mark_status*finescale_fishery_old*season,  family=Gamma(link = "log"), data = Season_terminal)
-res_gam_dropkept <- simulateResiduals(Season_terminal_model_gamma_dropkept, plot = T, quantreg=T)
-summary(Season_terminal_model_gamma_dropkept)
-
-Season_terminal_model_gamma_dropmark<- glm(formula = catch_estimate+1 ~creel_plus_summer*kept_status*finescale_fishery_old*season,  family=Gamma(link = "log"), data = Season_terminal)
-res_gam_dropmark <- simulateResiduals(Season_terminal_model_gamma_dropmark, plot = T, quantreg=T)
-summary(Season_terminal_model_gamma_dropmark)
-
-Season_terminal_model_gamma_dropmarkkept<- glm(formula = catch_estimate+1 ~creel_plus_summer*finescale_fishery_old*season,  family=Gamma(link = "log"), data = Season_terminal)
-res_gam_dropmarkkept <- simulateResiduals(Season_terminal_model_gamma_dropmarkkept, plot = T, quantreg=T)
-summary(Season_terminal_model_gamma_dropmarkkept)
-
-Season_terminal_model_gamma_dropfishery<- glm(formula = catch_estimate+1 ~creel_plus_summer*mark_status*kept_status*season,  family=Gamma(link = "log"), data = Season_terminal)
-res_gam_dropfishery <- simulateResiduals(Season_terminal_model_gamma_dropfishery, plot = T, quantreg=T)
-summary(Season_terminal_model_gamma_dropfishery)
-
-Season_terminal_model_gamma_dropfisherykept<- glm(formula = catch_estimate+1 ~creel_plus_summer*mark_status*season,  family=Gamma(link = "log"), data = Season_terminal)
-res_gam_dropfisherykept <- simulateResiduals(Season_terminal_model_gamma_dropfisherykept, plot = T, quantreg=T)
-summary(Season_terminal_model_gamma_dropfisherykept)
-
-Season_terminal_model_gamma_dropfisherymark<- glm(formula = catch_estimate+1 ~creel_plus_summer*kept_status*season,  family=Gamma(link = "log"), data = Season_terminal)
-res_gam_dropfisherymark <- simulateResiduals(Season_terminal_model_gamma_dropfisherymark, plot = T, quantreg=T)
-summary(Season_terminal_model_gamma_dropfisherymark)
-
-Season_terminal_model_gamma_dropall<- glm(formula = catch_estimate+1 ~creel_plus_summer*season,  family=Gamma(link = "log"), data = Season_terminal)
-res_gam_dropall <- simulateResiduals(Season_terminal_model_gamma_dropall, plot = T, quantreg=T)
-summary(Season_terminal_model_gamma_dropall)
-
-### without season
-Season_terminal_model_full_gamma_ns<- glm(formula = catch_estimate + 1 ~creel_plus_summer*mark_status*kept_status*finescale_fishery_old,  family=Gamma(link = "log"), data = Season_terminal)
-res_gam_ns <- simulateResiduals(Season_terminal_model_full_gamma_ns, plot = T, quantreg=T)
-summary(Season_terminal_model_full_gamma_ns)
-
-Season_terminal_model_gamma_dropkept_ns<- glm(formula = catch_estimate +1 ~creel_plus_summer*mark_status*finescale_fishery_old,  family=Gamma(link = "log"), data = Season_terminal)
-res_gam_dropkept_ns <- simulateResiduals(Season_terminal_model_gamma_dropkept_ns, plot = T, quantreg=T)
-summary(Season_terminal_model_gamma_dropkept_ns)
-
-Season_terminal_model_gamma_dropmark_ns<- glm(formula = catch_estimate+1 ~creel_plus_summer*kept_status*finescale_fishery_old,  family=Gamma(link = "log"), data = Season_terminal)
-res_gam_dropmark_ns <- simulateResiduals(Season_terminal_model_gamma_dropmark_ns, plot = T, quantreg=T)
-summary(Season_terminal_model_gamma_dropmark_ns)
-
-Season_terminal_model_gamma_dropmarkkept_ns<- glm(formula = catch_estimate+1 ~creel_plus_summer*finescale_fishery_old,  family=Gamma(link = "log"), data = Season_terminal)
-res_gam_dropmarkkept_ns <- simulateResiduals(Season_terminal_model_gamma_dropmarkkept_ns, plot = T, quantreg=T)
-summary(Season_terminal_model_gamma_dropmarkkept_ns)
-
-Season_terminal_model_gamma_dropfishery_ns<- glm(formula = catch_estimate+1 ~creel_plus_summer*mark_status*kept_status,  family=Gamma(link = "log"), data = Season_terminal)
-res_gam_dropfishery_ns <- simulateResiduals(Season_terminal_model_gamma_dropfishery_ns, plot = T, quantreg=T)
-summary(Season_terminal_model_gamma_dropfishery_ns)
-
-Season_terminal_model_gamma_dropfisherykept_ns<- glm(formula = catch_estimate+1 ~creel_plus_summer*mark_status,  family=Gamma(link = "log"), data = Season_terminal)
-res_gam_dropfisherykept_ns <- simulateResiduals(Season_terminal_model_gamma_dropfisherykept_ns, plot = T, quantreg=T)
-summary(Season_terminal_model_gamma_dropfisherykept_ns)
-
-Season_terminal_model_gamma_dropfisherymark_ns<- glm(formula = catch_estimate +1~creel_plus_summer*kept_status,  family=Gamma(link = "log"), data = Season_terminal)
-res_gam_dropfisherymark_ns <- simulateResiduals(Season_terminal_model_gamma_dropfisherymark_ns, plot = T, quantreg=T)
-summary(Season_terminal_model_gamma_dropfisherymark_ns)
-
-Season_terminal_model_gamma_dropall_ns<- glm(formula = catch_estimate+1 ~creel_plus_summer,  family=Gamma(link = "log"), data = Season_terminal)
-res_gam_dropall_ns <- simulateResiduals(Season_terminal_model_gamma_dropall_ns, plot = T, quantreg=T)
-summary(Season_terminal_model_gamma_dropall_ns)
-
-AICtab(Season_terminal_model_full_gamma, Season_terminal_model_gamma_dropkept, Season_terminal_model_gamma_dropmark, Season_terminal_model_gamma_dropmarkkept, Season_terminal_model_gamma_dropfishery, Season_terminal_model_gamma_dropfisherykept, Season_terminal_model_gamma_dropfisherymark, Season_terminal_model_gamma_dropall,
-       Season_terminal_model_full_gamma_ns, Season_terminal_model_gamma_dropkept_ns, Season_terminal_model_gamma_dropmark_ns, Season_terminal_model_gamma_dropmarkkept_ns, Season_terminal_model_gamma_dropfishery_ns, Season_terminal_model_gamma_dropfisherykept_ns, Season_terminal_model_gamma_dropfisherymark_ns, Season_terminal_model_gamma_dropall_ns)
-
-
-
-
-#full Gamma is best model
-
-
-## plots
-ggplot(Summer_terminal, aes(x=creel_plus_summer, y= catch_estimate, col=status, fill=status))+geom_point()+geom_abline(slope=1)+
-  geom_smooth(method="glm", family= Gamma(link = "log")) + facet_wrap(~finescale_fishery, scales="free") + ggtitle("Summer") + theme_bw() + scale_colour_viridis_d() + scale_fill_viridis_d()
-
-#Adding predicted data
-Summer_terminal_old<- Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2005:2012), finescale_fishery %in% c("TCA JDF S SUMMER", "TJOHN ST S SUMMER", "TNGS S SUMMER", "TSGS S SUMMER", "TWCVI S SUMMER")) %>% ungroup() %>%  dplyr::select(YEAR, status, finescale_fishery_old, finescale_fishery, mark_status, kept_status, status, creel_plus_summer)
-Summer_terminal_old_new<-predict.glm(Summer_terminal_model_full_gamma, newdata =  Summer_terminal_old, type = "response")
-Summer_terminal_old_new_2<-Summer_terminal_old %>%   mutate(creel_estimate_predicted = Summer_terminal_old_new)
-
-
-
-
-
-
-
 
 
 
