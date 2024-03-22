@@ -250,19 +250,22 @@ Sport_mark_rate_finescale<-
 
 
   mutate(finescale_fishery_old = case_when(
-    AREA%in%c("Area 121", "Area 123", "Area 124", "Area 125", "Area 126", "Area 127") & MANAGEMENT=="AABM" & MONTH%in%c(1:12) ~ "WCVI AABM S",
-    AREA%in%c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal)")  & MONTH%in%c(1:7, 10:12) ~ "WCVI AABM S",
-    AREA%in%c("Area 25", "Area 26", "Area 27") & MONTH%in%c(1:6, 10:12) ~ "WCVI AABM S",
-    AREA%in%c("Area 121", "Area 123", "Area 124", "Area 125", "Area 126", "Area 127") & MANAGEMENT=="ISBM" & MONTH%in%c(7:12) ~ "WCVI ISBM S",
-    AREA%in%c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal)") & MONTH%in%c(8,9) ~ "WCVI ISBM S",
-    AREA%in%c("Area 25", "Area 26", "Area 27") & MONTH%in%c(7,8,9) ~ "WCVI ISBM S",
+    AREA%in%c( "Area 125", "Area 126", "Area 127") & MANAGEMENT=="AABM" & MONTH%in%c(1:12) ~ "NWCVI AABM S",
+    AREA%in%c("Area 121", "Area 123", "Area 124") & MANAGEMENT=="AABM" & MONTH%in%c(1:12) ~ "SWCVI AABM S",
+    AREA%in%c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal)")  & MONTH%in%c(1:7, 10:12) ~ "SWCVI AABM S",
+    AREA%in%c("Area 25", "Area 26", "Area 27") & MONTH%in%c(1:6, 10:12) ~ "NWCVI AABM S",
+    AREA%in%c("Area 121", "Area 123", "Area 124") & MANAGEMENT=="ISBM" & MONTH%in%c(7:12) ~ "SWCVI ISBM S",
+    AREA%in%c("Area 125", "Area 126", "Area 127") & MANAGEMENT=="ISBM" & MONTH%in%c(7:12) ~ "NWCVI ISBM S",
+    AREA%in%c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal)") & MONTH%in%c(8,9) ~ "SWCVI ISBM S",
+    AREA%in%c("Area 25", "Area 26", "Area 27") & MONTH%in%c(7,8,9) ~ "NWCVI ISBM S",
     (AREA %in%c("Area 13", "Area 14", "Area 15", "Area 16") |REGION2== "GSN")& MONTH%in%c(1:12) ~ "NGS S",
-    (AREA %in%c("Area 17", "Area 18", "Area 19", "Area 19 (GS)", "Area 28", "Area 29") |REGION2== "GSS")& MONTH%in%c(1:12) ~ "SGS S",
+    (AREA %in%c("Area 17", "Area 18",  "Area 19 (GS)", "Area 28", "Area 29") |REGION2== "GSS")& MONTH%in%c(1:12) ~ "SGS S",
     (AREA %in% c("Area 11", "Area 111", "Area 12") | REGION2 == "JST") & MONTH%in%c(1:12) ~ "JNST S",
     AREA %in% c("Area 10", "Area 106", "Area 110", "Area 6", "Area 7", "Area 8", "Area 9", "Area 130", "Area 108", "Area 109", "Area 107")& MONTH%in%c(1:12)  ~ "CBC S",
     AREA %in% c("Area 2","Area 1", "Area 101", "Area 102",  "Area 142", "Area 2E", "Area 2W")& MONTH%in%c(1:12)  ~ "NBC AABM S",
     AREA %in% c( "Area 103", "Area 104", "Area 105", "Area 3", "Area 4", "Area 5")& MONTH%in%c(1:12)  ~ "NBC ISBM S",
-    (AREA %in% c("Area 19", "Area 19 (JDF)", "Area 20", "Area 20 (East)", "Area 20 (West)") | REGION2 == "JDF") & MONTH%in%c(1:12) ~ "CA JDF S"))
+    (AREA %in% c( "Area 19 (JDF)", "Area 20", "Area 20 (East)", "Area 20 (West)") | REGION2 == "JDF") & MONTH%in%c(1:12) ~ "CA JDF S"))
+
 
 
 Sport_mark_rate_finescale<- Sport_mark_rate_finescale %>% ungroup %>%
@@ -271,13 +274,14 @@ Sport_mark_rate_finescale<- Sport_mark_rate_finescale %>% ungroup %>%
     finescale_fishery_old == "JNST S" & MONTH %in% c(6:8) & YEAR != 2020 ~ "yes",
     finescale_fishery_old == "NGS S" & MONTH %in% c(6:8) & YEAR != 2020 ~ "yes",
     finescale_fishery_old == "SGS S" & MONTH %in% c(6,8) & YEAR %notin% c(2016, 2020) ~ "yes",
-    finescale_fishery_old == "WCVI ISBM S" & MONTH %in% c(7:8) ~ "yes",
-    finescale_fishery_old == "WCVI AABM S" & MONTH %in% c(6:8)& YEAR != 2020 ~ "yes",
+    finescale_fishery_old == "SWCVI ISBM S" & MONTH %in% c(7:8) ~ "yes",
+    finescale_fishery_old == "SWCVI AABM S" & MONTH %in% c(6:8)& YEAR != 2020 ~ "yes",
+    finescale_fishery_old == "NWCVI ISBM S" & MONTH %in% c(7:8) ~ "yes",
+    finescale_fishery_old == "NWCVI AABM S" & MONTH %in% c(6:8)& YEAR != 2020 ~ "yes",
     finescale_fishery_old == "CBC S" & MONTH %in% c(6:8) ~ "yes",
     finescale_fishery_old == "NBC AABM S" & MONTH %in% c(6:8) ~ "yes",
     finescale_fishery_old == "NBC ISBM S" & MONTH %in% c(6:8) ~ "yes",
     .default = "no"))
-
 
 Sport_mark_rate_finescale_sum<- Sport_mark_rate_finescale %>%
   filter(!is.na(finescale_fishery)) %>%

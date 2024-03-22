@@ -322,7 +322,7 @@ Sport_mark_rate_finescale<-
     (AREA %in%c("Area 13", "Area 14", "Area 15", "Area 16") |REGION2== "GSN")& season=="summer" ~ "NGS S SUMMER",
 
 
-    (AREA %in%c("Area 17", "Area 18", "Area 19 (GS)", "Area 28", "Area 29") |REGION2== "GSS")& season=="fall" ~ "SGS S FALL", #this captures 19
+    (AREA %in%c("Area 17", "Area 18", "Area 19 (GS)", "Area 28", "Area 29") |REGION2== "GSS")& season=="fall" ~ "SGS S FALL", 
     (AREA %in%c("Area 17", "Area 18", "Area 19 (GS)", "Area 28", "Area 29") |REGION2== "GSS")& season=="spring" ~ "SGS S SPRING",
     (AREA %in%c("Area 17", "Area 18", "Area 19 (GS)", "Area 28", "Area 29") |REGION2== "GSS")& season=="summer" ~ "SGS S SUMMER",
 
@@ -353,19 +353,21 @@ Sport_mark_rate_finescale<-
 
 
   mutate(finescale_fishery_old = case_when(
-    AREA%in%c("Area 121", "Area 123", "Area 124", "Area 125", "Area 126", "Area 127") & MANAGEMENT=="AABM" & MONTH%in%c(1:12) ~ "WCVI AABM S",
-    AREA%in%c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal)")  & MONTH%in%c(1:7, 10:12) ~ "WCVI AABM S",
-    AREA%in%c("Area 25", "Area 26", "Area 27") & MONTH%in%c(1:6, 10:12) ~ "WCVI AABM S",
-    AREA%in%c("Area 121", "Area 123", "Area 124", "Area 125", "Area 126", "Area 127") & MANAGEMENT=="ISBM" & MONTH%in%c(7:12) ~ "WCVI ISBM S",
-    AREA%in%c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal)") & MONTH%in%c(8,9) ~ "WCVI ISBM S",
-    AREA%in%c("Area 25", "Area 26", "Area 27") & MONTH%in%c(7,8,9) ~ "WCVI ISBM S",
+    AREA%in%c( "Area 125", "Area 126", "Area 127") & MANAGEMENT=="AABM" & MONTH%in%c(1:12) ~ "NWCVI AABM S",
+    AREA%in%c("Area 121", "Area 123", "Area 124") & MANAGEMENT=="AABM" & MONTH%in%c(1:12) ~ "SWCVI AABM S",
+    AREA%in%c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal)")  & MONTH%in%c(1:7, 10:12) ~ "SWCVI AABM S",
+    AREA%in%c("Area 25", "Area 26", "Area 27") & MONTH%in%c(1:6, 10:12) ~ "NWCVI AABM S",
+    AREA%in%c("Area 121", "Area 123", "Area 124") & MANAGEMENT=="ISBM" & MONTH%in%c(7:12) ~ "SWCVI ISBM S",
+       AREA%in%c("Area 125", "Area 126", "Area 127") & MANAGEMENT=="ISBM" & MONTH%in%c(7:12) ~ "NWCVI ISBM S",
+    AREA%in%c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal)") & MONTH%in%c(8,9) ~ "SWCVI ISBM S",
+    AREA%in%c("Area 25", "Area 26", "Area 27") & MONTH%in%c(7,8,9) ~ "NWCVI ISBM S",
     (AREA %in%c("Area 13", "Area 14", "Area 15", "Area 16") |REGION2== "GSN")& MONTH%in%c(1:12) ~ "NGS S",
-    (AREA %in%c("Area 17", "Area 18", "Area 19", "Area 19 (GS)", "Area 28", "Area 29") |REGION2== "GSS")& MONTH%in%c(1:12) ~ "SGS S",
+    (AREA %in%c("Area 17", "Area 18",  "Area 19 (GS)", "Area 28", "Area 29") |REGION2== "GSS")& MONTH%in%c(1:12) ~ "SGS S",
     (AREA %in% c("Area 11", "Area 111", "Area 12") | REGION2 == "JST") & MONTH%in%c(1:12) ~ "JNST S",
     AREA %in% c("Area 10", "Area 106", "Area 110", "Area 6", "Area 7", "Area 8", "Area 9", "Area 130", "Area 108", "Area 109", "Area 107")& MONTH%in%c(1:12)  ~ "CBC S",
     AREA %in% c("Area 2","Area 1", "Area 101", "Area 102",  "Area 142", "Area 2E", "Area 2W")& MONTH%in%c(1:12)  ~ "NBC AABM S",
     AREA %in% c( "Area 103", "Area 104", "Area 105", "Area 3", "Area 4", "Area 5")& MONTH%in%c(1:12)  ~ "NBC ISBM S",
-    (AREA %in% c("Area 19", "Area 19 (JDF)", "Area 20", "Area 20 (East)", "Area 20 (West)") | REGION2 == "JDF") & MONTH%in%c(1:12) ~ "CA JDF S"))
+    (AREA %in% c( "Area 19 (JDF)", "Area 20", "Area 20 (East)", "Area 20 (West)") | REGION2 == "JDF") & MONTH%in%c(1:12) ~ "CA JDF S"))
 
 
 
@@ -386,8 +388,10 @@ Sport_mark_rate_finescale<- Sport_mark_rate_finescale %>% ungroup %>%
     finescale_fishery_old == "JNST S" & MONTH %in% c(6:8) & YEAR != 2020 ~ "yes",
     finescale_fishery_old == "NGS S" & MONTH %in% c(6:8) & YEAR != 2020 ~ "yes",
     finescale_fishery_old == "SGS S" & MONTH %in% c(6,8) & YEAR %notin% c(2016, 2020) ~ "yes",
-    finescale_fishery_old == "WCVI ISBM S" & MONTH %in% c(7:8) ~ "yes",
-    finescale_fishery_old == "WCVI AABM S" & MONTH %in% c(6:8)& YEAR != 2020 ~ "yes",
+    finescale_fishery_old == "SWCVI ISBM S" & MONTH %in% c(7:8) ~ "yes",
+    finescale_fishery_old == "SWCVI AABM S" & MONTH %in% c(6:8)& YEAR != 2020 ~ "yes",
+    finescale_fishery_old == "NWCVI ISBM S" & MONTH %in% c(7:8) ~ "yes",
+    finescale_fishery_old == "NWCVI AABM S" & MONTH %in% c(6:8)& YEAR != 2020 ~ "yes",
     finescale_fishery_old == "CBC S" & MONTH %in% c(6:8) ~ "yes",
     finescale_fishery_old == "NBC AABM S" & MONTH %in% c(6:8) ~ "yes",
     finescale_fishery_old == "NBC ISBM S" & MONTH %in% c(6:8) ~ "yes",
@@ -527,8 +531,7 @@ g3
 ```{r Modelling all seasonal southern BC fisheries, message=FALSE, warning=FALSE, results='hold'}
 
 #Summer model
-Season_south<-Sport_mark_rate_finescale_combined%>% filter(YEAR %in% c(2013:2023), finescale_fishery %notin% c("TCA JDF S SUMMER", "TJOHN ST S SUMMER", "TNGS S SUMMER", "TSGS S SUMMER", "TWCVI S FALL", "TJOHN ST S FALL", "TNGS S FALL", "TSGS S FALL"))
-
+Season_south<-Sport_mark_rate_finescale_combined%>% filter(YEAR %in% c(2013:2023))
 # See modelling script for full model results: chosen model is: summer model full Gamma 
 
 Season_model_gamma_dropkept<- glm(formula = catch_estimate + 1 ~creel_plus_summer*mark_status*finescale_fishery_old*season,  family=Gamma(link = "log"), data = Season_south)
@@ -537,7 +540,7 @@ res_gam_dropkept <- simulateResiduals(Season_model_gamma_dropkept, plot = T, qua
 #summary(Season_model_gamma_dropkept)
 
 #Adding predicted data
-Season_south_old<- Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2005:2012), finescale_fishery %notin% c("TCA JDF S SUMMER", "TJOHN ST S SUMMER", "TNGS S SUMMER", "TSGS S SUMMER", "TWCVI S FALL", "TJOHN ST S FALL", "TNGS S FALL", "TSGS S FALL")) %>% ungroup() %>% mutate(pred_cat = "predicted")
+Season_south_old<- Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2005:2012)) %>% ungroup() %>% mutate(pred_cat = "predicted")
 Season_south_old_new<-predict.glm(Season_model_gamma_dropkept, newdata =  Season_south_old, type = "response")
 Season_south_old_new_2<-Season_south_old %>%   mutate(catch_estimate_predicted = Season_south_old_new)
 
@@ -574,7 +577,7 @@ resize <- function(g, fig_width=NA, fig_height=NA) {
 ```{r forloop seasonal, results='asis', echo=FALSE}
 
 yearMonth2_season<- yearMonth2_season %>% filter(!str_detect(finescale_fishery, "CBC|NBC"))
-fishery_name<- unique(yearMonth2_season$finescale_fishery)
+fishery_name<- sort(unique(yearMonth2_season$finescale_fishery))
 
   
 for (i in 1:length(fishery_name)){
