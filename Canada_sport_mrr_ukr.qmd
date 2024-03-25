@@ -79,17 +79,57 @@ rm(rslt)
 -   We also expanded the dataset to include all combinations of area, year, month, mark status, kept status and source -\> adding NAs where no data was collected
 
 ```{r Aligning creel and irec}
+#isolating months and areas where there is definitely creel effort, to be used later:
+creel_effort<-  estimates |>
+                as_tibble() |>
+                 mutate(INCLUDE_15 = case_when(
+                   SOURCE != "Creel" ~ 1,
+                   YEAR == 2006 & MONTH==8& REGION2=="WCVIS"& MANAGEMENT=="ISBM" ~ 1,
+                   YEAR == 2005 & MONTH==7& REGION2=="GSS"& MANAGEMENT=="ISBM" ~ 1,
+                   TRUE ~ INCLUDE_15
+                 ))|>
+                filter(INCLUDE_15 ==1, YEAR<2024, SOURCE=="Creel") |>
+                dplyr::select(YEAR, MONTH, AREA, REGION2, MANAGEMENT) |>
+                unique()
+creel_effort$creel_done<-"yes"
+
+#logbook effort
+logbook_effort<-  estimates |>
+  as_tibble() |>
+  mutate(INCLUDE_15 = case_when(
+    SOURCE != "Creel" ~ 1,
+    YEAR == 2006 & MONTH==8& REGION2=="WCVIS"& MANAGEMENT=="ISBM" ~ 1,
+    YEAR == 2005 & MONTH==7& REGION2=="GSS"& MANAGEMENT=="ISBM" ~ 1,
+    TRUE ~ INCLUDE_15
+  ))|>
+  filter(INCLUDE_15 ==1, YEAR<2024, SOURCE %notin% c("Creel", "iREC")) |>
+  dplyr::select(YEAR, MONTH, AREA, REGION2, MANAGEMENT) |>
+  unique()
+logbook_effort$logbook_done<-"yes"
+
+creel_plus_effort<- full_join(creel_effort, logbook_effort) %>%
+  mutate(creel_plus_done = case_when(
+    logbook_done == "yes" | creel_done == "yes" ~ "yes",
+    TRUE ~ "no"
+  ))
+
+
+
 Sport_filtered_south_irec<-
   estimates |>
   as_tibble() |>
   mutate(INCLUDE_15 = case_when(
     SOURCE != "Creel" ~ 1,
+    YEAR == 2006 & MONTH==8& REGION2=="WCVIS"& MANAGEMENT=="ISBM" ~ 1,
+    YEAR == 2005 & MONTH==7& REGION2=="GSS"& MANAGEMENT=="ISBM" ~ 1,
     TRUE ~ INCLUDE_15
   ))|>
   filter(INCLUDE_15 ==1, YEAR<2024)|>
   filter(AREA %notin% c("Area 29 (In River)", "Campbell River", "Quinsam River", "CR-1", "CR-2", "CR-3", "CR-4", "QR-1", "QR-2", "QR-3", "QR-4")) |>
    mutate(AREA = case_when(
     AREA== "Area 29 (Marine)" ~ "Area 29",
+    AREA== "Area 19" & REGION2=="JDF" ~ "Area 19 (JDF)",
+    AREA== "Area 19" & REGION2=="GSS" ~ "Area 19 (GS)",
     TRUE ~ as.character(AREA))) |>
   filter(SUB_TYPE == "LEGAL") |>
   mutate(REGION2 = case_when(AREA == "Area 2" ~ "NC", TRUE ~ REGION2)) |>
@@ -105,12 +145,12 @@ Sport_filtered_south_irec<-
     SOURCE %in% c("Lodge Log","Lodge Manifest","Lodge Manifest - Log", "Lodge Estimate", "Log Estimate", "Lodge eLog") ~ "lodge_log",
     SOURCE == "iREC" ~ "irec_calibrated",
     TRUE ~ SOURCE )) |>
-  group_by(YEAR, MONTH, AREA, REGION2, MANAGEMENT, SOURCE, MARKS_DESC, TYPE) |>
-  summarise(VARIANCE=sum(VARIANCE), VAL=sum(ESTIMATE)) |> ungroup() |>
+  group_by(YEAR, MONTH, AREA, REGION2, MANAGEMENT, SOURCE, MARKS_DESC, TYPE, INCLUDE_15) |>
+  summarise(VARIANCE=sum(VARIANCE), VAL=sum(ESTIMATE)) |> ungroup()|>
   mutate(season = case_when(
-    MONTH %in% c(1:4) ~ "spring", 
-    MONTH %in% c(5:8) ~ "summer", 
-    MONTH %in% c(9:12) ~ "fall" 
+    MONTH %in% c(1:4) ~ "spring",
+    MONTH %in% c(5:9) ~ "summer",
+    MONTH %in% c(10:12) ~ "fall"
   ))
 
 ```
@@ -184,7 +224,13 @@ Sport_mark_rate_region_month<- Sport_filtered_south_irec  %>%
 ```
 
 ```{r expanding to all combinations}
-allobs2 <- tidyr::expand(Sport_filtered_south_irec, nesting(AREA, REGION2, MANAGEMENT), YEAR, nesting(MONTH, season), MARKS_DESC, TYPE, SOURCE)
+allobs2 <- tidyr::expand(Sport_filtered_south_irec, nesting(AREA, REGION2, MANAGEMENT), YEAR, nesting(MONTH, season), MARKS_DESC, TYPE, SOURCE) %>%
+           mutate(bad_combos = case_when(
+             AREA %in% c("Area 25", "Area 26", "Area 27") & MANAGEMENT == "ISBM" & MONTH %in% c(1:6,10:12) ~ "bad",
+             AREA %in% c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal") & MANAGEMENT == "ISBM" & MONTH %in% c(1:7,10:12) ~ "bad",
+             TRUE ~ "good")) %>%
+            filter(bad_combos == "good") %>%
+            dplyr::select(-bad_combos)
 
 ```
 
@@ -214,8 +260,8 @@ Sport_mark_rate<- Sport_filtered_south_irec  %>%
     (is.na(marked_prop) | marked_prop %in% c(0,1)) & (is.na(marked_prop_source)| marked_prop_source %in% c(0,1))  & (is.na(marked_prop_REGION2)| marked_prop_REGION2 %in% c(0,1)) & (is.na(marked_prop_seasonal)| marked_prop_seasonal %in% c(0,1)) & (is.na(marked_prop_seasonal_reg) | marked_prop_seasonal_reg %in% c(0,1)) & (is.na(marked_prop_area_month) |marked_prop_area_month %in% c(0,1))& !is.na(marked_prop_region_month) & marked_prop_region_month %notin% c(0,1) ~ marked_prop_region_month,
     TRUE ~ marked_prop)) %>%
   mutate(marked_prop_use = case_when(
-    is.na(marked_prop_use1) ~ 0.5, 
-    TRUE ~ marked_prop_use1))%>%
+    is.na(marked_prop_use1) ~ 0.5,
+    TRUE ~ marked_prop_use1)) %>%
   mutate(marked_Kept_add = marked_prop_use*unchecked_Kept,
          marked_Released_add = marked_prop_use*unchecked_Released,
          unmarked_Kept_add = (1-marked_prop_use)*unchecked_Kept,
@@ -251,10 +297,11 @@ Sport_mark_rate2<-Sport_mark_rate %>%
          historic_plus = sum(historic,lodge_log, na.rm=TRUE)) %>%
   group_by(YEAR, MONTH, season, AREA, REGION2, MANAGEMENT) %>%
   mutate(catch_estimate_cat = case_when(
-    YEAR > 2012 & MONTH %in% c(5:9) & (is.na(creel) | creel==0) ~ "use irec",
-    YEAR > 2012 & MONTH %in% c(1:4,10:12) ~ "use irec",
-    YEAR < 2013 & (is.na(creel_plus) | creel_plus==0) ~ "use historic",
-    TRUE ~ "use creel plus")) %>%
+    YEAR > 2012 & MONTH %in% c(5:9) & (is.na(creel) | creel==0) ~ "use_irec",
+    YEAR > 2012 & MONTH %in% c(1:4,10:12) ~ "use_irec",
+    YEAR < 2013 & (is.na(creel_plus) | creel_plus==0) & (!is.na(historic) & historic!=0)~ "use_historic",
+    YEAR < 2013 & (is.na(creel_plus) | creel_plus==0) ~ "creel_plus_zero",
+    TRUE ~ "use_creel_plus")) %>%
   ungroup() %>% dplyr::select(YEAR, MONTH, season, AREA, REGION2, MANAGEMENT, catch_estimate_cat)
 
 
@@ -271,9 +318,10 @@ Sport_mark_rate3<-Sport_mark_rate %>%
   group_by(YEAR, MONTH, season, AREA, REGION2, MANAGEMENT) %>%
   left_join(Sport_mark_rate2) %>%
   mutate(catch_estimate = case_when(
-    catch_estimate_cat == "use irec" ~ as.numeric(irec_calibrated),
-    catch_estimate_cat == "use historic" ~  as.numeric(historic_plus),
-    catch_estimate_cat == "use creel plus" ~ as.numeric(creel_plus))) %>%
+    catch_estimate_cat == "use_irec" ~ as.numeric(irec_calibrated),
+    catch_estimate_cat == "use_historic" ~  as.numeric(historic_plus),
+    catch_estimate_cat == "use_creel_plus" ~ as.numeric(creel_plus),
+    catch_estimate_cat == "creel_zero" ~ as.numeric(creel_plus))) %>%
   ungroup() %>%
   relocate(catch_estimate_cat, .after=status)
 
@@ -400,7 +448,8 @@ Sport_mark_rate_finescale<- Sport_mark_rate_finescale %>% ungroup %>%
 
 -   We sum up catch by mark and kept status for each year and new finescale fishery of the defined coverage periods for creel and for the previously calculated catch estimate. This is the data used in the modelling exercise described below.
 
-```{r combining seasons and terminal}
+```{r summing data by fishery, combining summer period and catch effort}
+
 
 Sport_mark_rate_finescale_sum<- Sport_mark_rate_finescale %>%
   filter(!is.na(finescale_fishery)) %>%
@@ -413,9 +462,22 @@ Sport_creel_finescale_summer<- Sport_mark_rate_finescale %>%
   summarise_at(vars(creel_plus), sum, na.rm=TRUE) %>%
   rename(creel_plus_summer=creel_plus)
 
+Sport_creel_finescale_creel_effort<- Sport_mark_rate_finescale %>%
+  full_join(creel_plus_effort) %>%
+  mutate(creel_plus_done = case_when(
+    is.na(creel_plus_done)~ "no",
+    TRUE ~ creel_plus_done)) %>%
+  filter(!is.na(finescale_fishery_old), summer_coverage_tf=="yes") %>%
+  group_by(YEAR, finescale_fishery_old, finescale_fishery) %>% count(creel_plus_done) %>%
+  pivot_wider(names_from = creel_plus_done, values_from = n) %>%
+  mutate(creel_effort = sum(yes, na.rm=TRUE)/sum(no, yes, na.rm=TRUE)) %>%
+  ungroup() %>%
+  dplyr::select(YEAR, finescale_fishery_old,creel_effort)
+
 
 #Year, finescale fishery
 Sport_mark_rate_finescale_combined<-left_join(Sport_mark_rate_finescale_sum, Sport_creel_finescale_summer)
+Sport_mark_rate_finescale_combined<-left_join(Sport_mark_rate_finescale_combined, Sport_creel_finescale_creel_effort)
 
 Sport_mark_rate_finescale_combined<-Sport_mark_rate_finescale_combined %>% mutate(mark_status = case_when(
   status %in% c("marked_Kept_total", "marked_Released_total") ~ "marked",
@@ -429,7 +491,6 @@ Sport_mark_rate_finescale_combined<-Sport_mark_rate_finescale_combined %>% mutat
   str_detect(finescale_fishery, "SUMMER")  ~ "summer",
   str_detect(finescale_fishery, "SPRING")  ~ "spring",
   str_detect(finescale_fishery, "FALL")  ~ "fall"))
-
 
 ```
 
