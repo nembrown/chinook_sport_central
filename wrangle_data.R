@@ -385,7 +385,6 @@ library(bbmle)
 library(SuppDists)
 library(MuMIn)
 
-## Seasonal model without terminal
 Season_south<-Sport_mark_rate_finescale_combined%>% filter(YEAR %in% c(2013:2023)) %>% filter(!str_detect(finescale_fishery, "CBC|NBC"))
 
 Season_model_full<- glm(formula = catch_estimate ~creel_plus_summer*mark_status*kept_status*finescale_fishery_old*season*creel_effort,  family=gaussian, data = Season_south)
@@ -398,81 +397,120 @@ res_pois <- simulateResiduals(Season_model_full_poisson, plot = T, quantreg=T)
 summary(Season_model_full_poisson)
 
 #gamma
-Season_model_full_gamma<- glm(formula = (catch_estimate+2) ~creel_plus_summer*mark_status*kept_status*finescale_fishery_old*season*creel_effort,  family=Gamma(link = "log"), data = Season_south)
+Season_model_full_gamma<- glm(formula = (catch_estimate+3) ~creel_plus_summer*mark_status*kept_status*finescale_fishery_old*season*creel_effort,  family=Gamma(link = "log"), data = Season_south)
 res_gam <- simulateResiduals(Season_model_full_gamma, plot = T, quantreg=T)
 summary(Season_model_full_gamma)
 
 AICtab(Season_model_full,Season_model_full_poisson, Season_model_full_gamma)
-#Gamma is best
 
-Season_model_gamma_dropkept<- glm(formula = catch_estimate + 1 ~creel_plus_summer*mark_status*finescale_fishery_old*season*creel_effort,  family=Gamma(link = "log"), data = Season_south)
-res_gam_dropkept <- simulateResiduals(Season_model_gamma_dropkept, plot = T, quantreg=T)
-summary(Season_model_gamma_dropkept)
+#drop_ a single term:
+Season_model_gamma_drop_kept<- glm(formula = catch_estimate + 1 ~creel_plus_summer*mark_status*finescale_fishery_old*season*creel_effort,  family=Gamma(link = "log"), data = Season_south)
+res_gam_drop_kept <- simulateResiduals(Season_model_gamma_drop_kept, plot = T, quantreg=T)
+summary(Season_model_gamma_drop_kept)
 
-Season_model_gamma_dropmark<- glm(formula = catch_estimate + 1 ~creel_plus_summer*kept_status*finescale_fishery_old*season*creel_effort,  family=Gamma(link = "log"), data = Season_south)
-res_gam_dropmark <- simulateResiduals(Season_model_gamma_dropmark, plot = T, quantreg=T)
-summary(Season_model_gamma_dropmark)
+Season_model_gamma_drop_mark<- glm(formula = catch_estimate + 1 ~creel_plus_summer*kept_status*finescale_fishery_old*season*creel_effort,  family=Gamma(link = "log"), data = Season_south)
+res_gam_drop_mark <- simulateResiduals(Season_model_gamma_drop_mark, plot = T, quantreg=T)
+summary(Season_model_gamma_drop_mark)
 
-Season_model_gamma_dropmarkkept<- glm(formula = catch_estimate+1 ~creel_plus_summer*finescale_fishery_old*season*creel_effort,  family=Gamma(link = "log"), data = Season_south)
-res_gam_dropmarkkept <- simulateResiduals(Season_model_gamma_dropmarkkept, plot = T, quantreg=T)
-summary(Season_model_gamma_dropmarkkept)
+Season_model_gamma_drop_fishery<- glm(formula = catch_estimate+5 ~creel_plus_summer*mark_status*kept_status*season*creel_effort,  family=Gamma(link = "log"), data = Season_south)
+res_gam_drop_fishery <- simulateResiduals(Season_model_gamma_drop_fishery, plot = T, quantreg=T)
+summary(Season_model_gamma_drop_fishery)
 
-Season_model_gamma_dropfishery<- glm(formula = catch_estimate+10 ~creel_plus_summer*mark_status*kept_status*season*creel_effort,  family=Gamma(link = "log"), data = Season_south)
-res_gam_dropfishery <- simulateResiduals(Season_model_gamma_dropfishery, plot = T, quantreg=T)
-summary(Season_model_gamma_dropfishery)
+Season_model_gamma_drop_season<- glm(formula = catch_estimate+1 ~creel_plus_summer*mark_status*kept_status*finescale_fishery_old*creel_effort,  family=Gamma(link = "log"), data = Season_south)
+res_gam_drop_season <- simulateResiduals(Season_model_gamma_drop_season, plot = T, quantreg=T)
+summary(Season_model_gamma_drop_season)
 
-Season_model_gamma_dropfisherykept<- glm(formula = catch_estimate+3 ~creel_plus_summer*mark_status*season*creel_effort,  family=Gamma(link = "log"), data = Season_south)
-res_gam_dropfisherykept <- simulateResiduals(Season_model_gamma_dropfisherykept, plot = T, quantreg=T)
-summary(Season_model_gamma_dropfisherykept)
+Season_model_gamma_drop_effort<- glm(formula = catch_estimate+1 ~creel_plus_summer*mark_status*kept_status*finescale_fishery_old*season,  family=Gamma(link = "log"), data = Season_south)
+res_gam_drop_effort <- simulateResiduals(Season_model_gamma_drop_effort, plot = T, quantreg=T)
+summary(Season_model_gamma_drop_effort)
 
-Season_model_gamma_dropfisherymark<- glm(formula = catch_estimate+3 ~creel_plus_summer*kept_status*season*creel_effort,  family=Gamma(link = "log"), data = Season_south)
-res_gam_dropfisherymark <- simulateResiduals(Season_model_gamma_dropfisherymark, plot = T, quantreg=T)
-summary(Season_model_gamma_dropfisherymark)
+AICtab(Season_model_full_gamma, Season_model_gamma_drop_kept, Season_model_gamma_drop_mark, Season_model_gamma_drop_fishery, Season_model_gamma_drop_season, Season_model_gamma_drop_effort)
 
-Season_model_gamma_dropall<- glm(formula = catch_estimate+3 ~creel_plus_summer*season*creel_effort,  family=Gamma(link = "log"), data = Season_south)
-res_gam_dropall <- simulateResiduals(Season_model_gamma_dropall, plot = T, quantreg=T)
-summary(Season_model_gamma_dropall)
+## drop_ kept is the best... try sequentially dropping terms:
 
-#No season:
+Season_model_gamma_drop_kept_mark<- glm(formula = catch_estimate+1 ~creel_plus_summer*finescale_fishery_old*season*creel_effort,  family=Gamma(link = "log"), data = Season_south)
+res_gam_drop_kept_mark <- simulateResiduals(Season_model_gamma_drop_kept_mark, plot = T, quantreg=T)
+summary(Season_model_gamma_drop_kept_mark)
 
-Season_model_full_gamma_nce<- glm(formula = catch_estimate+3 ~creel_plus_summer*mark_status*kept_status*finescale_fishery_old*season,  family=Gamma(link = "log"), data = Season_south)
-res_gam_nce <- simulateResiduals(Season_model_full_gamma_nce, plot = T, quantreg=T)
-summary(Season_model_full_gamma_nce)
+Season_model_gamma_drop_kept_season<- glm(formula = catch_estimate + 1 ~creel_plus_summer*mark_status*finescale_fishery_old*creel_effort,  family=Gamma(link = "log"), data = Season_south)
+res_gam_drop_kept_season <- simulateResiduals(Season_model_gamma_drop_kept_season, plot = T, quantreg=T)
+summary(Season_model_gamma_drop_kept_season)
 
-Season_model_gamma_dropkept_nce<- glm(formula = catch_estimate + 1 ~creel_plus_summer*mark_status*finescale_fishery_old*season,  family=Gamma(link = "log"), data = Season_south)
-res_gam_dropkept_nce <- simulateResiduals(Season_model_gamma_dropkept_nce, plot = T, quantreg=T)
-summary(Season_model_gamma_dropkept_nce)
+Season_model_gamma_drop_kept_fishery<- glm(formula = catch_estimate+5 ~creel_plus_summer*mark_status*season*creel_effort,  family=Gamma(link = "log"), data = Season_south)
+res_gam_drop_kept_fishery <- simulateResiduals(Season_model_gamma_drop_kept_fishery, plot = T, quantreg=T)
+summary(Season_model_gamma_drop_kept_fishery)
 
-Season_model_gamma_dropmark_nce<- glm(formula = catch_estimate + 1 ~creel_plus_summer*kept_status*finescale_fishery_old*season,  family=Gamma(link = "log"), data = Season_south)
-res_gam_dropmark_nce <- simulateResiduals(Season_model_gamma_dropmark_nce, plot = T, quantreg=T)
-summary(Season_model_gamma_dropmark_nce)
+Season_model_gamma_drop_kept_effort<- glm(formula = catch_estimate+1 ~creel_plus_summer*mark_status*finescale_fishery_old*season,  family=Gamma(link = "log"), data = Season_south)
+res_gam_drop_kept_effort <- simulateResiduals(Season_model_gamma_drop_kept_effort, plot = T, quantreg=T)
+summary(Season_model_gamma_drop_kept_effort)
 
-Season_model_gamma_dropmarkkept_nce<- glm(formula = catch_estimate+1 ~creel_plus_summer*finescale_fishery_old*season,  family=Gamma(link = "log"), data = Season_south)
-res_gam_dropmarkkept_nce <- simulateResiduals(Season_model_gamma_dropmarkkept_nce, plot = T, quantreg=T)
-summary(Season_model_gamma_dropmarkkept_nce)
+AICtab(Season_model_gamma_drop_kept, Season_model_gamma_drop_kept_mark, Season_model_gamma_drop_kept_season, Season_model_gamma_drop_kept_fishery, Season_model_gamma_drop_kept_effort)
 
-Season_model_gamma_dropfishery_nce<- glm(formula = catch_estimate+1 ~creel_plus_summer*mark_status*kept_status*season,  family=Gamma(link = "log"), data = Season_south)
-res_gam_dropfishery_nce <- simulateResiduals(Season_model_gamma_dropfishery_nce, plot = T, quantreg=T)
-summary(Season_model_gamma_dropfishery_nce)
+### kept and creel effort,
 
-Season_model_gamma_dropfisherykept_nce<- glm(formula = catch_estimate+1 ~creel_plus_summer*mark_status*season,  family=Gamma(link = "log"), data = Season_south)
-res_gam_dropfisherykept_nce <- simulateResiduals(Season_model_gamma_dropfisherykept_nce, plot = T, quantreg=T)
-summary(Season_model_gamma_dropfisherykept_nce)
+Season_model_gamma_drop_kept_effort_mark<- glm(formula = catch_estimate+1 ~creel_plus_summer*finescale_fishery_old*season,  family=Gamma(link = "log"), data = Season_south)
+res_gam_drop_kept_effort_mark <- simulateResiduals(Season_model_gamma_drop_kept_effort_mark, plot = T, quantreg=T)
+summary(Season_model_gamma_drop_kept_effort_mark)
 
-Season_model_gamma_dropfisherymark_nce<- glm(formula = catch_estimate+1 ~creel_plus_summer*kept_status*season,  family=Gamma(link = "log"), data = Season_south)
-res_gam_dropfisherymark_nce <- simulateResiduals(Season_model_gamma_dropfisherymark_nce, plot = T, quantreg=T)
-summary(Season_model_gamma_dropfisherymark_nce)
+Season_model_gamma_drop_kept_effort_fishery<- glm(formula = catch_estimate+1 ~creel_plus_summer*mark_status*season,  family=Gamma(link = "log"), data = Season_south)
+res_gam_drop_kept_effort_fishery <- simulateResiduals(Season_model_gamma_drop_kept_effort_fishery, plot = T, quantreg=T)
+summary(Season_model_gamma_drop_kept_effort)
 
-Season_model_gamma_dropall_nce<- glm(formula = catch_estimate+1 ~creel_plus_summer*season,  family=Gamma(link = "log"), data = Season_south)
-res_gam_dropall_nce <- simulateResiduals(Season_model_gamma_dropall_nce, plot = T, quantreg=T)
-summary(Season_model_gamma_dropall_nce)
+Season_model_gamma_drop_kept_effort_season<- glm(formula = catch_estimate+1 ~creel_plus_summer*mark_status*finescale_fishery_old,  family=Gamma(link = "log"), data = Season_south)
+res_gam_drop_kept_effort_season <- simulateResiduals(Season_model_gamma_drop_kept_effort_season, plot = T, quantreg=T)
+summary(Season_model_gamma_drop_kept_effort_season)
+
+AICtab(Season_model_gamma_drop_kept_effort, Season_model_gamma_drop_kept_effort_mark, Season_model_gamma_drop_kept_effort_fishery, Season_model_gamma_drop_kept_effort_season)
+### kept and creel effort
+
+### Playing with model specification:
+Season_model_gamma_drop_kept_effort<- glm(formula = catch_estimate+1 ~creel_plus_summer*mark_status*finescale_fishery_old*season,  family=Gamma(link = "log"), data = Season_south)
+res_gam_drop_kept_effort <- simulateResiduals(Season_model_gamma_drop_kept_effort, plot = T, quantreg=T)
+summary(Season_model_gamma_drop_kept_effort)
+
+# Season_model_gamma_drop_kept_effort_2<- glm(formula = catch_estimate+1 ~creel_plus_summer+mark_status+finescale_fishery_old+season+
+#                                                                       creel_plus_summer:mark_status +
+#                                                                       creel_plus_summer:finescale_fishery_old +
+#                                                                       creel_plus_summer:season,
+#                                                                       creel_plus_summer:season:finescale_fishery_old,
+#                                                                       creel_plus_summer:season:finescale_fishery_old,  family=Gamma(link = "log"), data = Season_south)
+#
+#
+# res_gam_drop_kept_effort_2 <- simulateResiduals(Season_model_gamma_drop_kept_effort_2, plot = T, quantreg=T)
+# summary(Season_model_gamma_drop_kept_effort_2)
+#
+# AICtab(Season_model_gamma_drop_kept_effort,Season_model_gamma_drop_kept_effort_2 )
+#
+#
+# dd<-dredge(Season_model_gamma_drop_kept_effort, fixed = )
+#
+# par(mar = c(3,5,6,4))
+# plot(dd, labAsExpr = TRUE)
+#
+# summary(get.models(dd, 1)[[1]])
+#
+#
+# subset(dd, delta < 4)
+### Selected model:
+Season_model_gamma_drop_kept_effort<- glm(formula = catch_estimate+1 ~creel_plus_summer*mark_status*finescale_fishery_old*season,  family=Gamma(link = "log"), data = Season_south)
+res_gam_drop_kept_effort <- simulateResiduals(Season_model_gamma_drop_kept_effort, plot = T, quantreg=T)
+summary(Season_model_gamma_drop_kept_effort)
 
 
-AICtab(Season_model_full_gamma, Season_model_gamma_dropkept, Season_model_gamma_dropmark, Season_model_gamma_dropmarkkept, Season_model_gamma_dropfishery, Season_model_gamma_dropfisherykept, Season_model_gamma_dropfisherymark, Season_model_gamma_dropall,
-       Season_model_full_gamma_nce, Season_model_gamma_dropkept_nce, Season_model_gamma_dropmark_nce, Season_model_gamma_dropmarkkept_nce, Season_model_gamma_dropfishery_nce, Season_model_gamma_dropfisherykept_nce, Season_model_gamma_dropfisherymark_nce, Season_model_gamma_dropall_nce)
+testDispersion(Season_model_gamma_drop_kept_effort)
+simulationOutput <- simulateResiduals(fittedModel = Season_model_gamma_drop_kept_effort, plot = F)
+residuals(simulationOutput)
+residuals(simulationOutput, quantileFunction = qnorm, outlierValues = c(-7,7))
+plot(simulationOutput)
+plotResiduals(simulationOutput, na.omit(Season_south$creel_plus_summer))
 
+plotResiduals(simulationOutput, form = na.omit(Season_south$finescale_fishery_old))
 
+testCategorical(simulationOutput, catPred = na.omit(Season_south$season))
 
+simulationOutput <- simulateResiduals(fittedModel = fittedModel)
+# plotConventionalResiduals(fittedModel)
+plot(simulationOutput, quantreg = T)
 
 
 #### MRR URR

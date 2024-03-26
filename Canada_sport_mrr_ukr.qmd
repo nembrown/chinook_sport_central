@@ -44,7 +44,6 @@ col4 = "lightblue4"
 col5 = "pink"
 col6 = "darkred"
 colclear= "#1C00ff00"
-
 ```
 
 ## Pulling and filtering data
@@ -71,6 +70,8 @@ rm(rslt)
     -   At least 25 interviews on weekends OR at least 10% of interviews from weekend
     -   At least 15 day spread in flights
     -   At least 15 day spread in interviews
+
+-   After filtering for criteria, we identify where a creel or logbook estimate was made (even if 0).
 
 -   We combined estimates under sources called "Lodge Log","Lodge Manifest","Lodge Manifest - Log", "Lodge Estimate", "Log Estimate", "Lodge eLog" to be called lodge_log.
 
@@ -231,7 +232,6 @@ allobs2 <- tidyr::expand(Sport_filtered_south_irec, nesting(AREA, REGION2, MANAG
              TRUE ~ "good")) %>%
             filter(bad_combos == "good") %>%
             dplyr::select(-bad_combos)
-
 ```
 
 -   We joined the various calculations of mark rate to the catch data and expanded unchecked kept and released into marked and unmarked of those categories using the best available chosen mark rate
@@ -275,7 +275,7 @@ Sport_mark_rate<- Sport_filtered_south_irec  %>%
 
 ## Choosing best catch estimate
 
--   We then chose the correct catch estimate by PFMA and month as follows:
+-   We then used criteria to choose the catch estimate by PFMA and month as follows:
 
     -   In months 5-9 use creel+ lodge if that data exists, otherwise use calibrated iREC
 
@@ -447,9 +447,9 @@ Sport_mark_rate_finescale<- Sport_mark_rate_finescale %>% ungroup %>%
 ```
 
 -   We sum up catch by mark and kept status for each year and new finescale fishery of the defined coverage periods for creel and for the previously calculated catch estimate. This is the data used in the modelling exercise described below.
+-   We also calculate creel effort - a proportion of months and areas in a given finescale fishery that we surveyed using creel or logbooks. This is used in the modelling efforts below.
 
 ```{r summing data by fishery, combining summer period and catch effort}
-
 
 Sport_mark_rate_finescale_sum<- Sport_mark_rate_finescale %>%
   filter(!is.na(finescale_fishery)) %>%
@@ -574,16 +574,109 @@ g3
         -   First we compared three distributions: normal (gaussian), poisson, and Gamma distribution to see which fit our data the best on the full model. These distributions are all consistent with our positive, continuous data
 
             $$
-            catch = creel.summer * mark.status * kept.status * finescale.fishery * season
+            catch = creel.summer * mark.status * kept.status * finescale.fishery * season * creel.effort
             $$
 
-        -   Next, using the chosen distribution, we compared the full model with all terms to models with each of the terms dropped sequentially
+        -   Next, using the chosen distribution, we compared the full model with all terms to models with each of the terms dropped sequentially except for creel.summer which was our main interest.
 
         -   We selected the model with the lowest AIC and best visual diagnostics.
 
 ## Pre-terminal fisheries 
 
--   The best model was one without kept-status:
+-   The best model was one with a gamma distribution:
+
+```{r Modelling distributions, message=FALSE, warning=FALSE, echo=FALSE}
+
+Season_south<-Sport_mark_rate_finescale_combined%>% filter(YEAR %in% c(2013:2023)) %>% filter(!str_detect(finescale_fishery, "CBC|NBC"))
+
+Season_model_full<- glm(formula = catch_estimate ~creel_plus_summer*mark_status*kept_status*finescale_fishery_old*season*creel_effort,  family=gaussian, data = Season_south)
+# summary(Season_model_full)
+# res <- simulateResiduals(Season_model_full, plot = T, quantreg=T)
+
+#poisson
+Season_model_full_poisson<- glm(formula = catch_estimate ~creel_plus_summer*mark_status*kept_status*finescale_fishery_old*season*creel_effort,  family=poisson, data = Season_south)
+#res_pois <- simulateResiduals(Season_model_full_poisson, plot = T, quantreg=T)
+#summary(Season_model_full_poisson)
+
+#gamma
+Season_model_full_gamma<- glm(formula = (catch_estimate+3) ~creel_plus_summer*mark_status*kept_status*finescale_fishery_old*season*creel_effort,  family=Gamma(link = "log"), data = Season_south)
+# res_gam <- simulateResiduals(Season_model_full_gamma, plot = T, quantreg=T)
+# summary(Season_model_full_gamma)
+
+AICtab(Season_model_full,Season_model_full_poisson, Season_model_full_gamma)
+
+```
+
+-   The best model was one where kept status was dropped from the model:
+
+```{r Modelling drop each term, message=FALSE, warning=FALSE, echo=FALSE}
+
+#drop_ a single term: 
+Season_model_gamma_drop_kept<- glm(formula = catch_estimate + 1 ~creel_plus_summer*mark_status*finescale_fishery_old*season*creel_effort,  family=Gamma(link = "log"), data = Season_south)
+# res_gam_drop_kept <- simulateResiduals(Season_model_gamma_drop_kept, plot = T, quantreg=T)
+# summary(Season_model_gamma_drop_kept)
+
+Season_model_gamma_drop_mark<- glm(formula = catch_estimate + 1 ~creel_plus_summer*kept_status*finescale_fishery_old*season*creel_effort,  family=Gamma(link = "log"), data = Season_south)
+# res_gam_drop_mark <- simulateResiduals(Season_model_gamma_drop_mark, plot = T, quantreg=T)
+# summary(Season_model_gamma_drop_mark)
+
+Season_model_gamma_drop_fishery<- glm(formula = catch_estimate+5 ~creel_plus_summer*mark_status*kept_status*season*creel_effort,  family=Gamma(link = "log"), data = Season_south)
+# res_gam_drop_fishery <- simulateResiduals(Season_model_gamma_drop_fishery, plot = T, quantreg=T)
+# summary(Season_model_gamma_drop_fishery)
+
+Season_model_gamma_drop_season<- glm(formula = catch_estimate+1 ~creel_plus_summer*mark_status*kept_status*finescale_fishery_old*creel_effort,  family=Gamma(link = "log"), data = Season_south)
+# res_gam_drop_season <- simulateResiduals(Season_model_gamma_drop_season, plot = T, quantreg=T)
+# summary(Season_model_gamma_drop_season)
+
+Season_model_gamma_drop_effort<- glm(formula = catch_estimate+1 ~creel_plus_summer*mark_status*kept_status*finescale_fishery_old*season,  family=Gamma(link = "log"), data = Season_south)
+# res_gam_drop_effort <- simulateResiduals(Season_model_gamma_drop_effort, plot = T, quantreg=T)
+# summary(Season_model_gamma_drop_effort)
+
+AICtab(Season_model_full_gamma, Season_model_gamma_drop_kept, Season_model_gamma_drop_mark, Season_model_gamma_drop_fishery, Season_model_gamma_drop_season, Season_model_gamma_drop_effort)
+
+```
+
+-   Further investigation showed that the best model dropped both kept status and creel effort but no further terms:
+
+```{r Modelling model format, message=FALSE, warning=FALSE, echo=FALSE}
+
+Season_model_gamma_drop_kept_mark<- glm(formula = catch_estimate+1 ~creel_plus_summer*finescale_fishery_old*season*creel_effort,  family=Gamma(link = "log"), data = Season_south)
+# res_gam_drop_kept_mark <- simulateResiduals(Season_model_gamma_drop_kept_mark, plot = T, quantreg=T)
+# summary(Season_model_gamma_drop_kept_mark)
+
+Season_model_gamma_drop_kept_season<- glm(formula = catch_estimate + 1 ~creel_plus_summer*mark_status*finescale_fishery_old*creel_effort,  family=Gamma(link = "log"), data = Season_south)
+# res_gam_drop_kept_season <- simulateResiduals(Season_model_gamma_drop_kept_season, plot = T, quantreg=T)
+# summary(Season_model_gamma_drop_kept_season)
+
+Season_model_gamma_drop_kept_fishery<- glm(formula = catch_estimate+5 ~creel_plus_summer*mark_status*season*creel_effort,  family=Gamma(link = "log"), data = Season_south)
+# res_gam_drop_kept_fishery <- simulateResiduals(Season_model_gamma_drop_kept_fishery, plot = T, quantreg=T)
+# summary(Season_model_gamma_drop_kept_fishery)
+
+Season_model_gamma_drop_kept_effort<- glm(formula = catch_estimate+1 ~creel_plus_summer*mark_status*finescale_fishery_old*season,  family=Gamma(link = "log"), data = Season_south)
+# res_gam_drop_kept_effort <- simulateResiduals(Season_model_gamma_drop_kept_effort, plot = T, quantreg=T)
+# summary(Season_model_gamma_drop_kept_effort)
+
+AICtab(Season_model_gamma_drop_kept, Season_model_gamma_drop_kept_mark, Season_model_gamma_drop_kept_season, Season_model_gamma_drop_kept_fishery, Season_model_gamma_drop_kept_effort)
+
+### kept and creel effort, 
+
+Season_model_gamma_drop_kept_effort_mark<- glm(formula = catch_estimate+1 ~creel_plus_summer*finescale_fishery_old*season,  family=Gamma(link = "log"), data = Season_south)
+# res_gam_drop_kept_effort_mark <- simulateResiduals(Season_model_gamma_drop_kept_effort_mark, plot = T, quantreg=T)
+# summary(Season_model_gamma_drop_kept_effort_mark)
+
+Season_model_gamma_drop_kept_effort_fishery<- glm(formula = catch_estimate+1 ~creel_plus_summer*mark_status*season,  family=Gamma(link = "log"), data = Season_south)
+# res_gam_drop_kept_effort_fishery <- simulateResiduals(Season_model_gamma_drop_kept_effort_fishery, plot = T, quantreg=T)
+# summary(Season_model_gamma_drop_kept_effort)
+
+Season_model_gamma_drop_kept_effort_season<- glm(formula = catch_estimate+1 ~creel_plus_summer*mark_status*finescale_fishery_old,  family=Gamma(link = "log"), data = Season_south)
+# res_gam_drop_kept_effort_season <- simulateResiduals(Season_model_gamma_drop_kept_effort_season, plot = T, quantreg=T)
+# summary(Season_model_gamma_drop_kept_effort_season)
+
+AICtab(Season_model_gamma_drop_kept_effort, Season_model_gamma_drop_kept_effort_mark, Season_model_gamma_drop_kept_effort_fishery, Season_model_gamma_drop_kept_effort_season)
+
+```
+
+-   Therefore the best model included mark status, finescale fishery and season
 
     $$
     catch = creel.summer * mark.status * finescale.fishery * season
@@ -591,18 +684,13 @@ g3
 
 ```{r Modelling all seasonal southern BC fisheries, message=FALSE, warning=FALSE, results='hold'}
 
-#Summer model
-Season_south<-Sport_mark_rate_finescale_combined%>% filter(YEAR %in% c(2013:2023))
-# See modelling script for full model results: chosen model is: summer model full Gamma 
-
-Season_model_gamma_dropkept<- glm(formula = catch_estimate + 1 ~creel_plus_summer*mark_status*finescale_fishery_old*season,  family=Gamma(link = "log"), data = Season_south)
-res_gam_dropkept <- simulateResiduals(Season_model_gamma_dropkept, plot = T, quantreg=T)
-
-#summary(Season_model_gamma_dropkept)
+Season_model_gamma_drop_kept_effort<- glm(formula = catch_estimate+1 ~creel_plus_summer*mark_status*finescale_fishery_old*season,  family=Gamma(link = "log"), data = Season_south)
+ res_gam_drop_kept_effort <- simulateResiduals(Season_model_gamma_drop_kept_effort, plot = T, quantreg=T)
+# summary(Season_model_gamma_drop_kept_effort)
 
 #Adding predicted data
-Season_south_old<- Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2005:2012)) %>% ungroup() %>% mutate(pred_cat = "predicted")
-Season_south_old_new<-predict.glm(Season_model_gamma_dropkept, newdata =  Season_south_old, type = "response")
+Season_south_old<- Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2005:2012)) %>% ungroup() %>% mutate(pred_cat = "predicted") %>% filter(!str_detect(finescale_fishery, "CBC|NBC"))
+Season_south_old_new<-predict.glm(Season_model_gamma_drop_kept_effort, newdata =  Season_south_old, type = "response")
 Season_south_old_new_2<-Season_south_old %>%   mutate(catch_estimate_predicted = Season_south_old_new)
 
 Season_south2<-Season_south %>% mutate(catch_estimate_predicted = catch_estimate, pred_cat= "observed")
