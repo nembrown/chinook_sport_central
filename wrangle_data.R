@@ -49,6 +49,40 @@ creel_plus_effort<- full_join(creel_effort, logbook_effort) %>%
     TRUE ~ "no"
   ))
 
+Sport_filtered_south_irec_unfiltered<-
+  estimates |>
+  as_tibble() |>
+  filter( YEAR<2024)|>
+  filter(AREA %notin% c("Area 29 (In River)", "Campbell River", "Quinsam River", "CR-1", "CR-2", "CR-3", "CR-4", "QR-1", "QR-2", "QR-3", "QR-4")) |>
+  mutate(AREA = case_when(
+    AREA== "Area 29 (Marine)" ~ "Area 29",
+    AREA== "Area 19" & REGION2=="JDF" ~ "Area 19 (JDF)",
+    AREA== "Area 19" & REGION2=="GSS" ~ "Area 19 (GS)",
+    TRUE ~ as.character(AREA))) |>
+  filter(SUB_TYPE == "LEGAL") |>
+  mutate(REGION2 = case_when(AREA == "Area 2" ~ "NC", TRUE ~ REGION2)) |>
+  mutate(MARKS_DESC = case_when(
+    MARKS_DESC == "Not Adipose Checked" ~ "unchecked",
+    MARKS_DESC == "Not Checked" ~ "unchecked",
+    MARKS_DESC == "Not Applicable" ~ "unchecked",
+    MARKS_DESC == "Not Adipose Marked" ~ "unmarked",
+    MARKS_DESC == "Adipose Marked" ~ "marked")) |>
+  mutate(SOURCE = case_when(
+    SOURCE == "Creel" ~ "creel_unfiltered",
+    SOURCE == "Historic" ~ "historic",
+    SOURCE %in% c("Lodge Log","Lodge Manifest","Lodge Manifest - Log", "Lodge Estimate", "Log Estimate", "Lodge eLog") ~ "lodge_log",
+    SOURCE == "iREC" ~ "irec_calibrated",
+    TRUE ~ SOURCE )) |>
+  group_by(YEAR, MONTH, AREA, REGION2, MANAGEMENT, SOURCE, MARKS_DESC, TYPE, INCLUDE_15) |>
+  summarise(VARIANCE=sum(VARIANCE), VAL=sum(ESTIMATE)) |> ungroup()|>
+  mutate(season = case_when(
+    MONTH %in% c(1:4) ~ "spring",
+    MONTH %in% c(5:9) ~ "summer",
+    MONTH %in% c(10:12) ~ "fall"
+  )) |>
+  filter(SOURCE == "creel_unfiltered")
+
+
 Sport_filtered_south_irec<-
   estimates |>
   as_tibble() |>
@@ -87,6 +121,8 @@ Sport_filtered_south_irec<-
     MONTH %in% c(10:12) ~ "fall"
   ))
 
+Sport_filtered_south_irec<-Sport_filtered_south_irec |>
+                           rbind(Sport_filtered_south_irec_unfiltered)
 
 #Take filtered data and get a by-year estimate to in fill for NAs below
 
@@ -197,6 +233,7 @@ Sport_mark_rate2<-Sport_mark_rate %>%
   rowwise() %>%
   group_by(YEAR, MONTH, season, AREA, REGION2, MANAGEMENT) %>%
   mutate(creel_plus = sum(creel,lodge_log, na.rm=TRUE),
+         creel_unfiltered_plus = sum(creel_unfiltered,lodge_log, na.rm=TRUE),
          historic_plus = sum(historic,lodge_log, na.rm=TRUE)) %>%
   group_by(YEAR, MONTH, season, AREA, REGION2, MANAGEMENT) %>%
   mutate(catch_estimate_cat = case_when(
@@ -217,6 +254,7 @@ Sport_mark_rate3<-Sport_mark_rate %>%
   rowwise() %>%
   group_by(YEAR, MONTH, season, AREA, REGION2, MANAGEMENT, status) %>%
   mutate(creel_plus = sum(creel,lodge_log, na.rm=TRUE),
+         creel_unfiltered_plus = sum(creel_unfiltered,lodge_log, na.rm=TRUE),
          historic_plus = sum(historic,lodge_log, na.rm=TRUE)) %>%
   group_by(YEAR, MONTH, season, AREA, REGION2, MANAGEMENT) %>%
   left_join(Sport_mark_rate2) %>%
