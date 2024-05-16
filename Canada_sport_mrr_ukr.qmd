@@ -383,27 +383,27 @@ Sport_mark_rate3<-Sport_mark_rate %>%
 Sport_mark_rate_finescale<-
   Sport_mark_rate3%>% ungroup %>%
   mutate(finescale_fishery = case_when(
-    AREA%in%c( "Area 125", "Area 126", "Area 127") & MANAGEMENT=="AABM" & season=="fall" ~ "NWCVI S FALL",
-    AREA%in%c( "Area 125", "Area 126", "Area 127") & MANAGEMENT=="AABM" & season=="spring" ~ "NWCVI S SPRING",
-    AREA%in%c( "Area 125", "Area 126", "Area 127") & MANAGEMENT=="AABM" & season=="summer" ~ "NWCVI S SUMMER",
+    AREA%in%c( "Area 125", "Area 126", "Area 127") & MANAGEMENT=="AABM" & season=="fall" ~ "NWCVI S FALL AABM",
+    AREA%in%c( "Area 125", "Area 126", "Area 127") & MANAGEMENT=="AABM" & season=="spring" ~ "NWCVI S SPRING AABM",
+    AREA%in%c( "Area 125", "Area 126", "Area 127") & MANAGEMENT=="AABM" & season=="summer" ~ "NWCVI S SUMMER AABM",
 
-    AREA%in%c("Area 121", "Area 123", "Area 124") & MANAGEMENT=="AABM" & season=="fall" ~ "SWCVI S FALL",
-    AREA%in%c("Area 121", "Area 123", "Area 124") & MANAGEMENT=="AABM" & season=="spring" ~ "SWCVI S SPRING",
-    AREA%in%c("Area 121", "Area 123", "Area 124") & MANAGEMENT=="AABM" & season=="summer" ~ "SWCVI S SUMMER",
+    AREA%in%c("Area 121", "Area 123", "Area 124") & MANAGEMENT=="AABM" & season=="fall" ~ "SWCVI S FALL AABM",
+    AREA%in%c("Area 121", "Area 123", "Area 124") & MANAGEMENT=="AABM" & season=="spring" ~ "SWCVI S SPRING AABM",
+    AREA%in%c("Area 121", "Area 123", "Area 124") & MANAGEMENT=="AABM" & season=="summer" ~ "SWCVI S SUMMER AABM",
 
-    AREA%in%c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal)")  & MONTH%in%c(10:12) ~ "SWCVI S FALL",
-    AREA%in%c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal)")  & season=="spring" ~ "SWCVI S SPRING",
-    AREA%in%c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal)")  & MONTH%in%c(6:7) ~ "SWCVI S SUMMER",
+    AREA%in%c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal)")  & MONTH%in%c(10:12) ~ "SWCVI S FALL AABM",
+    AREA%in%c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal)")  & season=="spring" ~ "SWCVI S SPRING AABM",
+    AREA%in%c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal)")  & MONTH%in%c(6:7) ~ "SWCVI S SUMMER AABM",
 
-    AREA%in%c("Area 25", "Area 26", "Area 27") & MONTH%in%c(10:12) ~ "NWCVI S FALL",
-    AREA%in%c("Area 25", "Area 26", "Area 27") & season=="spring" ~ "NWCVI S SPRING",
-    AREA%in%c("Area 25", "Area 26", "Area 27") & MONTH%in%c(6) ~ "NWCVI S SUMMER",
+    AREA%in%c("Area 25", "Area 26", "Area 27") & MONTH%in%c(10:12) ~ "NWCVI S FALL AABM",
+    AREA%in%c("Area 25", "Area 26", "Area 27") & season=="spring" ~ "NWCVI S SPRING AABM",
+    AREA%in%c("Area 25", "Area 26", "Area 27") & MONTH%in%c(6) ~ "NWCVI S SUMMER AABM",
 
-    AREA%in%c("Area 121", "Area 123", "Area 124") & MANAGEMENT=="ISBM" & MONTH%in%c(7:9) ~ "SWCVI S SUMMER",
-    AREA%in%c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal)") & MONTH%in%c(8,9) ~ "SWCVI S SUMMER",
+    AREA%in%c("Area 121", "Area 123", "Area 124") & MANAGEMENT=="ISBM" & MONTH%in%c(7:9) ~ "SWCVI S SUMMER ISBM",
+    AREA%in%c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal)") & MONTH%in%c(8,9) ~ "SWCVI S SUMMER ISBM",
 
-    AREA%in%c("Area 125", "Area 126", "Area 127") & MANAGEMENT=="ISBM" & MONTH%in%c(7:9) ~ "NWCVI S SUMMER",
-    AREA%in%c("Area 25", "Area 26", "Area 27") & MONTH%in%c(7,8,9) ~ "NWCVI S SUMMER",
+    AREA%in%c("Area 125", "Area 126", "Area 127") & MANAGEMENT=="ISBM" & MONTH%in%c(7:9) ~ "NWCVI S SUMMER ISBM",
+    AREA%in%c("Area 25", "Area 26", "Area 27") & MONTH%in%c(7,8,9) ~ "NWCVI S SUMMER ISBM",
 
     (AREA %in%c("Area 13", "Area 14", "Area 15", "Area 16") |REGION2== "GSN")& season=="fall" ~ "NGS S FALL",
     (AREA %in%c("Area 13", "Area 14", "Area 15", "Area 16") |REGION2== "GSN")& season=="spring" ~ "NGS S SPRING",
@@ -441,14 +441,14 @@ Sport_mark_rate_finescale<-
 
 
   mutate(finescale_fishery_old = case_when(
-    AREA%in%c( "Area 125", "Area 126", "Area 127") & MANAGEMENT=="AABM" & MONTH%in%c(1:12) ~ "NWCVI S",
-    AREA%in%c("Area 121", "Area 123", "Area 124") & MANAGEMENT=="AABM" & MONTH%in%c(1:12) ~ "SWCVI S",
-    AREA%in%c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal)")  & MONTH%in%c(1:7, 10:12) ~ "SWCVI S",
-    AREA%in%c("Area 25", "Area 26", "Area 27") & MONTH%in%c(1:6, 10:12) ~ "NWCVI S",
-    AREA%in%c("Area 121", "Area 123", "Area 124") & MANAGEMENT=="ISBM" & MONTH%in%c(7:12) ~ "SWCVI S",
-    AREA%in%c("Area 125", "Area 126", "Area 127") & MANAGEMENT=="ISBM" & MONTH%in%c(7:12) ~ "NWCVI S",
-    AREA%in%c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal)") & MONTH%in%c(8,9) ~ "SWCVI S",
-    AREA%in%c("Area 25", "Area 26", "Area 27") & MONTH%in%c(7,8,9) ~ "NWCVI S",
+    AREA%in%c( "Area 125", "Area 126", "Area 127") & MANAGEMENT=="AABM" & MONTH%in%c(1:12) ~ "NWCVI S AABM",
+    AREA%in%c("Area 121", "Area 123", "Area 124") & MANAGEMENT=="AABM" & MONTH%in%c(1:12) ~ "SWCVI S AABM",
+    AREA%in%c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal)")  & MONTH%in%c(1:7, 10:12) ~ "SWCVI S AABM",
+    AREA%in%c("Area 25", "Area 26", "Area 27") & MONTH%in%c(1:6, 10:12) ~ "NWCVI S AABM",
+    AREA%in%c("Area 121", "Area 123", "Area 124") & MANAGEMENT=="ISBM" & MONTH%in%c(7:12) ~ "SWCVI S ISBM",
+    AREA%in%c("Area 125", "Area 126", "Area 127") & MANAGEMENT=="ISBM" & MONTH%in%c(7:12) ~ "NWCVI S ISBM",
+    AREA%in%c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal)") & MONTH%in%c(8,9) ~ "SWCVI S ISBM",
+    AREA%in%c("Area 25", "Area 26", "Area 27") & MONTH%in%c(7,8,9) ~ "NWCVI S ISBM",
     (AREA %in%c("Area 13", "Area 14", "Area 15", "Area 16") |REGION2== "GSN")& MONTH%in%c(1:12) ~ "NGS S",
     (AREA %in%c("Area 17", "Area 18",  "Area 19 (GS)", "Area 28", "Area 29") |REGION2== "GSS")& MONTH%in%c(1:12) ~ "SGS S",
     (AREA %in% c("Area 11", "Area 111", "Area 12") | REGION2 == "JST") & MONTH%in%c(1:12) ~ "JNST S",
@@ -456,7 +456,6 @@ Sport_mark_rate_finescale<-
     AREA %in% c("Area 2","Area 1", "Area 101", "Area 102",  "Area 142", "Area 2E", "Area 2W")& MONTH%in%c(1:12)  ~ "NBC AABM S",
     AREA %in% c( "Area 103", "Area 104", "Area 105", "Area 3", "Area 4", "Area 5")& MONTH%in%c(1:12)  ~ "NBC ISBM S",
     (AREA %in% c( "Area 19 (JDF)", "Area 20", "Area 20 (East)", "Area 20 (West)") | REGION2 == "JDF") & MONTH%in%c(1:12) ~ "CA JDF S"))
-
 
 
 ```
@@ -470,15 +469,19 @@ Sport_mark_rate_finescale<-
     -   The summer coverage period included all months within 6:8 that are consistent through the timeseries.
 
 ```{r Assigning seasonal coverage}
+
+
 Sport_mark_rate_finescale<- Sport_mark_rate_finescale %>% ungroup %>%
   mutate(summer_coverage_tf = case_when(
     finescale_fishery_old == "CA JDF S" & MONTH %in% c(6:8) & YEAR %notin% c(2020) ~ "yes",
     finescale_fishery_old == "JNST S" & MONTH %in% c(6:8) & YEAR %notin% c(2020) ~ "yes",
     finescale_fishery_old == "NGS S" & MONTH %in% c(6:8) & YEAR %notin% c(2020)  ~ "yes",
     finescale_fishery_old == "SGS S" & MONTH %in% c(6:8) & YEAR %notin% c(2016, 2020) ~ "yes",
-    #finescale_fishery_old == "SWCVI ISBM S" & MONTH %in% c(8) ~ "yes",
+    finescale_fishery_old == "SWCVI S ISBM" & MONTH %in% c(8) ~ "yes",
+    finescale_fishery_old == "SWCVI S AABM" & MONTH %in% c(8) ~ "yes",
     finescale_fishery_old == "SWCVI S" & MONTH %in% c(6:8) & YEAR %notin% c(2020) ~ "yes",
-    #finescale_fishery_old == "NWCVI ISBM S" & MONTH %in% c(7:8) ~ "yes",
+    finescale_fishery_old == "NWCVI S ISBM" & MONTH %in% c(7:8) ~ "yes",
+    finescale_fishery_old == "NWCVI S AABM" & MONTH %in% c(7:8) ~ "yes",
     finescale_fishery_old == "NWCVI S" & MONTH %in% c(6:8) & YEAR %notin% c(2014,2020)~ "yes",
     finescale_fishery_old == "CBC S" & MONTH %in% c(7:8) ~ "yes",
     finescale_fishery_old == "NBC AABM S" & MONTH %in% c(7:8) ~ "yes",
@@ -625,7 +628,7 @@ g3
 
         -   We selected the model with the lowest AIC and best visual diagnostics.
 
-## Pre-terminal fisheries 
+## Pre-terminal fisheries
 
 -   The best model was one with a gamma distribution:
 
@@ -919,6 +922,34 @@ resize(m, 7, 4)
 ```
 
 # CBC and NBC
+
+### Methods
+
+Data was in various formats and pieced together as follows:
+
+### Northern BC - NBC AABM S
+
+-   Comprises Areas 1, 2, 101, 102, 142
+
+-   Data for 2005 to 2008 for areas 1 and 2W found in the Fixed Sport Estimates had total unchecked (for mark status) kept and released #s of fish in the sheet QCI Sport. The sheet "ALL" has an estimate of Mark rate. Therefore:
+
+    -   Marked Kept = Unchecked Kept x mark rate
+
+    -   Marked Released = Unchecked Released x mark rate
+
+    -   Unmarked Kept = Unchecked Kept x (1- mark rate)
+
+    -   Unmarked Released = Unchecked Released x (1- mark rate)
+
+-   From 2009-2019, for Area 1, 2W, (and beginning in 2017 for 2E) there was only Unchecked Kept catch available and mark rate. Therefore we used the release rate from CNR file for the whole year for all of NBC AABM S to get releases.
+
+    -   Marked Kept = Unchecked Kept x mark rate
+
+    -   Marked Released = (Unchecked Kept x Release Ratio) x mark rate
+
+    -   Unmarked Kept = Unchecked Kept x (1- mark rate)
+
+    -   Unmarked Released = (Unchecked Kept x Release Ratio) x (1- mark rate)
 
 ### Central BC - CBC S
 
