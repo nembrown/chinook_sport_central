@@ -478,7 +478,7 @@ Sport_mark_rate_finescale<- Sport_mark_rate_finescale %>% ungroup %>%
     finescale_fishery_old == "NGS S" & MONTH %in% c(6:8) & YEAR %notin% c(2020)  ~ "yes",
     finescale_fishery_old == "SGS S" & MONTH %in% c(6:8) & YEAR %notin% c(2016, 2020) ~ "yes",
     finescale_fishery_old == "SWCVI S ISBM" & MONTH %in% c(8) ~ "yes",
-    finescale_fishery_old == "SWCVI S AABM" & MONTH %in% c(8) ~ "yes",
+    finescale_fishery_old == "SWCVI S AABM" & MONTH %in% c(7:8) ~ "yes",
     finescale_fishery_old == "SWCVI S" & MONTH %in% c(6:8) & YEAR %notin% c(2020) ~ "yes",
     finescale_fishery_old == "NWCVI S ISBM" & MONTH %in% c(7:8) ~ "yes",
     finescale_fishery_old == "NWCVI S AABM" & MONTH %in% c(7:8) ~ "yes",
@@ -678,7 +678,7 @@ Season_model_gamma_drop_season<- glm(formula = catch_estimate+1 ~creel_plus_summ
 # res_gam_drop_season <- simulateResiduals(Season_model_gamma_drop_season, plot = T, quantreg=T)
 # summary(Season_model_gamma_drop_season)
 
-Season_model_gamma_drop_effort<- glm(formula = catch_estimate+1 ~creel_plus_summer*mark_status*kept_status*finescale_fishery_old*season,  family=Gamma(link = "log"), data = Season_south)
+Season_model_gamma_drop_effort<- glm(formula = catch_estimate+3 ~creel_plus_summer*mark_status*kept_status*finescale_fishery_old*season,  family=Gamma(link = "log"), data = Season_south)
 # res_gam_drop_effort <- simulateResiduals(Season_model_gamma_drop_effort, plot = T, quantreg=T)
 # summary(Season_model_gamma_drop_effort)
 
@@ -761,20 +761,19 @@ resize(dd2plot, 10, 25)
 -   Therefore the best model included creel effort, mark status, finescale fishery and season
 
     $$
-    catch = creel.summer + creel.effort + finescale.fishery + season + mark.status +                                          creel.summer:finescale.fishery + creel.summer:season + creel.summer:creel.effort +creel.summer:mark.status +                                          finescale.fishery:season + finescale.fishery:creel.effort + finescale.fishery:mark.status +                                          season:creel.effort + season:mark.status +                                          creel.effort:mark.status +                                          creel.summer:finescale.fishery:creel.effort + creel.summer:finescale.fishery:mark.status + creel.summer:creel_effort:mark.status+                                          finescale.fishery:season:creel.effort,
+    catch = creel.summer + creel.effort + finescale.fishery + season + mark.status +                                          creel.summer:finescale.fishery + creel.summer:season + creel.summer:creel.effort +creel.summer:mark.status +                                          finescale.fishery:season + finescale.fishery:creel.effort +                                      season:creel.effort + season:mark.status +                                          creel.effort:mark.status +                                          creel.summer:finescale.fishery:creel.effort + creel.summer:creel_effort:mark.status+                                          finescale.fishery:season:creel.effort,
     $$
 
 ```{r Modelling all seasonal southern BC fisheries, message=FALSE, warning=FALSE, results='hold'}
 
 Season_model_gamma_drop_kept_spec<- glm(formula = catch_estimate+3 ~creel_plus_summer+finescale_fishery_old+season+creel_effort+mark_status+
                                           creel_plus_summer:finescale_fishery_old + creel_plus_summer:season + creel_plus_summer:creel_effort +creel_plus_summer:mark_status+
-                                          finescale_fishery_old:season + finescale_fishery_old:creel_effort + finescale_fishery_old:mark_status +
+                                          finescale_fishery_old:season + finescale_fishery_old:creel_effort+
                                           season:creel_effort + season:mark_status +
                                           creel_effort:mark_status +
-                                          creel_plus_summer:finescale_fishery_old:creel_effort +creel_plus_summer:finescale_fishery_old:mark_status+creel_plus_summer:creel_effort:mark_status+
-                                          finescale_fishery_old:season:creel_effort,  family=Gamma(link = "log"), data = Season_south_no_nas)
+                                          creel_plus_summer:finescale_fishery_old:creel_effort +creel_plus_summer:creel_effort:mark_status+
+                                          finescale_fishery_old:season:creel_effort, family=Gamma(link = "log"), data = Season_south_no_nas)
 res_gam_drop_kept_spec <- simulateResiduals(Season_model_gamma_drop_kept_spec, plot = T, quantreg=T)
-
 #summary(Season_model_gamma_drop_kept_spec)
 
 # dat<- predict_response(Season_model_gamma_drop_kept_spec, terms = c("creel_plus_summer", "finescale_fishery_old", "season", "mark_status", "creel_effort"))
