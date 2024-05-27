@@ -477,7 +477,7 @@ library(MuMIn)
 Season_south<-Sport_mark_rate_finescale_combined%>% filter(YEAR %in% c(2013:2023)) %>% filter(!str_detect(finescale_fishery, "CBC|NBC"))
 
 #Modelling comparisons need to be done on models with same # of NAs - so drop nas
-Season_south_no_nas<-Season_south %>% drop_na(any_of(c("creel_plus_summer", "mark_status", "finescale_fishery_old", "season", "creel_effort", "kept_status")))
+Season_south_no_nas<-Season_south %>% drop_na(any_of(c("creel_plus_summer", "mark_status","status", "finescale_fishery_old", "season", "creel_effort", "kept_status")))
 
 Season_model_full<- glm(formula = catch_estimate ~creel_plus_summer*mark_status*kept_status*finescale_fishery_old*season*creel_effort,  family=gaussian, data = Season_south_no_nas)
 summary(Season_model_full)
@@ -537,7 +537,7 @@ res_gam_drop_kept_effort <- simulateResiduals(Season_model_gamma_drop_kept_effor
 summary(Season_model_gamma_drop_kept_effort)
 
 AICtab(Season_model_gamma_drop_kept, Season_model_gamma_drop_kept_mark, Season_model_gamma_drop_kept_season, Season_model_gamma_drop_kept_fishery, Season_model_gamma_drop_kept_effort)
-#####dropping kept and effort is the best.
+#####dropping kept only is the best - maybe efffort
 
 ##Any further terms? no.
 #####kept and effort only.
@@ -554,17 +554,16 @@ Season_model_gamma_drop_kept_effort_season<- glm(formula = catch_estimate+1 ~cre
 # res_gam_drop_kept_effort_season <- simulateResiduals(Season_model_gamma_drop_kept_effort_season, plot = T, quantreg=T)
 # summary(Season_model_gamma_drop_kept_effort_season)
 
-AICtab(Season_model_gamma_drop_kept_effort, Season_model_gamma_drop_kept_effort_mark, Season_model_gamma_drop_kept_effort_fishery, Season_model_gamma_drop_kept_effort_season)
+AICtab(Season_model_gamma_drop_kept, Season_model_gamma_drop_kept_effort, Season_model_gamma_drop_kept_effort_mark, Season_model_gamma_drop_kept_effort_fishery, Season_model_gamma_drop_kept_effort_season)
 
 
 
 #Now changing around model specification:
-#First find the model with drop kept and effort that is the best.Then add back in marked.
+#First find the model with drop kept and effort that is the best.Then add back in effort.
 Season_model_gamma_drop_kept_effort_2<- glm(formula = catch_estimate+1 ~creel_plus_summer*finescale_fishery_old*season*mark_status,  family=Gamma(link = "log"), data = Season_south_no_nas, na.action = na.fail)
 dd<-dredge(Season_model_gamma_drop_kept_effort_2, fixed= ~ creel_plus_summer)
 subset(dd, delta < 2)
 plot(dd, labAsExpr = TRUE)
-#
 summary(get.models(dd, 1)[[1]])
 
 #Model with both dropped kept and effort that fits the best:
@@ -592,18 +591,20 @@ plot(dd2, labAsExpr = TRUE)
 summary(get.models(dd2, 1)[[1]])
 
 #Try the model with effort added back in:
-Season_model_gamma_drop_kept_spec<- glm(formula = catch_estimate+3 ~creel_plus_summer+finescale_fishery_old+season+creel_effort+mark_status+
-                                          creel_plus_summer+finescale_fishery_old+season+mark_status+
+Season_model_gamma_drop_kept_spec<- glm(formula = catch_estimate+1 ~creel_plus_summer+finescale_fishery_old+season+creel_effort+mark_status+
+                                          creel_plus_summer:creel_effort + creel_effort:finescale_fishery_old + creel_effort:mark_status + creel_effort:season +
                                           creel_plus_summer:finescale_fishery_old + creel_plus_summer:season + creel_plus_summer:mark_status+
                                           finescale_fishery_old:season + finescale_fishery_old:mark_status + season:mark_status +
-                                          creel_plus_summer:finescale_fishery_old:mark_status + creel_plus_summer:finescale_fishery_old:season +creel_effort+
-                                          creel_plus_summer:creel_effort + creel_effort:finescale_fishery_old + creel_effort:mark_status + creel_effort:season ,  family=Gamma(link = "log"), data = Season_south_no_nas)
+                                          creel_plus_summer:finescale_fishery_old:mark_status + creel_plus_summer:finescale_fishery_old:season +
+                                          creel_plus_summer:creel_effort:mark_status + creel_effort:finescale_fishery_old:season + creel_effort:mark_status:season  ,  family=Gamma(link = "log"), data = Season_south_no_nas)
 res_gam_drop_kept_spec <- simulateResiduals(Season_model_gamma_drop_kept_spec, plot = T, quantreg=T)
 summary(Season_model_gamma_drop_kept_spec)
 
-AICtab(Season_model_gamma_drop_kept_spec, Season_model_gamma_drop_kept_effort_spec)
-#adding effort back in doesn't improve the model, so leave it out.
-#
+AICtab(Season_model_gamma_drop_kept_spec, Season_model_gamma_drop_kept_effort_spec, Season_model_gamma_drop_kept, Season_model_gamma_drop_kept_effort)
+#adding effort does improve the model.
+
+
+
 #
 # #try adding kept status back in:
 # Season_model_gamma_spec<- glm(formula = catch_estimate+3 ~creel_plus_summer+finescale_fishery_old+season+creel_effort+mark_status+ kept_status+
@@ -622,12 +623,12 @@ AICtab(Season_model_gamma_drop_kept_spec, Season_model_gamma_drop_kept_effort_sp
 
 
 ### Selected model:
-Season_model_gamma_drop_kept_effort_spec
-res_gam_drop_kept_effort_spec <- simulateResiduals(Season_model_gamma_drop_kept_effort_spec, plot = T, quantreg=T)
+Season_model_gamma_drop_kept_spec
+res_gam_drop_kept_spec <- simulateResiduals(Season_model_gamma_drop_kept_spec, plot = T, quantreg=T)
 summary(Season_model_gamma_drop_kept_effort_spec)
 
-testDispersion(Season_model_gamma_drop_kept_effort_spec)
-simulationOutput <- simulateResiduals(fittedModel = Season_model_gamma_drop_kept_effort_spec, plot = F)
+testDispersion(Season_model_gamma_drop_kept_spec)
+simulationOutput <- simulateResiduals(fittedModel = Season_model_gamma_drop_kept_spec, plot = F)
 residuals(simulationOutput)
 residuals(simulationOutput, quantileFunction = qnorm, outlierValues = c(-7,7))
 plot(simulationOutput)
@@ -643,15 +644,59 @@ plot(simulationOutput, quantreg = T)
 
 
 
-
 #### Adding data back in post modelling
 #Adding predicted data
 Season_south_old<- Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2005:2012)) %>% ungroup() %>% mutate(pred_cat = "predicted") %>% filter(!str_detect(finescale_fishery, "CBC|NBC"))
-Season_south_old_new<-predict.glm(Season_model_gamma_drop_kept_effort_spec, newdata =  Season_south_old, type = "response")
+Season_south_old_new<-predict.glm(Season_model_gamma_drop_kept_spec, newdata =  Season_south_old, type = "response")
 Season_south_old_new_2<-Season_south_old %>%   mutate(catch_estimate_predicted = Season_south_old_new)
 
 Season_south2<-Season_south %>% mutate(catch_estimate_predicted = catch_estimate, pred_cat= "observed")
 Season_south_combined<- rbind(Season_south_old_new_2, Season_south2)
+
+
+
+#### Testin two different plots:
+ggplot(Season_south_combined %>% filter(finescale_fishery=="CA JDF S FALL"), aes(x=creel_plus_summer, y= catch_estimate_predicted+1, col=mark_status, fill=mark_status))+
+  geom_point(aes(shape=pred_cat, size=creel_effort))+
+  geom_smooth(method="glm", method.args = list(family= Gamma(link = "log")), fullrange=TRUE) + facet_wrap(~mark_status, scales="free") +
+  ggtitle(paste("CA JDF S FALL")) + theme_bw() +
+  scale_colour_viridis_d(option = "turbo")+  scale_fill_viridis_d(option = "turbo") +scale_size_continuous(range=c(1,3))
+
+
+Season_south_combined_2 <- add_column(Season_south_combined, fit = predict(Season_model_gamma_drop_kept_spec, newdata = Season_south_combined, type = 'response'))
+Season_south_combined_2  <- bind_cols(Season_south_combined_2 , setNames(as_tibble(predict(Season_model_gamma_drop_kept_spec, Season_south_combined , se.fit = TRUE)[1:2]), c('fit_link','se_link')))
+
+family.set <- family(Season_model_gamma_drop_kept_spec)
+ilink.family.set<- family.set$linkinv
+
+Season_south_combined_2  <- mutate(Season_south_combined_2 ,
+fit_resp  = ilink.family.set(fit_link),
+right_upr = ilink.family.set(fit_link + (2 * se_link)),
+right_lwr = ilink.family.set(fit_link - (2 * se_link)))
+
+
+ggplot(Season_south_combined_2 %>% filter(finescale_fishery=="CA JDF S FALL"), aes(x=creel_plus_summer, y= catch_estimate_predicted+1, col=mark_status, fill=mark_status))+
+ geom_point(aes(shape=pred_cat, size=creel_effort))+
+  geom_line()+
+ geom_ribbon(aes(ymin = right_lwr, ymax = right_upr, fill=mark_status), alpha = 0.10)+
+  facet_wrap(~mark_status, scales="free") +
+  ggtitle(paste("CA JDF S FALL")) + theme_bw() +
+  scale_colour_viridis_d(option = "turbo")+  scale_fill_viridis_d(option = "turbo") +scale_size_continuous(range=c(1,3))
+
+
+plt.gam.hydroid <- ggplot(ndata.hydroid, aes(x = min.10.pH.unscaled, y = fit)) +
+  geom_line(aes(colour=oFood.quality)) +
+  geom_point(aes(y = hydroid.001, shape=CO2, colour=oFood.quality), data = food.exp.data.12.2019_zscores)+
+  xlab(expression("Minimum" ~"10"^"th"~"percentile pH")) + ylab(expression(atop(NA,atop(textstyle(italic("Obelia")~ "abundance"), textstyle("(proportion cover)")))))+
+  scale_color_manual(values=colorset2, guide = guide_legend(title="Food supplement", title.position = "top"))+
+  scale_fill_manual(values=colorset2, guide = FALSE)+
+  scale_shape_manual(values=c(19,17), labels=c("Ambient", "Low pH"), guide = guide_legend(title="pH treatment", title.position = "top"))+
+  geom_ribbon(data = ndata.hydroid,aes(ymin = right_lwr, ymax = right_upr, fill=oFood.quality), alpha = 0.10)+
+  theme(legend.position='none')
+plt.gam.hydroid
+ggsave("C:Data//Graphs March 2020//hydroid_pred.png")
+
+
 
 
 ### NBC AABM modelling

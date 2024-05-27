@@ -815,7 +815,7 @@ subset(dd2, delta < 2)
 summary(get.models(dd2, 1)[[1]])
 
 #Try the model with effort added back in:
-Season_model_gamma_drop_kept_spec<- glm(formula = catch_estimate+3 ~creel_plus_summer+finescale_fishery_old+season+creel_effort+mark_status+
+Season_model_gamma_drop_kept_spec<- glm(formula = catch_estimate+1 ~creel_plus_summer+finescale_fishery_old+season+creel_effort+mark_status+
                                           creel_plus_summer:creel_effort + creel_effort:finescale_fishery_old + creel_effort:mark_status + creel_effort:season + 
                                           creel_plus_summer:finescale_fishery_old + creel_plus_summer:season + creel_plus_summer:mark_status+
                                           finescale_fishery_old:season + finescale_fishery_old:mark_status + season:mark_status +
