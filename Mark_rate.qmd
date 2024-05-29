@@ -1,13 +1,20 @@
 ---
 title: "Mark rate exploration"
 author: "Norah Brown"
-date: today
-format: html
-date: "2/28/2024"
+
 editor: visual
+execute: 
+  warning: false
+
+theme: litera
+ 
+format:
+  html:
+    page-layout: full
+    embed-resources: true
 toc: true
-toc-depth: 7
-embed-resources: true
+toc-depth: 4
+toc-location: left
 ---
 
 # Methods
