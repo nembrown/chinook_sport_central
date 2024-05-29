@@ -3,9 +3,7 @@ library(tidyverse)
 library(odbc)
 library(lubridate)
 library(ggnewscale)
-library(facetscales)
 
-#remotes::install_github("zeehio/facetscales@archived")
 #utils
 "%notin%" <- Negate("%in%")
 
