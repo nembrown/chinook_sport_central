@@ -733,39 +733,39 @@ ggplot(Season_south_no_nas %>% filter(finescale_fishery=="CA JDF S SUMMER", stat
   scale_y_continuous(limits=c(0,max(dataminmax$catch_estimate)+10000))
 
 
-dataminmax_marked_kept<- Season_south_no_nas %>% filter(finescale_fishery=="CA JDF S SUMMER", status=="marked_Kept_total")
-dataminmax_marked_released<- Season_south_no_nas %>% filter(finescale_fishery=="CA JDF S SUMMER", status=="marked_Released_total")
-dataminmax_unmarked_kept<- Season_south_no_nas %>% filter(finescale_fishery=="CA JDF S SUMMER", status=="unmarked_Kept_total")
-dataminmax_unmarked_released<- Season_south_no_nas %>% filter(finescale_fishery=="CA JDF S SUMMER", status=="unmarked_Released_total")
+dataminmax_marked_kept<- Season_south_no_nas %>% filter(finescale_fishery=="JNST S FALL", status=="marked_Kept_total")
+dataminmax_marked_released<- Season_south_no_nas %>% filter(finescale_fishery=="JNST S FALL", status=="marked_Released_total")
+dataminmax_unmarked_kept<- Season_south_no_nas %>% filter(finescale_fishery=="JNST S FALL", status=="unmarked_Kept_total")
+dataminmax_unmarked_released<- Season_south_no_nas %>% filter(finescale_fishery=="JNST S FALL", status=="unmarked_Released_total")
 
-g1<-ggplot(Season_south_no_nas %>% filter(finescale_fishery=="CA JDF S SUMMER", status=="marked_Kept_total"), aes(x=creel_plus_summer,  y= catch_estimate, col=status))+
+g1<-ggplot(Season_south_no_nas %>% filter(finescale_fishery=="JNST S FALL", status=="marked_Kept_total"), aes(x=creel_plus_summer,  y= catch_estimate, col=status))+
   geom_point(aes(size=creel_effort))+
-  geom_line(ndata %>% filter(finescale_fishery=="CA JDF S SUMMER", status=="marked_Kept_total"), mapping=aes(y= fit, x=creel_plus_summer, col=status))+
-  geom_ribbon(ndata %>% filter(finescale_fishery=="CA JDF S SUMMER", status=="marked_Kept_total"), mapping=aes(y= fit,x=creel_plus_summer, ymin = right_lwr, ymax = right_upr, fill=status), alpha = 0.10)+
+  geom_line(ndata %>% filter(finescale_fishery=="JNST S FALL", status=="marked_Kept_total"), mapping=aes(y= fit, x=creel_plus_summer, col=status))+
+  geom_ribbon(ndata %>% filter(finescale_fishery=="JNST S FALL", status=="marked_Kept_total"), mapping=aes(y= fit,x=creel_plus_summer, ymin = right_lwr, ymax = right_upr, fill=status), alpha = 0.10)+
    theme_bw() +
   scale_size_continuous(range=c(1,3))+ scale_colour_manual(values=c("#440154"))+  scale_fill_manual(values=c("#440154"))+
   coord_cartesian(ylim = c(0,max(dataminmax_marked_kept$catch_estimate)), xlim = c(0,max(dataminmax_marked_kept$creel_plus_summer)))
 
-g2<-ggplot(Season_south_no_nas %>% filter(finescale_fishery=="CA JDF S SUMMER", status=="marked_Released_total"), aes(x=creel_plus_summer,  y= catch_estimate, col=status))+
+g2<-ggplot(Season_south_no_nas %>% filter(finescale_fishery=="JNST S FALL", status=="marked_Released_total"), aes(x=creel_plus_summer,  y= catch_estimate, col=status))+
   geom_point(aes(size=creel_effort))+
-  geom_line(ndata %>% filter(finescale_fishery=="CA JDF S SUMMER", status=="marked_Released_total"), mapping=aes(y= fit, x=creel_plus_summer, col=status))+
-  geom_ribbon(ndata %>% filter(finescale_fishery=="CA JDF S SUMMER", status=="marked_Released_total"), mapping=aes(y= fit,x=creel_plus_summer, ymin = right_lwr, ymax = right_upr, fill=status), alpha = 0.10)+
+  geom_line(ndata %>% filter(finescale_fishery=="JNST S FALL", status=="marked_Released_total"), mapping=aes(y= fit, x=creel_plus_summer, col=status))+
+  geom_ribbon(ndata %>% filter(finescale_fishery=="JNST S FALL", status=="marked_Released_total"), mapping=aes(y= fit,x=creel_plus_summer, ymin = right_lwr, ymax = right_upr, fill=status), alpha = 0.10)+
   theme_bw() +
  scale_size_continuous(range=c(1,3))+ scale_colour_manual(values=c("#31688e"))+  scale_fill_manual(values=c("#31688e"))+
   coord_cartesian(ylim = c(0,max(dataminmax_marked_released$catch_estimate)), xlim = c(0,max(dataminmax_marked_released$creel_plus_summer)))
 
-g3<-ggplot(Season_south_no_nas %>% filter(finescale_fishery=="CA JDF S SUMMER", status=="unmarked_Kept_total"), aes(x=creel_plus_summer,  y= catch_estimate, col=status))+
+g3<-ggplot(Season_south_no_nas %>% filter(finescale_fishery=="JNST S FALL", status=="unmarked_Kept_total"), aes(x=creel_plus_summer,  y= catch_estimate, col=status))+
   geom_point(aes(size=creel_effort))+
-  geom_line(ndata %>% filter(finescale_fishery=="CA JDF S SUMMER", status=="unmarked_Kept_total"), mapping=aes(y= fit, x=creel_plus_summer, col=status))+
-  geom_ribbon(ndata %>% filter(finescale_fishery=="CA JDF S SUMMER", status=="unmarked_Kept_total"), mapping=aes(y= fit,x=creel_plus_summer, ymin = right_lwr, ymax = right_upr, fill=status), alpha = 0.10)+
+  geom_line(ndata %>% filter(finescale_fishery=="JNST S FALL", status=="unmarked_Kept_total"), mapping=aes(y= fit, x=creel_plus_summer, col=status))+
+  geom_ribbon(ndata %>% filter(finescale_fishery=="JNST S FALL", status=="unmarked_Kept_total"), mapping=aes(y= fit,x=creel_plus_summer, ymin = right_lwr, ymax = right_upr, fill=status), alpha = 0.10)+
   theme_bw() +
   scale_size_continuous(range=c(1,3))+ scale_colour_manual(values=c("#35b779"))+  scale_fill_manual(values=c("#35b779"))+
   coord_cartesian(ylim = c(0,max(dataminmax_unmarked_kept$catch_estimate)), xlim = c(0,max(dataminmax_unmarked_kept$creel_plus_summer)))
 
-g4<-ggplot(Season_south_no_nas %>% filter(finescale_fishery=="CA JDF S SUMMER", status=="unmarked_Released_total"), aes(x=creel_plus_summer,  y= catch_estimate, col=status))+
+g4<-ggplot(Season_south_no_nas %>% filter(finescale_fishery=="JNST S FALL", status=="unmarked_Released_total"), aes(x=creel_plus_summer,  y= catch_estimate, col=status))+
   geom_point(aes(size=creel_effort))+
-  geom_line(ndata %>% filter(finescale_fishery=="CA JDF S SUMMER", status=="unmarked_Released_total"), mapping=aes(y= fit, x=creel_plus_summer, col=status))+
-  geom_ribbon(ndata %>% filter(finescale_fishery=="CA JDF S SUMMER", status=="unmarked_Released_total"), mapping=aes(y= fit,x=creel_plus_summer, ymin = right_lwr, ymax = right_upr, fill=status, col=status), alpha = 0.10)+
+  geom_line(ndata %>% filter(finescale_fishery=="JNST S FALL", status=="unmarked_Released_total"), mapping=aes(y= fit, x=creel_plus_summer, col=status))+
+  geom_ribbon(ndata %>% filter(finescale_fishery=="JNST S FALL", status=="unmarked_Released_total"), mapping=aes(y= fit,x=creel_plus_summer, ymin = right_lwr, ymax = right_upr, fill=status, col=status), alpha = 0.10)+
    theme_bw() +
   scale_size_continuous(range=c(1,3))+ scale_colour_manual(values=c("#fde725"))+  scale_fill_manual(values=c("#fde725"))+
   coord_cartesian(ylim = c(0,max(dataminmax_unmarked_released$catch_estimate)), xlim = c(0,max(dataminmax_unmarked_released$creel_plus_summer)))
@@ -814,88 +814,49 @@ ggsave("C:Data//Graphs March 2020//hydroid_pred.png")
 Season_north_aabm<-Sport_mark_rate_finescale_combined%>% filter(YEAR %in% c(2013:2023)) %>% filter(finescale_fishery_old == "NBC AABM S")
 
 #Modelling comparisons need to be done on models with same # of NAs - so drop nas
-Season_north_aabm_no_nas<-Season_north_aabm %>% drop_na(any_of(c("historic_summer", "mark_status", "finescale_fishery_old", "season", "historic_effort", "kept_status")))
+Season_north_aabm_no_nas<-Season_north_aabm %>% drop_na(any_of(c("historic_summer", "status", "finescale_fishery_old", "season", "historic_effort")))
 
-North_aabm_model_full<- glm(formula = catch_estimate + 1 ~ historic_summer*mark_status*kept_status*season*historic_effort,  family=gaussian, data = Season_north_aabm_no_nas)
+North_aabm_model_full<- glm(formula = catch_estimate + 1 ~ historic_summer*status*season*historic_effort,  family=gaussian, data = Season_north_aabm_no_nas)
 summary(North_aabm_model_full)
 res <- simulateResiduals(North_aabm_model_full, plot = T, quantreg=T)
 
 #poisson
-North_aabm_model_full_poisson<- glm(formula = catch_estimate + 1 ~historic_summer*mark_status*kept_status*season*historic_effort,  family=poisson, data = Season_north_aabm_no_nas)
+North_aabm_model_full_poisson<- glm(formula = catch_estimate + 1 ~historic_summer*status*season*historic_effort,  family=poisson, data = Season_north_aabm_no_nas)
 res_pois <- simulateResiduals(North_aabm_model_full_poisson, plot = T, quantreg=T)
 summary(North_aabm_model_full_poisson)
 
 #gamma
-North_aabm_model_full_gamma<- glm(formula = (catch_estimate+1) ~historic_summer*mark_status*kept_status*season*historic_effort,  family=Gamma(link = "log"), data=Season_north_aabm_no_nas, na.action = na.fail)
+North_aabm_model_full_gamma<- glm(formula = (catch_estimate+1) ~historic_summer*status*season*historic_effort,  family=Gamma(link = "log"), data=Season_north_aabm_no_nas, na.action = na.fail)
 res_gam <- simulateResiduals(North_aabm_model_full_gamma, plot = T, quantreg=T)
 summary(North_aabm_model_full_gamma)
 
 AICtab(North_aabm_model_full,North_aabm_model_full_poisson, North_aabm_model_full_gamma)
 
 #gamma is the best
-#drop_ a single term from the full interaction model:
-North_aabm_model_gamma_drop_kept<- glm(formula = catch_estimate + 1 ~historic_summer*mark_status*season*historic_effort,  family=Gamma(link = "log"), data = Season_north_aabm_no_nas)
-res_gam_drop_kept <- simulateResiduals(North_aabm_model_gamma_drop_kept, plot = T, quantreg=T)
-summary(North_aabm_model_gamma_drop_kept)
 
-North_aabm_model_gamma_drop_mark<- glm(formula = catch_estimate + 1 ~historic_summer*kept_status*season*historic_effort,  family=Gamma(link = "log"), data = Season_north_aabm_no_nas)
-res_gam_drop_mark <- simulateResiduals(North_aabm_model_gamma_drop_mark, plot = T, quantreg=T)
-summary(North_aabm_model_gamma_drop_mark)
-
-North_aabm_model_gamma_drop_season<- glm(formula = catch_estimate+5 ~historic_summer*mark_status*kept_status*historic_effort,  family=Gamma(link = "log"), data = Season_north_aabm_no_nas)
-res_gam_drop_season <- simulateResiduals(North_aabm_model_gamma_drop_season, plot = T, quantreg=T)
-summary(North_aabm_model_gamma_drop_season)
-
-North_aabm_model_gamma_drop_effort<- glm(formula = catch_estimate+1 ~historic_summer*mark_status*kept_status*season,  family=Gamma(link = "log"), data = Season_north_aabm_no_nas)
-res_gam_drop_effort <- simulateResiduals(North_aabm_model_gamma_drop_effort, plot = T, quantreg=T)
-summary(North_aabm_model_gamma_drop_effort)
-
-AICtab(North_aabm_model_full_gamma, North_aabm_model_gamma_drop_kept, North_aabm_model_gamma_drop_mark,  North_aabm_model_gamma_drop_season, North_aabm_model_gamma_drop_effort)
-
-## drop_ kept is the best... try sequentially dropping terms:
-
-North_aabm_model_gamma_drop_kept_mark<- glm(formula = catch_estimate+1 ~historic_summer*season*historic_effort,  family=Gamma(link = "log"), data = Season_north_aabm_no_nas)
-res_gam_drop_kept_mark <- simulateResiduals(North_aabm_model_gamma_drop_kept_mark, plot = T, quantreg=T)
-summary(North_aabm_model_gamma_drop_kept_mark)
-
-North_aabm_model_gamma_drop_kept_season<- glm(formula = catch_estimate + 5 ~historic_summer*mark_status*historic_effort,  family=Gamma(link = "log"), data = Season_north_aabm_no_nas)
-res_gam_drop_kept_season <- simulateResiduals(North_aabm_model_gamma_drop_kept_season, plot = T, quantreg=T)
-summary(North_aabm_model_gamma_drop_kept_season)
-
-North_aabm_model_gamma_drop_kept_effort<- glm(formula = catch_estimate+1 ~historic_summer*mark_status*season,  family=Gamma(link = "log"), data = Season_north_aabm_no_nas)
-res_gam_drop_kept_effort <- simulateResiduals(North_aabm_model_gamma_drop_kept_effort, plot = T, quantreg=T)
-summary(North_aabm_model_gamma_drop_kept_effort)
-
-AICtab(North_aabm_model_gamma_drop_kept, North_aabm_model_gamma_drop_kept_mark, North_aabm_model_gamma_drop_kept_season, North_aabm_model_gamma_drop_kept_effort)
-
-#####dropping kept only is the best.
 #Now changing around model specification:
-North_aabm_model_gamma_drop_kept_2<- glm(formula = catch_estimate+1 ~historic_summer*season*historic_effort*mark_status,  family=Gamma(link = "log"), data = Season_north_aabm_no_nas, na.action = na.fail)
-dd<-dredge(North_aabm_model_gamma_drop_kept_2, fixed= ~ historic_summer)
+North_aabm_model_full_gamma<- glm(formula = catch_estimate+1 ~historic_summer*season*historic_effort*status,  family=Gamma(link = "log"), data = Season_north_aabm_no_nas, na.action = na.fail)
+dd<-dredge(North_aabm_model_full_gamma, fixed= ~ historic_summer)
 subset(dd, delta < 2)
 plot(dd, labAsExpr = TRUE)
 #
 summary(get.models(dd, 1)[[1]])
 
 #The model with AIC <2 factors added back in:
-North_aabm_model_gamma_drop_kept_spec<- glm(formula = catch_estimate+1 ~historic_summer+season+mark_status+historic_effort*historic_summer +
-                                                      historic_effort*mark_status + historic_summer*mark_status + historic_summer*season + mark_status*season,  family=Gamma(link = "log"), data = Season_north_aabm_no_nas)
-res_gam_drop_kept_spec <- simulateResiduals(North_aabm_model_gamma_drop_kept_spec, plot = T, quantreg=T)
-summary(North_aabm_model_gamma_drop_kept_spec)
+North_aabm_model_full_gamma_spec<- glm(formula = catch_estimate+1 ~historic_summer+season+status+
+                                                historic_effort*historic_summer + historic_effort*status +
+                                                historic_summer*season,  family=Gamma(link = "log"), data = Season_north_aabm_no_nas)
+res_gam_drop_kept_spec <- simulateResiduals(North_aabm_model_full_gamma_spec, plot = T, quantreg=T)
+summary(North_aabm_model_full_gamma_spec)
 
-AICtab(North_aabm_model_gamma_drop_kept, North_aabm_model_gamma_drop_kept_spec)
-#kept status should be dropped fully but mark status dropped only partially.
+AICtab(North_aabm_model_full_gamma, North_aabm_model_full_gamma_spec)
 
 
 
 ### Selected model:
-North_aabm_model_gamma_drop_kept_spec<- glm(formula = catch_estimate+1 ~historic_summer+season+mark_status+historic_effort*historic_summer +
-                                              historic_effort*mark_status + historic_summer*mark_status + historic_summer*season + mark_status*season,  family=Gamma(link = "log"), data = Season_north_aabm_no_nas)
-res_gam_drop_kept_spec <- simulateResiduals(North_aabm_model_gamma_drop_kept_spec, plot = T, quantreg=T)
-summary(North_aabm_model_gamma_drop_kept_spec)
 
-testDispersion(North_aabm_model_gamma_drop_kept_spec)
-simulationOutput <- simulateResiduals(fittedModel = North_aabm_model_gamma_drop_kept_mark, plot = F)
+testDispersion(North_aabm_model_full_gamma_spec)
+simulationOutput <- simulateResiduals(fittedModel = North_aabm_model_full_gamma_spec, plot = F)
 residuals(simulationOutput)
 residuals(simulationOutput, quantileFunction = qnorm, outlierValues = c(-7,7))
 plot(simulationOutput)
@@ -909,7 +870,7 @@ testCategorical(simulationOutput, catPred = na.omit(Season_north_aabm$season))
 #### Adding data back in post modelling
 #Adding predicted data
 Season_north_aabm_old<- Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2005:2012)) %>% ungroup() %>% mutate(pred_cat = "predicted") %>% filter(finescale_fishery_old == "NBC AABM S")
-Season_north_aabm_old_new<-predict.glm(North_aabm_model_gamma_drop_kept_spec, newdata =  Season_north_aabm_old, type = "response")
+Season_north_aabm_old_new<-predict.glm(North_aabm_model_full_gamma_spec, newdata =  Season_north_aabm_old, type = "response")
 Season_north_aabm_old_new_2<-Season_north_aabm_old %>%   mutate(catch_estimate_predicted = Season_north_aabm_old_new)
 
 Season_north_aabm2<-Season_north_aabm %>% mutate(catch_estimate_predicted = catch_estimate, pred_cat= "observed")
