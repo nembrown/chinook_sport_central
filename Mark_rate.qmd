@@ -1,6 +1,7 @@
 ---
 title: "Mark rate exploration"
 author: "Norah Brown"
+date: today
 
 editor: visual
 execute: 
@@ -55,7 +56,7 @@ Sport_filtered_south_irec_mr<-
   mutate(AREA = case_when(
     str_detect(AREA, "Area 20") ~ "Area 20",
     #str_detect(AREA, "Area 23") ~ "Area 23",
-    str_detect(AREA, "Area 19") ~ "Area 19",
+    #str_detect(AREA, "Area 19") ~ "Area 19",
     str_detect(AREA, "2E|2W") ~ "Area 2",
     AREA== "Area 29 (Marine)" ~ "Area 29",
     TRUE ~ as.character(AREA))) |>
@@ -125,7 +126,7 @@ Sport_mark_rate_only<- Sport_filtered_south_irec_mr  %>%
     mutate_all(~ifelse(is.nan(.), NA, .)) %>%
   left_join(Commercial_mr1)
   
-Sport_mark_rate_only_recent<- Sport_mark_rate_only %>% filter(YEAR %in% 2021:2023) %>% dplyr::select(YEAR, MONTH, AREA, marked_prop_lodge_log,marked_prop_creel, marked_prop_creel_plus,  marked_prop_historic_plus, marked_prop_irec_calibrated, marked_prop_commercial ) %>% group_by(MONTH, AREA) %>%  summarise_if(is.numeric, mean, na.rm = TRUE) %>%  mutate(marked_prop_catch_estimate = case_when(
+Sport_mark_rate_only_recent<- Sport_mark_rate_only %>% filter(YEAR %in% 2019:2023) %>% dplyr::select(YEAR, MONTH, AREA, marked_prop_lodge_log,marked_prop_creel, marked_prop_creel_plus,  marked_prop_historic_plus, marked_prop_irec_calibrated, marked_prop_commercial ) %>% group_by(MONTH, AREA) %>%  summarise_if(is.numeric, mean, na.rm = TRUE) %>%  mutate(marked_prop_catch_estimate = case_when(
                    MONTH %in% c(5:9) & (is.na(marked_prop_creel) | marked_prop_creel %in% c(0,1)) & !is.na(marked_prop_irec_calibrated) & marked_prop_irec_calibrated %notin% c(0,1) ~ as.numeric(marked_prop_irec_calibrated),
                    MONTH %in% c(1:4,10:12) & !is.na(marked_prop_irec_calibrated) & marked_prop_irec_calibrated %notin% c(0,1) ~ as.numeric(marked_prop_irec_calibrated),
                    (marked_prop_irec_calibrated %in% c(0,1)| is.na(marked_prop_irec_calibrated)) ~ as.numeric(marked_prop_commercial),
@@ -138,7 +139,7 @@ Sport_mark_rate_only_recent<- Sport_mark_rate_only %>% filter(YEAR %in% 2021:202
                    TRUE ~ "no source"))
 
 
-Sport_mark_rate_only_past<- Sport_mark_rate_only %>% filter(YEAR %in% 2016:2020) %>% dplyr::select(YEAR, MONTH, AREA, marked_prop_lodge_log,marked_prop_creel, marked_prop_creel_plus,  marked_prop_historic_plus, marked_prop_irec_calibrated, marked_prop_commercial ) %>% group_by(MONTH, AREA) %>%  summarise_if(is.numeric, mean, na.rm = TRUE) %>%  mutate(marked_prop_catch_estimate = case_when(
+Sport_mark_rate_only_past<- Sport_mark_rate_only %>% filter(YEAR %in% 2013:2018) %>% dplyr::select(YEAR, MONTH, AREA, marked_prop_lodge_log,marked_prop_creel, marked_prop_creel_plus,  marked_prop_historic_plus, marked_prop_irec_calibrated, marked_prop_commercial ) %>% group_by(MONTH, AREA) %>%  summarise_if(is.numeric, mean, na.rm = TRUE) %>%  mutate(marked_prop_catch_estimate = case_when(
                    MONTH %in% c(5:9) & (is.na(marked_prop_creel) | marked_prop_creel %in% c(0,1)) & !is.na(marked_prop_irec_calibrated) & marked_prop_irec_calibrated %notin% c(0,1) ~ as.numeric(marked_prop_irec_calibrated),
                    MONTH %in% c(1:4,10:12) & !is.na(marked_prop_irec_calibrated) & marked_prop_irec_calibrated %notin% c(0,1) ~ as.numeric(marked_prop_irec_calibrated),
                    (marked_prop_irec_calibrated %in% c(0,1)| is.na(marked_prop_irec_calibrated)) ~ as.numeric(marked_prop_commercial),
@@ -156,7 +157,7 @@ Sport_mark_rate_only_past<- Sport_mark_rate_only %>% filter(YEAR %in% 2016:2020)
 
 ## Heat Map
 
-### iREC & creel data combined 2021-current
+### iREC & creel data combined 2019-current
 
 -   Pink borders indicate the estimate includes data from iREC, without the border is creel-only information
 
@@ -185,12 +186,12 @@ MR_post2019<-ggplot(data=Sport_mark_rate_only_recent %>% filter(AREA %notin% c("
 MR_post2019
 ```
 
-### iREC & creel data combined 2016-2020
+### iREC & creel data combined 2013-2018
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
 #| label: fig-heatmap-pre1029
-#| fig-cap: "Mark rate heatmap by management area and month. Mark rate is an average of mark rates from 2014-2018."
-#| fig-alt: "Heatmap for mark rate in different PFMAs organized by month of the year.Using data from 2014-2018. "
+#| fig-cap: "Mark rate heatmap by management area and month. Mark rate is an average of mark rates from 2013-2018."
+#| fig-alt: "Heatmap for mark rate in different PFMAs organized by month of the year.Using data from 2013-2018. "
 #| fig-width: 10
 #| fig-height: 8
 
@@ -214,7 +215,7 @@ MR_pre2019
 
 ### Individual data sets
 
-Datasets for 2021-2023 separated out by source.
+Datasets for 2019-2023 separated out by source.
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
 #| label: fig-source
