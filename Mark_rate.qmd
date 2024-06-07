@@ -288,7 +288,39 @@ Re-created these using the "best practices" combo of creel and irec
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
 
+resize <- function(g, fig_width=NA, fig_height=NA) {
+  g_deparsed <- paste0(deparse(function() g), collapse = '')
+  sub_chunk <- paste0("`","``{r sub_chunk_", floor(runif(1) * 10000), ", fig.height=", fig_height, ", fig.width=", fig_width, ", warning=FALSE, echo=FALSE}","\n(", g_deparsed, ")()","\n`","``")
+  cat(knitr::knit(text = knitr::knit_expand(text = sub_chunk), quiet = TRUE))
+}
+
+
+library(patchwork)
 Sport_mark_rate_only_by_year<-Sport_mark_rate_only %>% filter(YEAR >2013) %>% dplyr::select(YEAR, MONTH, AREA, marked_prop_lodge_log, marked_prop_creel, marked_prop_irec_calibrated, marked_prop_commercial ) %>%  pivot_longer(cols = contains("marked"), names_to = "Source", values_to = "mark_rate")
+
+
+Sport_mark_rate_only_by_year_av_past<-Sport_mark_rate_only_by_year %>% filter(YEAR %in% c(2013:2018)) %>% group_by(MONTH, AREA, Source) %>% summarise(across(where(is.numeric), list(mean=mean, sd=sd), na.rm=TRUE))
+
+Sport_mark_rate_only_by_year_av_recent<-Sport_mark_rate_only_by_year %>% filter(YEAR %in% c(2019:2023)) %>% group_by(MONTH, AREA, Source) %>% summarise(across(where(is.numeric), list(mean=mean, sd=sd), na.rm=TRUE))
+
+
+p1<-ggplot(Sport_mark_rate_only_by_year_av_past %>% filter(AREA=="Area 16"), aes(y=mark_rate_mean, x=month(MONTH, label=TRUE) , col=Source, group=Source)) +
+  geom_point() +  geom_errorbar(aes(ymin=mark_rate_mean-mark_rate_sd, ymax=mark_rate_mean+mark_rate_sd), width=.1) + geom_line() + ggtitle("2013:2018") +scale_x_discrete(guide = guide_axis(angle = 90)) + 
+  xlab("Month") + ylab("Proportion marked")+ theme_bw() + ylim(0,1)
+
+
+p2<-ggplot(Sport_mark_rate_only_by_year_av_recent %>% filter(AREA=="Area 16"), aes(y=mark_rate_mean, x=month(MONTH, label=TRUE) , col=Source, group=Source)) +
+  geom_point() +  geom_errorbar(aes(ymin=mark_rate_mean-mark_rate_sd, ymax=mark_rate_mean+mark_rate_sd), width=.1) + geom_line() + ggtitle("2019:2023") +scale_x_discrete(guide = guide_axis(angle = 90)) + 
+  xlab("Month") + ylab("Proportion marked")+ theme_bw()+ ylim(0,1)
+
+p<-p1 + p2 + plot_layout(guides = "collect") + plot_annotation(
+  title = 'Area 16')
+
+p
+
+# cat("\n\n")
+# resize(p, 7, 4)
+# cat("\n\n")
 
 ggplot(Sport_mark_rate_only_by_year %>% filter(AREA=="Area 16"), aes(y=mark_rate, x=month(MONTH, label=TRUE) , col=Source, group=Source)) +
   geom_point() + geom_line()+  facet_wrap(~YEAR) + ggtitle("Area 16") +scale_x_discrete(guide = guide_axis(angle = 90)) + 
@@ -298,6 +330,25 @@ ggplot(Sport_mark_rate_only_by_year %>% filter(AREA=="Area 16"), aes(y=mark_rate
 ### Area 17
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+p1<-ggplot(Sport_mark_rate_only_by_year_av_past %>% filter(AREA=="Area 17"), aes(y=mark_rate_mean, x=month(MONTH, label=TRUE) , col=Source, group=Source)) +
+  geom_point() +  geom_errorbar(aes(ymin=mark_rate_mean-mark_rate_sd, ymax=mark_rate_mean+mark_rate_sd), width=.1) + geom_line() + ggtitle("2013:2018") +scale_x_discrete(guide = guide_axis(angle = 90)) + 
+  xlab("Month") + ylab("Proportion marked")+ theme_bw() + ylim(0,1)
+
+
+p2<-ggplot(Sport_mark_rate_only_by_year_av_recent %>% filter(AREA=="Area 17"), aes(y=mark_rate_mean, x=month(MONTH, label=TRUE) , col=Source, group=Source)) +
+  geom_point() +  geom_errorbar(aes(ymin=mark_rate_mean-mark_rate_sd, ymax=mark_rate_mean+mark_rate_sd), width=.1) + geom_line() + ggtitle("2019:2023") +scale_x_discrete(guide = guide_axis(angle = 90)) + 
+  xlab("Month") + ylab("Proportion marked")+ theme_bw() + ylim(0,1)
+
+p<-p1 + p2 + plot_layout(guides = "collect") + plot_annotation(
+  title = 'Area 17')
+
+p
+
+# cat("\n\n")
+# resize(p, 7, 4)
+# cat("\n\n")
+
 ggplot(Sport_mark_rate_only_by_year %>% filter(AREA=="Area 17"), aes(y=mark_rate, x=month(MONTH, label=TRUE) , col=Source, group=Source)) +
   geom_point() + geom_line()+  facet_wrap(~YEAR) + ggtitle("Area 17") +scale_x_discrete(guide = guide_axis(angle = 90)) + 
   xlab("Month") + ylab("Proportion marked")+ theme_bw()
@@ -306,22 +357,107 @@ ggplot(Sport_mark_rate_only_by_year %>% filter(AREA=="Area 17"), aes(y=mark_rate
 ### Area 18
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+p1<-ggplot(Sport_mark_rate_only_by_year_av_past %>% filter(AREA=="Area 18"), aes(y=mark_rate_mean, x=month(MONTH, label=TRUE) , col=Source, group=Source)) +
+  geom_point() +  geom_errorbar(aes(ymin=mark_rate_mean-mark_rate_sd, ymax=mark_rate_mean+mark_rate_sd), width=.1) + geom_line() + ggtitle("2013:2018") +scale_x_discrete(guide = guide_axis(angle = 90)) + 
+  xlab("Month") + ylab("Proportion marked")+ theme_bw() + ylim(0,1)
+
+
+p2<-ggplot(Sport_mark_rate_only_by_year_av_recent %>% filter(AREA=="Area 18"), aes(y=mark_rate_mean, x=month(MONTH, label=TRUE) , col=Source, group=Source)) +
+  geom_point() +  geom_errorbar(aes(ymin=mark_rate_mean-mark_rate_sd, ymax=mark_rate_mean+mark_rate_sd), width=.1) + geom_line() + ggtitle("2019:2023") +scale_x_discrete(guide = guide_axis(angle = 90)) + 
+  xlab("Month") + ylab("Proportion marked")+ theme_bw() + ylim(0,1)
+
+p<- p1 + p2 + plot_layout(guides = "collect") + plot_annotation(
+  title = 'Area 18')
+
+p
+
+# cat("\n\n")
+# resize(p, 7, 4)
+# cat("\n\n")
+
 ggplot(Sport_mark_rate_only_by_year %>% filter(AREA=="Area 18"), aes(y=mark_rate, x=month(MONTH, label=TRUE) , col=Source, group=Source))  +
   geom_point() + geom_line()+  facet_wrap(~YEAR) + ggtitle("Area 18") +scale_x_discrete(guide = guide_axis(angle = 90)) + 
   xlab("Month") + ylab("Proportion marked")+ theme_bw()
 ```
 
-### Area 19
+### Area 19 GS
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
-ggplot(Sport_mark_rate_only_by_year %>% filter(AREA=="Area 19"), aes(y=mark_rate, x=month(MONTH, label=TRUE) , col=Source, group=Source))  +
-  geom_point() + geom_line()+  facet_wrap(~YEAR) + ggtitle("Area 19") +scale_x_discrete(guide = guide_axis(angle = 90)) + 
+
+p1<-ggplot(Sport_mark_rate_only_by_year_av_past %>% filter(AREA=="Area 19 (GS)"), aes(y=mark_rate_mean, x=month(MONTH, label=TRUE) , col=Source, group=Source)) +
+  geom_point() +  geom_errorbar(aes(ymin=mark_rate_mean-mark_rate_sd, ymax=mark_rate_mean+mark_rate_sd), width=.1) + geom_line() + ggtitle("2013:2018") +scale_x_discrete(guide = guide_axis(angle = 90)) + 
+  xlab("Month") + ylab("Proportion marked")+ theme_bw() + ylim(0,1)
+
+
+p2<-ggplot(Sport_mark_rate_only_by_year_av_recent %>% filter(AREA=="Area 19 (GS)"), aes(y=mark_rate_mean, x=month(MONTH, label=TRUE) , col=Source, group=Source)) +
+  geom_point() +  geom_errorbar(aes(ymin=mark_rate_mean-mark_rate_sd, ymax=mark_rate_mean+mark_rate_sd), width=.1) + geom_line() + ggtitle("2019:2023") +scale_x_discrete(guide = guide_axis(angle = 90)) + 
+  xlab("Month") + ylab("Proportion marked")+ theme_bw() + ylim(0,1)
+
+p<-p1 + p2 + plot_layout(guides = "collect") + plot_annotation(
+  title = 'Area 19 (GS)')
+
+p
+
+# cat("\n\n")
+# resize(p, 7, 4)
+# cat("\n\n")
+
+ggplot(Sport_mark_rate_only_by_year %>% filter(AREA=="Area 19 (GS)"), aes(y=mark_rate, x=month(MONTH, label=TRUE) , col=Source, group=Source))  +
+  geom_point() + geom_line()+  facet_wrap(~YEAR) + ggtitle("Area 19 (GS)") +scale_x_discrete(guide = guide_axis(angle = 90)) + 
   xlab("Month") + ylab("Proportion marked")+ theme_bw()
+```
+
+### Area 19 JDF
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+p1<-ggplot(Sport_mark_rate_only_by_year_av_past %>% filter(AREA=="Area 19 (JDF)"), aes(y=mark_rate_mean, x=month(MONTH, label=TRUE) , col=Source, group=Source)) +
+  geom_point() +  geom_errorbar(aes(ymin=mark_rate_mean-mark_rate_sd, ymax=mark_rate_mean+mark_rate_sd), width=.1) + geom_line() + ggtitle("2013:2018") +scale_x_discrete(guide = guide_axis(angle = 90)) + 
+  xlab("Month") + ylab("Proportion marked")+ theme_bw() + ylim(0,1)
+
+
+p2<-ggplot(Sport_mark_rate_only_by_year_av_recent %>% filter(AREA=="Area 19 (JDF)"), aes(y=mark_rate_mean, x=month(MONTH, label=TRUE) , col=Source, group=Source)) +
+  geom_point() +  geom_errorbar(aes(ymin=mark_rate_mean-mark_rate_sd, ymax=mark_rate_mean+mark_rate_sd), width=.1) + geom_line() + ggtitle("2019:2023") +scale_x_discrete(guide = guide_axis(angle = 90)) + 
+  xlab("Month") + ylab("Proportion marked")+ theme_bw() + ylim(0,1)
+
+p<-p1 + p2 + plot_layout(guides = "collect") + plot_annotation(
+  title = 'Area 19 (JDF)')
+
+p
+
+# cat("\n\n")
+# resize(p, 7, 4)
+# cat("\n\n")
+
+ggplot(Sport_mark_rate_only_by_year %>% filter(AREA=="Area 19 (JDF)"), aes(y=mark_rate, x=month(MONTH, label=TRUE) , col=Source, group=Source))  +
+  geom_point() + geom_line()+  facet_wrap(~YEAR) + ggtitle("Area 19 (JDF)") +scale_x_discrete(guide = guide_axis(angle = 90)) + 
+  xlab("Month") + ylab("Proportion marked")+ theme_bw()
+
 ```
 
 ### Area 20
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+p1<-ggplot(Sport_mark_rate_only_by_year_av_past %>% filter(AREA=="Area 20"), aes(y=mark_rate_mean, x=month(MONTH, label=TRUE) , col=Source, group=Source)) +
+  geom_point() +  geom_errorbar(aes(ymin=mark_rate_mean-mark_rate_sd, ymax=mark_rate_mean+mark_rate_sd), width=.1) + geom_line() + ggtitle("2013:2018") +scale_x_discrete(guide = guide_axis(angle = 90)) + 
+  xlab("Month") + ylab("Proportion marked")+ theme_bw() + ylim(0,1)
+
+
+p2<-ggplot(Sport_mark_rate_only_by_year_av_recent %>% filter(AREA=="Area 20"), aes(y=mark_rate_mean, x=month(MONTH, label=TRUE) , col=Source, group=Source)) +
+  geom_point() +  geom_errorbar(aes(ymin=mark_rate_mean-mark_rate_sd, ymax=mark_rate_mean+mark_rate_sd), width=.1) + geom_line() + ggtitle("2019:2023") +scale_x_discrete(guide = guide_axis(angle = 90)) + 
+  xlab("Month") + ylab("Proportion marked")+ theme_bw() + ylim(0,1)
+
+p<-p1 + p2 + plot_layout(guides = "collect") + plot_annotation(
+  title = 'Area 20')
+
+p
+
+# cat("\n\n")
+# resize(p, 7, 4)
+# cat("\n\n")
+
 ggplot(Sport_mark_rate_only_by_year %>% filter(AREA=="Area 20"), aes(y=mark_rate, x=month(MONTH, label=TRUE) , col=Source, group=Source))  +
   geom_point() + geom_line()+  facet_wrap(~YEAR) + ggtitle("Area 20") +scale_x_discrete(guide = guide_axis(angle = 90)) + 
   xlab("Month") + ylab("Proportion marked")+ theme_bw()
@@ -331,6 +467,25 @@ ggplot(Sport_mark_rate_only_by_year %>% filter(AREA=="Area 20"), aes(y=mark_rate
 ### Area 25
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+p1<-ggplot(Sport_mark_rate_only_by_year_av_past %>% filter(AREA=="Area 25"), aes(y=mark_rate_mean, x=month(MONTH, label=TRUE) , col=Source, group=Source)) +
+  geom_point() +  geom_errorbar(aes(ymin=mark_rate_mean-mark_rate_sd, ymax=mark_rate_mean+mark_rate_sd), width=.1) + geom_line() + ggtitle("2013:2018") +scale_x_discrete(guide = guide_axis(angle = 90)) + 
+  xlab("Month") + ylab("Proportion marked")+ theme_bw() + ylim(0,1)
+
+
+p2<-ggplot(Sport_mark_rate_only_by_year_av_recent %>% filter(AREA=="Area 25"), aes(y=mark_rate_mean, x=month(MONTH, label=TRUE) , col=Source, group=Source)) +
+  geom_point() +  geom_errorbar(aes(ymin=mark_rate_mean-mark_rate_sd, ymax=mark_rate_mean+mark_rate_sd), width=.1) + geom_line() + ggtitle("2019:2023") +scale_x_discrete(guide = guide_axis(angle = 90)) + 
+  xlab("Month") + ylab("Proportion marked")+ theme_bw() + ylim(0,1)
+
+p<- p1 + p2 + plot_layout(guides = "collect") + plot_annotation(
+  title = 'Area 25')
+
+p
+
+# cat("\n\n")
+# resize(p, 7, 4)
+# cat("\n\n")
+
 ggplot(Sport_mark_rate_only_by_year %>% filter(AREA=="Area 25"), aes(y=mark_rate, x=month(MONTH, label=TRUE) , col=Source, group=Source))  +
   geom_point() + geom_line()+  facet_wrap(~YEAR) + ggtitle("Area 25") +scale_x_discrete(guide = guide_axis(angle = 90)) + 
   xlab("Month") + ylab("Proportion marked")+ theme_bw()
