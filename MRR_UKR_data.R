@@ -2,8 +2,9 @@
 
 #### MRR URR
 source("wrangle_data.R")
-source("model_data.R")
+source("final_model.R")
 
+#For now, until we get the data from NBC and CBC just use: Season_south_combined which has the modelled data in it
 
 
 Sport_mark_rate_mrr<-Season_south_combined %>%
@@ -58,14 +59,6 @@ ggplot(Sport_mark_rate_finescale_combined, aes(y=catch_estimate, x=YEAR, col=as.
 ggplot(Sport_mark_rate_finescale_combined %>% filter(YEAR==2023, status=="marked_Kept_total"), aes(x=creel_plus, y=catch_estimate, col=as.factor(finescale_fishery))) + geom_point()
 ggplot(Sport_mark_rate %>% filter(YEAR==2022), aes(x=creel_plus, y=catch_estimate)) + geom_point()
 
-
-#modelling: 2022:
-
-model_marked<- glm(formula = catch_estimate ~ creel_plus,
-                   family = gaussian,
-                   data = Sport_mark_kept_2022)
-
-summary(model_marked)
 
 
 ##

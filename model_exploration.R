@@ -12,7 +12,7 @@ library(MuMIn)
 
 #Need to run wrangle_data first and then you get Sport_mark_rate_finescale_combined
 
-source("wrangle_data.R")
+#source("wrangle_data.R")
 
 
 Season_south<-Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2013:2023)) %>% filter(!str_detect(finescale_fishery, "CBC|NBC"))
