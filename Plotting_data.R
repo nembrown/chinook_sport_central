@@ -175,3 +175,159 @@ yearMonth2_season_south_old<- yearMonth2_season_old %>% filter(!str_detect(fines
   plt.gam.hydroid
   ggsave("C:Data//Graphs March 2020//hydroid_pred.png")
 
+
+
+  #
+  # ggplot(Sport_mark_rate_finescale_combined %>% filter(season=="summer")%>% filter(!str_detect(finescale_fishery, "CBC|NBC")), aes(y=creel_plus_summer+1, x=creel_effort)) +
+  #   geom_point() + geom_smooth(method="glm", method.args = list(family= Gamma(link = "log"))) + facet_wrap(~finescale_fishery, scales="free")
+  #
+  # ggplot(Sport_mark_rate_finescale_combined %>% filter(season=="summer")%>% filter(str_detect(finescale_fishery, "CBC|NBC")), aes(y=historic_summer+1, x=historic_effort)) +
+  #   geom_point() + geom_smooth(method="glm", method.args = list(family= Gamma(link = "log"))) + facet_wrap(~finescale_fishery, scales="free")
+
+
+
+
+
+
+
+  col1 = "#d8e1cf"
+  col2 = "#438484"
+  col3 = "lightblue"
+  col4 = "lightblue4"
+  col5 = "pink"
+  col6 = "darkred"
+  ####
+  yearMonth <- plyr::ddply(Sport_mark_rate_finescale, c( "YEAR", "MONTH", "finescale_fishery_old"), summarise,
+                           sum= sum(creel_plus, na.rm = TRUE), sum_historic= sum(historic_plus, na.rm = TRUE), sum_catch_estimate = sum(catch_estimate, na.rm = TRUE), sum_irec = sum(irec_calibrated, na.rm = TRUE))
+
+  yearMonth_creel_1<-yearMonth %>% filter(sum!=0, finescale_fishery_old!="NA")
+  yearMonth_historic_1<-yearMonth %>% filter(sum_historic!=0, finescale_fishery_old!="NA")
+
+
+  ggplot()+
+    geom_tile(data=yearMonth_creel_1, aes(x=YEAR, y=as.factor(MONTH), fill = sum),colour = "white") +
+    scale_fill_gradient(low = col1, high = col2) +
+    scale_y_discrete(limits=rev)+
+    guides(fill=guide_legend(title="creel only estimates")) +
+    new_scale_fill() +
+    geom_tile(data=yearMonth_historic_1, aes(x=YEAR, y=as.factor(MONTH), fill = sum_historic),colour = "white") +
+    scale_fill_gradient(low = col1, high = col2)+
+    facet_wrap(~finescale_fishery_old)+
+    labs(title = "Coverage by finescale fishery",
+         x = "Year", y = "Month") +
+    theme_bw() + theme_minimal() + geom_vline(xintercept = 2012)
+
+
+  yearMonth_creel_2<-yearMonth %>% filter(sum!=0, sum_catch_estimate==sum, finescale_fishery_old!="NA")
+  yearMonth_catch_estimate_1<-yearMonth %>% filter(sum_catch_estimate!=sum, sum_catch_estimate!=sum_irec, finescale_fishery_old!="NA")
+  yearMonth_irec_1<-yearMonth %>% filter(sum_irec!=0, sum_catch_estimate==sum_irec, finescale_fishery_old!="NA")
+
+
+
+
+  ggplot()+
+    geom_tile(data=yearMonth_creel_2, aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
+    scale_fill_gradient(low = col1, high = col2) +
+    scale_y_discrete(limits=rev)+
+    guides(fill=guide_legend(title="creel only estimates")) +
+    new_scale_fill() +
+    geom_tile(data=yearMonth_catch_estimate_1, aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
+    scale_fill_gradient(low = col3, high = col4)+
+    guides(fill=guide_legend(title="creel plus irec estimates")) +
+    new_scale_fill() +
+    geom_tile(data=yearMonth_irec_1, aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
+    scale_fill_gradient(low = col5, high = col6)+
+    facet_wrap(~finescale_fishery_old)+
+    guides(fill=guide_legend(title="irec only estimates")) +
+    labs(title = "Coverage by finescale fishery",
+         x = "Year", y = "Month") +
+    theme_bw() + theme_minimal() + geom_vline(xintercept = 2012)
+
+
+  #Marked Kept only
+  ggplot()+
+    geom_tile(data=yearMonth_creel %>% filter(status == "marked_Kept_total"), aes(x=YEAR, y=as.factor(MONTH), fill = sum),colour = "white") +
+    scale_fill_gradient(low = col1, high = col2) +
+    new_scale_fill() +
+    geom_tile(data=yearMonth_irec, aes(x=YEAR, y=as.factor(MONTH), fill = sum_irec),colour = "white") +
+    scale_fill_gradient(low = col3, high = col4) +
+    facet_wrap(~finescale_fishery)+
+    scale_y_discrete(limits=rev)+
+    guides(fill=guide_legend(title="iREC estimates")) +
+    labs(title = "Coverage by finescale fishery - marked_Kept_total",
+         x = "Year", y = "Month") +
+    theme_bw() + theme_minimal() + geom_vline(xintercept = 2012)
+
+  # Marked Released
+  ggplot()+
+    geom_tile(data=yearMonth_creel %>% filter(status == "marked_Released_total"), aes(x=YEAR, y=as.factor(MONTH), fill = sum),colour = "white") +
+    scale_fill_gradient(low = col1, high = col2) +
+    new_scale_fill() +
+    geom_tile(data=yearMonth_irec, aes(x=YEAR, y=as.factor(MONTH), fill = sum_irec),colour = "white") +
+    scale_fill_gradient(low = col3, high = col4) +
+    facet_wrap(~finescale_fishery)+
+    scale_y_discrete(limits=rev)+
+    guides(fill=guide_legend(title="iREC estimates")) +
+    labs(title = "Coverage by finescale fishery - marked_Released_total",
+         x = "Year", y = "Month") +
+    theme_bw() + theme_minimal() + geom_vline(xintercept = 2012)
+
+  #Unmarked Kept only
+  ggplot()+
+    geom_tile(data=yearMonth_creel %>% filter(status == "unmarked_Kept_total"), aes(x=YEAR, y=as.factor(MONTH), fill = sum),colour = "white") +
+    scale_fill_gradient(low = col1, high = col2) +
+    new_scale_fill() +
+    geom_tile(data=yearMonth_irec, aes(x=YEAR, y=as.factor(MONTH), fill = sum_irec),colour = "white") +
+    scale_fill_gradient(low = col3, high = col4) +
+    facet_wrap(~finescale_fishery)+
+    scale_y_discrete(limits=rev)+
+    guides(fill=guide_legend(title="iREC estimates")) +
+    labs(title = "Coverage by finescale fishery - unmarked_Kept_total",
+         x = "Year", y = "Month") +
+    theme_bw() + theme_minimal() + geom_vline(xintercept = 2012)
+
+
+  #Unmarked Released
+  ggplot()+
+    geom_tile(data=yearMonth_creel %>% filter(status == "unmarked_Released_total"), aes(x=YEAR, y=as.factor(MONTH), fill = sum),colour = "white") +
+    scale_fill_gradient(low = col1, high = col2) +
+    new_scale_fill() +
+    geom_tile(data=yearMonth_irec, aes(x=YEAR, y=as.factor(MONTH), fill = sum_irec),colour = "white") +
+    scale_fill_gradient(low = col3, high = col4) +
+    facet_wrap(~finescale_fishery)+
+    scale_y_discrete(limits=rev)+
+    guides(fill=guide_legend(title="iREC estimates")) +
+    labs(title = "Coverage by finescale fishery - unmarked_Released_total",
+         x = "Year", y = "Month") +
+    theme_bw() + theme_minimal() + geom_vline(xintercept = 2012)
+
+  ################## TERMINAL
+
+  yearMonth_term <- plyr::ddply(Sport_mark_rate_finescale, c( "YEAR", "MONTH", "finescale_fishery_term"), summarise,
+                                sum = sum(creel_plus), sum_catch_estimate = sum(catch_estimate), sum_irec = sum(irec_calibrated))
+
+  yearMonth_creel_term<-yearMonth_term %>% filter(sum!=0, sum_catch_estimate==sum, finescale_fishery_term!="NA")
+  yearMonth_catch_estimate_term<-yearMonth_term %>% filter(sum_catch_estimate!=sum, sum_catch_estimate!=sum_irec, finescale_fishery_term!="NA")
+  yearMonth_irec_term<-yearMonth_term %>% filter(sum_irec!=0, sum_catch_estimate==sum_irec, finescale_fishery_term!="NA")
+
+
+  #overall summary
+  ggplot()+
+    geom_tile(data=yearMonth_creel_term, aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
+    scale_fill_gradient(low = col1, high = col2) +
+    scale_y_discrete(limits=rev)+
+    guides(fill=guide_legend(title="creel only estimates")) +
+    new_scale_fill() +
+    geom_tile(data=yearMonth_catch_estimate_term, aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
+    scale_fill_gradient(low = col3, high = col4)+
+    guides(fill=guide_legend(title="creel plus irec estimates")) +
+    new_scale_fill() +
+    geom_tile(data=yearMonth_irec_term, aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
+    scale_fill_gradient(low = col5, high = col6)+
+    facet_wrap(~finescale_fishery_term)+
+    guides(fill=guide_legend(title="irec only estimates")) +
+    labs(title = "Coverage by terminal finescale fishery",
+         x = "Year", y = "Month") +
+    theme_bw() + theme_minimal() + geom_vline(xintercept = 2012)
+
+
