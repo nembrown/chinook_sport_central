@@ -1,0 +1,264 @@
+---
+title: "Modelling_plots"
+author: "Norah Brown"
+date: today
+
+editor: visual
+execute: 
+  warning: false
+
+theme: litera
+ 
+format:
+  html:
+    page-layout: full
+    embed-resources: true
+    code-fold: true
+    code-summary: "Show the code"
+toc: true
+toc-depth: 4
+toc-location: left
+---
+
+```{r Loading data, message=FALSE, warning=FALSE, results='hide', echo=FALSE}
+#load packages
+library(tidyverse)
+library(odbc)
+library(lubridate)
+library(ggnewscale)
+library(patchwork)
+library(DHARMa)
+library(lme4)
+library(bbmle)
+library(SuppDists)
+library(MuMIn)
+
+#utils
+"%notin%" <- Negate("%in%")
+
+col1 = "#d8e1cf"
+col2 = "#438484"
+col3 = "lightblue"
+col4 = "lightblue4"
+col5 = "pink"
+col6 = "darkred"
+colclear= "#1C00ff00"
+
+resize <- function(g, fig_width=NA, fig_height=NA) {
+  g_deparsed <- paste0(deparse(function() g), collapse = '')
+  sub_chunk <- paste0("`","``{r sub_chunk_", floor(runif(1) * 10000), ", fig.height=", fig_height, ", fig.width=", fig_width, ", warning=FALSE, echo=FALSE}","\n(", g_deparsed, ")()","\n`","``")
+  cat(knitr::knit(text = knitr::knit_expand(text = sub_chunk), quiet = TRUE))
+}
+
+
+Sport_mark_rate_finescale<-read_rds("Sport_mark_rate_finescale.RDS")
+
+Sport_mark_rate_finescale_combined<-read_rds("Sport_mark_rate_finescale_combined.RDS")
+
+Season_south_combined<- read_rds("Season_south_combined.RDS")
+
+
+
+```
+
+## Pre-terminal Spring and Fall fisheries
+
+-   The best model was one with a gamma distribution
+-   Next, we investigated if the fully interactive model is better than a subset of interactions. We used the dredge function from the MuMin package to sequentially drop terms (including all interactions).
+-   The best model included summer creel, marked and kept status, finescale fishery, and season and various interactions of these terms
+-   $$ catch = creel.summer+finescale.fishery+season+status+                                               creel.summer:finescale.fishery  + creel.summer:status+                                               finescale.fishery:season $$
+
+```{r Modelling spring and fall subsetting, message=FALSE, warning=FALSE, results='hide', echo=FALSE}
+
+Season_south_sf<-Sport_mark_rate_finescale_combined %>%
+                 filter(YEAR %in% c(2013:2023))%>%
+                 filter(!str_detect(finescale_fishery, "CBC|NBC")) %>%
+                 filter(season %in% c("spring", "fall"))
+
+
+#Modelling comparisons need to be done on models with same # of NAs - so drop nas
+Season_south_no_nas<-Season_south_sf %>% drop_na(any_of(c("creel_plus_summer", "mark_status","status", "finescale_fishery_old", "season", "creel_effort", "kept_status")))
+
+
+Season_model_gamma_full_spec<- glm(formula =catch_estimate + 3 ~ finescale_fishery_old + season +status + creel_plus_summer:finescale_fishery_old + creel_plus_summer:status +finescale_fishery_old:season + 1 + creel_plus_summer,  family=Gamma(link = "log"), data = Season_south_no_nas)
+
+res_gam_drop_kept_effort_spec <- simulateResiduals(Season_model_gamma_full_spec, plot = T, quantreg=T)
+#summary(Season_model_gamma_full_spec)
+
+
+```
+
+```{r Modelling all spring and fall southern BC fisheries, message=FALSE, warning=FALSE, results='hold'}
+
+#Adding predicted data to the modelled set
+Season_south_old_sf<- Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2005:2012)) %>% ungroup() %>% mutate(pred_cat = "predicted") %>% filter(!str_detect(finescale_fishery, "CBC|NBC"))%>%
+  filter(season %in% c("spring", "fall"))
+Season_south_old_new<-predict.glm(Season_model_gamma_full_spec, newdata =  Season_south_old_sf, type = "response")
+Season_south_old_new_2<-Season_south_old_sf %>%   mutate(catch_estimate_predicted = Season_south_old_new)
+
+Season_south2<-Season_south_sf %>% mutate(catch_estimate_predicted = catch_estimate, pred_cat= "observed")
+Season_south_combined<- rbind(Season_south_old_new_2, Season_south2)
+
+
+
+
+#### Adding confidence intervals based on model to a dataframe for plotting purposes
+#based on this blog: https://fromthebottomoftheheap.net/2018/12/10/confidence-intervals-for-glms/
+
+family.set <- family(Season_model_gamma_full_spec)
+ilink.family.set<- family.set$linkinv
+
+want_marked_kept <- seq(1, nrow(Season_south_no_nas %>% filter(status == "marked_Kept_total")), length.out = 1000)
+want_marked_released <- seq(1, nrow(Season_south_no_nas %>% filter(status == "marked_Released_total")), length.out = 1000)
+want_umarked_kept <- seq(1, nrow(Season_south_no_nas %>% filter(status == "unmarked_Kept_total")), length.out = 1000)
+want_umarked_released <- seq(1, nrow(Season_south_no_nas %>% filter(status == "unmarked_Released_total")), length.out = 1000)
+
+mod<-Season_model_gamma_full_spec
+
+ndata_marked_kept <- with(Season_south_no_nas %>% filter(status == "marked_Kept_total"), data_frame(creel_plus_summer= seq(min(creel_plus_summer), max(creel_plus_summer), length = 1000),  status = "marked_Kept_total", season = season[want_marked_kept], finescale_fishery_old=finescale_fishery_old[want_marked_kept], creel_effort=creel_effort[want_marked_kept], finescale_fishery=finescale_fishery[want_marked_kept]))
+
+ndata_marked_released <- with(Season_south_no_nas %>% filter(status == "marked_Released_total"), data_frame(creel_plus_summer= seq(min(creel_plus_summer), max(creel_plus_summer), length = 1000),  status = "marked_Released_total", season = season[want_marked_released], finescale_fishery_old=finescale_fishery_old[want_marked_released], creel_effort=creel_effort[want_marked_released], finescale_fishery=finescale_fishery[want_marked_released]))
+
+ndata_unmarked_kept <- with(Season_south_no_nas %>% filter(status == "unmarked_Kept_total"), data_frame(creel_plus_summer= seq(min(creel_plus_summer), max(creel_plus_summer),length = 1000),  status = "unmarked_Kept_total", season = season[want_umarked_kept], finescale_fishery_old=finescale_fishery_old[want_umarked_kept], creel_effort=creel_effort[want_umarked_kept], finescale_fishery=finescale_fishery[want_umarked_kept]))
+
+
+ndata_unmarked_released <- with(Season_south_no_nas %>% filter(status == "unmarked_Released_total"), data_frame(creel_plus_summer= seq(min(creel_plus_summer), max(creel_plus_summer), length = 1000),  status =  "unmarked_Released_total", season = season[want_umarked_released], finescale_fishery_old=finescale_fishery_old[want_umarked_released], creel_effort=creel_effort[want_umarked_released], finescale_fishery=finescale_fishery[want_umarked_released]))
+
+ndata<- bind_rows(ndata_marked_kept,ndata_marked_released, ndata_unmarked_kept, ndata_unmarked_released)
+
+## add the fitted values by predicting from the model for the new data
+ndata<- add_column(ndata, fit = predict(mod, newdata = ndata, type = 'response'))
+ndata<- bind_cols(ndata, setNames(as_tibble(predict(mod, ndata, se.fit = TRUE)[1:2]),
+                                                   c('fit_link','se_link')))
+
+ndata <- mutate(ndata,
+                fit_resp  = ilink.family.set(fit_link),
+                right_upr = ilink.family.set(fit_link + (2 * se_link)),
+                right_lwr = ilink.family.set(fit_link - (2 * se_link)))
+```
+
+```{r summarizing spring and fall}
+yearMonth2_season <- plyr::ddply(Sport_mark_rate_finescale, c( "YEAR", "MONTH", "finescale_fishery", "season"), summarise,
+                         sum_creel = sum(creel, na.rm = TRUE), sum= sum(creel_plus, na.rm = TRUE), sum_historic= sum(historic_plus, na.rm = TRUE), sum_catch_estimate = sum(catch_estimate, na.rm = TRUE), sum_irec = sum(irec_calibrated, na.rm = TRUE)) %>% filter(finescale_fishery!="NA") %>% mutate(across(where(is.numeric), ~na_if(., 0))) 
+
+
+yearMonth_catch_estimate_2_season<-yearMonth2_season %>% filter(sum_catch_estimate!=sum,sum_catch_estimate!=sum_historic, sum_catch_estimate!=sum_irec)
+
+yearMonth_irec_2_season<-yearMonth2_season %>% filter(sum_catch_estimate==sum_irec)
+
+
+```
+
+```{r forloop seasonal spring and fall, results='asis', echo=FALSE}
+
+yearMonth2_season_south<- yearMonth2_season %>% filter(!str_detect(finescale_fishery, "CBC|NBC")) %>%
+  filter(season %in% c("spring", "fall"))
+fishery_name_south<- sort(unique(yearMonth2_season_south$finescale_fishery))
+
+  
+for (i in 1:length(fishery_name_south)){
+ 
+  cat("\n\n")
+  cat("### ", paste0("", fishery_name_south[fishery_name_south== fishery_name_south[i]], " "),"\n\n") 
+  
+p1<-ggplot()+
+  geom_tile(data=yearMonth2_season_south %>% filter(finescale_fishery==fishery_name_south[i]), aes(x=YEAR, y=as.factor(MONTH), fill = sum),colour = "white") +
+  scale_y_discrete(limits=rev)+
+  geom_tile(data=yearMonth2_season_south  %>% filter(finescale_fishery==fishery_name_south[i]), aes(x=YEAR, y=as.factor(MONTH), fill = sum_historic),colour = "white") +
+  guides(fill=guide_legend(title="creel and logbook estimates")) +
+  scale_fill_gradient(low = col1, high = col2, na.value = colclear)+
+  labs(title = paste("Coverage for", fishery_name_south[i]),
+       x = "Year", y = "Month") +
+  theme_bw() + theme_minimal() + geom_vline(xintercept = 2013) 
+
+p2<-ggplot()+
+  geom_tile(data=yearMonth2_season_south %>% filter(finescale_fishery==fishery_name_south[i]), aes(x=YEAR, y=as.factor(MONTH), fill = sum),colour = "white") +
+  scale_fill_gradient(low = col1, high = col2, na.value = colclear) +
+  scale_y_discrete(limits=rev)+
+  guides(fill=guide_legend(title="creel and logbook estimates")) +
+  geom_tile(data=yearMonth2_season_south%>% filter(finescale_fishery==fishery_name_south[i]), aes(x=YEAR, y=as.factor(MONTH), fill = sum_historic),colour = "white") +
+  scale_fill_gradient(low = col1, high = col2, na.value = colclear) +
+  new_scale_fill() +
+  geom_tile(data=yearMonth_catch_estimate_2_season%>% filter(finescale_fishery==fishery_name_south[i]), aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
+  scale_fill_gradient(low = col3, high = col4, na.value = colclear)+
+  guides(fill=guide_legend(title="creel plus iREC estimates")) +
+  new_scale_fill() +
+  geom_tile(data=yearMonth_irec_2_season%>% filter(finescale_fishery==fishery_name_south[i]), aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
+  scale_fill_gradient(low = col5, high = col6, na.value = colclear)+
+  guides(fill=guide_legend(title="iREC estimates")) +
+  labs(
+       x = "Year", y = "Month") +
+  theme_bw() + theme_minimal() + geom_vline(xintercept = 2013)
+
+
+p<-p1+p2 + plot_layout(guides = "collect") & theme(legend.position = 'none')
+
+cat("\n\n")
+resize(p, 5, 2)
+
+
+#####
+
+dataminmax_marked_kept<- Season_south_no_nas %>% filter(finescale_fishery==fishery_name_south[i], status=="marked_Kept_total")
+dataminmax_marked_released<- Season_south_no_nas %>% filter(finescale_fishery==fishery_name_south[i], status=="marked_Released_total")
+dataminmax_unmarked_kept<- Season_south_no_nas %>% filter(finescale_fishery==fishery_name_south[i], status=="unmarked_Kept_total")
+dataminmax_unmarked_released<- Season_south_no_nas %>% filter(finescale_fishery==fishery_name_south[i], status=="unmarked_Released_total")
+
+
+g1<-ggplot(Season_south_no_nas %>% filter(finescale_fishery==fishery_name_south[i], status=="marked_Kept_total"), aes(x=creel_plus_summer,  y= catch_estimate, col=status))+
+  geom_point()+
+  geom_line(ndata %>% filter(finescale_fishery==fishery_name_south[i], status=="marked_Kept_total"), mapping=aes(y= fit, x=creel_plus_summer, col=status))+
+  geom_ribbon(ndata %>% filter(finescale_fishery==fishery_name_south[i], status=="marked_Kept_total"), mapping=aes(y= fit,x=creel_plus_summer, ymin = right_lwr, ymax = right_upr, fill=status), alpha = 0.10)+
+   theme_bw() +
+  scale_size_continuous(range=c(1,3))+ scale_colour_manual(values=c("#440154"))+  scale_fill_manual(values=c("#440154"))+
+  coord_cartesian(ylim = c(0,max(dataminmax_marked_kept$catch_estimate)), xlim = c(0,max(dataminmax_marked_kept$creel_plus_summer)))
+
+g2<-ggplot(Season_south_no_nas %>% filter(finescale_fishery==fishery_name_south[i], status=="marked_Released_total"), aes(x=creel_plus_summer,  y= catch_estimate, col=status))+
+  geom_point()+
+  geom_line(ndata %>% filter(finescale_fishery==fishery_name_south[i], status=="marked_Released_total"), mapping=aes(y= fit, x=creel_plus_summer, col=status))+
+  geom_ribbon(ndata %>% filter(finescale_fishery==fishery_name_south[i], status=="marked_Released_total"), mapping=aes(y= fit,x=creel_plus_summer, ymin = right_lwr, ymax = right_upr, fill=status), alpha = 0.10)+
+  theme_bw() +
+ scale_size_continuous(range=c(1,3))+ scale_colour_manual(values=c("#31688e"))+  scale_fill_manual(values=c("#31688e"))+
+  coord_cartesian(ylim = c(0,max(dataminmax_marked_released$catch_estimate)), xlim = c(0,max(dataminmax_marked_released$creel_plus_summer)))
+
+g3<-ggplot(Season_south_no_nas %>% filter(finescale_fishery==fishery_name_south[i], status=="unmarked_Kept_total"), aes(x=creel_plus_summer,  y= catch_estimate, col=status))+
+  geom_point()+
+  geom_line(ndata %>% filter(finescale_fishery==fishery_name_south[i], status=="unmarked_Kept_total"), mapping=aes(y= fit, x=creel_plus_summer, col=status))+
+  geom_ribbon(ndata %>% filter(finescale_fishery==fishery_name_south[i], status=="unmarked_Kept_total"), mapping=aes(y= fit,x=creel_plus_summer, ymin = right_lwr, ymax = right_upr, fill=status), alpha = 0.10)+
+  theme_bw() +
+  scale_size_continuous(range=c(1,3))+ scale_colour_manual(values=c("#35b779"))+  scale_fill_manual(values=c("#35b779"))+
+  coord_cartesian(ylim = c(0,max(dataminmax_unmarked_kept$catch_estimate)), xlim = c(0,max(dataminmax_unmarked_kept$creel_plus_summer)))
+
+g4<-ggplot(Season_south_no_nas %>% filter(finescale_fishery==fishery_name_south[i], status=="unmarked_Released_total"), aes(x=creel_plus_summer,  y= catch_estimate, col=status))+
+  geom_point()+
+  geom_line(ndata %>% filter(finescale_fishery==fishery_name_south[i], status=="unmarked_Released_total"), mapping=aes(y= fit, x=creel_plus_summer, col=status))+
+  geom_ribbon(ndata %>% filter(finescale_fishery==fishery_name_south[i], status=="unmarked_Released_total"), mapping=aes(y= fit,x=creel_plus_summer, ymin = right_lwr, ymax = right_upr, fill=status, col=status), alpha = 0.10)+
+   theme_bw() +
+  scale_size_continuous(range=c(1,3))+ scale_colour_manual(values=c("#fde725"))+  scale_fill_manual(values=c("#fde725"))+
+    coord_cartesian(ylim = c(0,max(dataminmax_unmarked_released$catch_estimate)), xlim = c(0,max(dataminmax_unmarked_released$creel_plus_summer)))
+
+g<-g1+g2 + g3+g4 + plot_layout(guides = "collect") 
+g
+cat("\n\n")
+ resize(g, 7, 5)
+ 
+ 
+ m<-ggplot(Season_south_combined %>% filter(finescale_fishery==fishery_name_south[i])) +
+    geom_point(size=2.5,  aes(y=creel_unfiltered_plus, x=YEAR,col=status, fill=status, shape=pred_cat))+
+    geom_line(aes(y=creel_unfiltered_plus, x=YEAR,col=status, linetype = " Unfiltered creel and logbook"))+
+    scale_shape_manual(values=c(1,1))+
+    new_scale("shape")+
+    scale_colour_viridis_d()+
+    geom_point(size=2.5, aes(y=catch_estimate_predicted, x=YEAR,col=status, fill=status, shape=pred_cat))+
+    geom_line(aes(y=catch_estimate_predicted, x=YEAR,col=status, linetype = "iREC included"))+
+    scale_shape_manual(values=c(16,17))+
+    scale_linetype_manual(values=c(2,1))+
+    facet_wrap(~status, scales="free") + ggtitle(paste(fishery_name_south[i])) + theme_bw()
+ 
+ 
+cat("\n\n") 
+resize(m, 7, 5)
+ cat("\n\n\n")
+}
+
+```

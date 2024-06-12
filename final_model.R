@@ -14,6 +14,9 @@ library(MuMIn)
 
 # Southern BC Spring and Fall iREC only-------------------------------------------------------------
 
+Sport_mark_rate_finescale_combined<-read_rds("Sport_mark_rate_finescale_combined.RDS")
+
+
 ### Data needed
 Season_south_sf<-Sport_mark_rate_finescale_combined %>%
   filter(YEAR %in% c(2013:2023))%>%
@@ -37,7 +40,7 @@ Season_model_gamma_full_spec<- glm(formula =catch_estimate + 3 ~ finescale_fishe
 Season_south_old_sf<- Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2005:2012)) %>% ungroup() %>% mutate(pred_cat = "predicted") %>% filter(!str_detect(finescale_fishery, "CBC|NBC"))%>%
   filter(season %in% c("spring", "fall"))
 Season_south_old_new<-predict.glm(Season_model_gamma_full_spec, newdata =  Season_south_old_sf, type = "response")
-Season_south_old_new_2<-Season_south_old %>%   mutate(catch_estimate_predicted = Season_south_old_new)
+Season_south_old_new_2<-Season_south_old_sf %>%   mutate(catch_estimate_predicted = Season_south_old_new)
 
 Season_south2<-Season_south_sf %>% mutate(catch_estimate_predicted = catch_estimate, pred_cat= "observed")
 Season_south_combined<- rbind(Season_south_old_new_2, Season_south2)
@@ -93,4 +96,8 @@ Season_north_aabm_combined<- rbind(Season_north_aabm_old_new_2, Season_north_aab
 
 # Combining all modelled data into season south combined ------------------
 Season_south_combined<-rbind(Season_south_combined, Summer_south_combined)
+Season_south_combined<- rbind(Season_south_combined, Season_north_aabm_combined)
 
+
+
+write_rds(Season_south_combined, "Season_south_combined.RDS")

@@ -456,4 +456,5 @@ Sport_mark_rate_finescale_combined<-Sport_mark_rate_finescale_combined %>% mutat
   str_detect(finescale_fishery, "SPRING")  ~ "spring",
   str_detect(finescale_fishery, "FALL")  ~ "fall"))
 
-
+write_rds(Sport_mark_rate_finescale, "Sport_mark_rate_finescale.RDS")
+write_rds(Sport_mark_rate_finescale_combined, "Sport_mark_rate_finescale_combined.RDS")
