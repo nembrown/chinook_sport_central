@@ -14,6 +14,11 @@ Sport_mark_rate_mrr<-Season_south_combined %>%
 Sport_mark_rate_mrr$mrr[is.na(Sport_mark_rate_mrr$mrr)]<-0
 Sport_mark_rate_mrr$ukr[is.na(Sport_mark_rate_mrr$ukr)]<-1
 
+
+
+
+
+write.csv(Sport_mark_rate_mrr, "Sport_mark_rate_mrr.csv")
 Sport_mark_rate_mrr<- Sport_mark_rate_mrr %>% mutate(unmarked_release=1-ukr)
 
 Sport_mark_rate_mrr_creel<-Sport_mark_rate_finescale_combined %>%
@@ -21,6 +26,17 @@ Sport_mark_rate_mrr_creel<-Sport_mark_rate_finescale_combined %>%
   mutate(mrr=marked_Released_total/(marked_Kept_total+marked_Released_total),
          ukr=unmarked_Kept_total/(unmarked_Kept_total+unmarked_Released_total)) %>%
   mutate(mrrplusukr=mrr + ukr)
+
+
+
+
+
+
+
+
+
+
+
 
 ggplot() +
   geom_point(data=Sport_mark_rate_mrr, aes(y=unmarked_release, x=YEAR, col="lightblue")) + geom_line(data=Sport_mark_rate_mrr, aes(y=unmarked_release, x=YEAR, col="lightblue"))+
