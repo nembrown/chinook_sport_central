@@ -147,24 +147,22 @@ Summer_south_combined<- rbind(Summer_south_old_new_2, Summer_south2)
 
 # NBC AABM  ---------------------------------------------------------------
 
-
-
 Season_north_aabm<-Sport_mark_rate_finescale_combined%>% filter(YEAR %in% c(2013:2023)) %>% filter(finescale_fishery_old == "NBC AABM S")
 
 #Modelling comparisons need to be done on models with same # of NAs - so drop nas
 Season_north_aabm_no_nas<-Season_north_aabm %>% drop_na(any_of(c("historic_summer", "status", "finescale_fishery_old", "season", "historic_effort")))
 
-North_aabm_model_full<- glm(formula = catch_estimate + 1 ~ historic_summer*status*season*historic_effort,  family=gaussian, data = Season_north_aabm_no_nas)
+North_aabm_model_full<- glm(formula = catch_estimate + 1 ~ historic_summer*status*season,  family=gaussian, data = Season_north_aabm_no_nas)
 summary(North_aabm_model_full)
 res <- simulateResiduals(North_aabm_model_full, plot = T, quantreg=T)
 
 #poisson
-North_aabm_model_full_poisson<- glm(formula = catch_estimate + 1 ~historic_summer*status*season*historic_effort,  family=poisson, data = Season_north_aabm_no_nas)
+North_aabm_model_full_poisson<- glm(formula = catch_estimate + 1 ~historic_summer*status*season,  family=poisson, data = Season_north_aabm_no_nas)
 res_pois <- simulateResiduals(North_aabm_model_full_poisson, plot = T, quantreg=T)
 summary(North_aabm_model_full_poisson)
 
 #gamma
-North_aabm_model_full_gamma<- glm(formula = (catch_estimate+1) ~historic_summer*status*season*historic_effort,  family=Gamma(link = "log"), data=Season_north_aabm_no_nas, na.action = na.fail)
+North_aabm_model_full_gamma<- glm(formula = (catch_estimate+1) ~historic_summer*status*season,  family=Gamma(link = "log"), data=Season_north_aabm_no_nas, na.action = na.fail)
 res_gam <- simulateResiduals(North_aabm_model_full_gamma, plot = T, quantreg=T)
 summary(North_aabm_model_full_gamma)
 
@@ -173,17 +171,15 @@ AICtab(North_aabm_model_full,North_aabm_model_full_poisson, North_aabm_model_ful
 #gamma is the best
 
 #Now changing around model specification:
-North_aabm_model_full_gamma<- glm(formula = catch_estimate+1 ~historic_summer*season*historic_effort*status,  family=Gamma(link = "log"), data = Season_north_aabm_no_nas, na.action = na.fail)
-dd<-dredge(North_aabm_model_full_gamma, fixed= ~ historic_summer)
-subset(dd, delta < 2)
-plot(dd, labAsExpr = TRUE)
+North_aabm_model_full_gamma<- glm(formula = catch_estimate+1 ~historic_summer*season*status,  family=Gamma(link = "log"), data = Season_north_aabm_no_nas, na.action = na.fail)
+dd3<-dredge(North_aabm_model_full_gamma, fixed= ~ historic_summer)
+subset(dd3, delta < 2)
+plot(dd3, labAsExpr = TRUE)
 #
-summary(get.models(dd, 1)[[1]])
+summary(get.models(dd3, 1)[[1]])
 
 #The model with AIC <2 factors added back in:
-North_aabm_model_full_gamma_spec<- glm(formula = catch_estimate+1 ~historic_summer+season+status+
-                                         historic_effort*historic_summer + historic_effort*status +
-                                         historic_summer*season,  family=Gamma(link = "log"), data = Season_north_aabm_no_nas)
+North_aabm_model_full_gamma_spec<- glm(formula = catch_estimate+1 ~season + status + 1 + historic_summer,  family=Gamma(link = "log"), data = Season_north_aabm_no_nas)
 res_gam_drop_kept_spec <- simulateResiduals(North_aabm_model_full_gamma_spec, plot = T, quantreg=T)
 summary(North_aabm_model_full_gamma_spec)
 

@@ -79,9 +79,7 @@ Season_north_aabm_no_nas<-Season_north_aabm %>% drop_na(any_of(c("historic_summe
 
 
 ###Chosen model
-North_aabm_model_full_gamma_spec<- glm(formula = catch_estimate+1 ~historic_summer+season+status+
-                                         historic_effort*historic_summer + historic_effort*status +
-                                         historic_summer*season,  family=Gamma(link = "log"), data = Season_north_aabm_no_nas)
+North_aabm_model_full_gamma_spec<- glm(formula = catch_estimate+1 ~season + status + 1 + historic_summer,  family=Gamma(link = "log"), data = Season_north_aabm_no_nas)
 
 
 #### Adding data back in post modelling
