@@ -16,8 +16,6 @@ PullAllSport.R
 Creel_iRec.txt
 *.config
 *.docx
-Canada_sport_mrr_ukr_files/
-Canada_sport_mrr_ukr_files/figure-html/
 *.png
 
 # Example code in package build process
@@ -53,6 +51,9 @@ vignettes/*.pdf
 # pkgdown site
 docs/
 
+# don't use
+*.pptx
+*.RDS
 # translation temp files
 po/*~
 
