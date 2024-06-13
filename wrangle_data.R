@@ -146,7 +146,7 @@ Sport_filtered_south_irec<-
 Sport_filtered_south_irec<-Sport_filtered_south_irec |>
                            rbind(Sport_filtered_south_irec_unfiltered)|>
                            mutate(filter_NC = case_when(
-                             REGION2 %in% c("NC", "CC") & SOURCE != "irec_calibrated" ~ "remove",
+                             REGION2 %in% c("NC") & SOURCE != "irec_calibrated" ~ "remove",
                              TRUE ~ "keep") ) |>
                            filter(filter_NC=="keep")|>
                            dplyr::select(-filter_NC)|>
@@ -339,9 +339,9 @@ Sport_mark_rate_finescale<-
     (AREA %in% c("Area 11", "Area 111", "Area 12")| REGION2 == "JST") & season=="summer" ~ "JNST S SUMMER",
 
 
-    AREA %in% c("Area 10", "Area 106", "Area 110", "Area 6", "Area 7", "Area 8", "Area 9", "Area 130", "Area 108", "Area 109", "Area 107") & season=="spring"   ~ "CBC S SPRING",
-    AREA %in% c("Area 10", "Area 106", "Area 110", "Area 6", "Area 7", "Area 8", "Area 9", "Area 130", "Area 108", "Area 109", "Area 107") & season=="fall"  ~ "CBC S FALL",
-    AREA %in% c("Area 10", "Area 106", "Area 110", "Area 6", "Area 7", "Area 8", "Area 9", "Area 130", "Area 108", "Area 109", "Area 107") & season=="summer"   ~ "CBC S SUMMER",
+    AREA %in% c("Area 10", "Area 106", "Area 110", "Area 6", "Area 7", "Area 8", "Area 9", "Area 130", "Area 108", "Area 109", "Area 107") & season=="spring"   ~ "CBC S",
+    AREA %in% c("Area 10", "Area 106", "Area 110", "Area 6", "Area 7", "Area 8", "Area 9", "Area 130", "Area 108", "Area 109", "Area 107") & season=="fall"  ~ "CBC S",
+    AREA %in% c("Area 10", "Area 106", "Area 110", "Area 6", "Area 7", "Area 8", "Area 9", "Area 130", "Area 108", "Area 109", "Area 107") & season=="summer"   ~ "CBC S",
 
 
     AREA %in% c("Area 2","Area 1", "Area 101", "Area 102",  "Area 142", "Area 2E", "Area 2W")& season=="spring"   ~ "NBC AABM S SPRING",
