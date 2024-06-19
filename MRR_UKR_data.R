@@ -1,5 +1,3 @@
-
-
 #### MRR URR
 source("wrangle_data.R")
 source("final_model.R")
@@ -22,10 +20,14 @@ Sport_mark_rate_mrr<-Season_south_combined %>%
          ukr=unmarked_Kept_total/(unmarked_Kept_total+unmarked_Released_total))%>%
          mutate(unmarked_release=1-ukr) %>%
   mutate(mrr_corrected = case_when(
-    YEAR %in% c(2005:2012) ~ (mrr + unmarked_release)/2,
+    YEAR %in% c(2005:2007) ~ (marked_Released_total+unmarked_Released_total)/(marked_Kept_total+unmarked_Kept_total+marked_Released_total+unmarked_Released_total),
+    YEAR %in% c(2008:2012) & finescale_fishery != "CA JDF S SUMMER" ~ (marked_Released_total+unmarked_Released_total)/(marked_Kept_total+unmarked_Kept_total+marked_Released_total+unmarked_Released_total),
+    YEAR %in% c(2008:2012) & finescale_fishery == "CA JDF S SUMMER" ~ mrr,
   TRUE ~ mrr)) %>%
   mutate(unmarked_release_corrected = case_when(
-    YEAR %in% c(2005:2012) ~ (mrr + unmarked_release)/2,
+    YEAR %in% c(2005:2007) ~ mrr_corrected,
+    YEAR %in% c(2008:2012) & finescale_fishery != "CA JDF S SUMMER" ~ mrr_corrected,
+    YEAR %in% c(2008:2012) & finescale_fishery == "CA JDF S SUMMER" ~ unmarked_release,
     TRUE ~ unmarked_release
   )) %>%
   mutate(ukr_corrected = 1-unmarked_release_corrected)
