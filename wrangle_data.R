@@ -141,12 +141,12 @@ Sport_filtered_south_irec<-
     MONTH %in% c(10:12) ~ "fall"
   ))
 
-#Take out NC and CC and add back in from csv but KEEP IREC in
+#Take out NC and add back in from csv but KEEP IREC in
 #Add back in NBC data from csv
 Sport_filtered_south_irec<-Sport_filtered_south_irec |>
                            rbind(Sport_filtered_south_irec_unfiltered)|>
                            mutate(filter_NC = case_when(
-                             REGION2 %in% c("NC") & SOURCE != "irec_calibrated" ~ "remove",
+                             REGION2 %in% c("NC") & MANAGEMENT=="AABM" & SOURCE != "irec_calibrated" ~ "remove",
                              TRUE ~ "keep") ) |>
                            filter(filter_NC=="keep")|>
                            dplyr::select(-filter_NC)|>
@@ -318,7 +318,7 @@ Sport_mark_rate_finescale<-
     AREA%in%c("Area 25", "Area 26", "Area 27") & season=="spring" ~ "NWCVI S SPRING AABM",
     AREA%in%c("Area 25", "Area 26", "Area 27") & MONTH%in%c(5,6) ~ "NWCVI S SUMMER AABM",
 
-    AREA%in%c("Area 121", "Area 123", "Area 124") & MANAGEMENT=="ISBM" & MONTH%in%c(7:9) ~ "SWCVI S SUMMER ISBM",
+    AREA%in%c("Area 121", "Area 123", "Area 124") & MANAGEMENT=="ISBM" & MONTH%in%c(8:9) ~ "SWCVI S SUMMER ISBM",
     AREA%in%c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal)") & MONTH%in%c(8,9) ~ "SWCVI S SUMMER ISBM",
 
     AREA%in%c("Area 125", "Area 126", "Area 127") & MANAGEMENT=="ISBM" & MONTH%in%c(7:9) ~ "NWCVI S SUMMER ISBM",
