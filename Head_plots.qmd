@@ -1,0 +1,47 @@
+---
+title: "Canadian Sport Data revisions"
+author: "Nicholas Komick"
+date: today
+
+editor: visual
+execute: 
+  warning: false
+
+theme: litera
+ 
+format:
+  html:
+    page-layout: full
+    embed-resources: true
+    code-fold: true
+    code-summary: "Show the code"
+toc: true
+toc-depth: 4
+toc-location: left
+---
+
+# Methods
+
+```{r Loading packages, useful functions, echo=FALSE}
+#load packages
+library(tidyverse)
+library(odbc)
+library(lubridate)
+library(ggnewscale)
+library(patchwork)
+library(DHARMa)
+library(lme4)
+library(bbmle)
+library(SuppDists)
+library(MuMIn)
+
+#utils
+"%notin%" <- Negate("%in%")
+
+ggplot(head_catch_model_df, aes(x=catch_estimate_predicted, y=head_total)) +
+  geom_point() +
+  geom_smooth(method='lm', formula= y~x) +
+  geom_text(x = 500, y = 5000, label = lm_eqn(head_catch_model_df), parse = TRUE, hjust=0, vjust=0)
+
+
+```
