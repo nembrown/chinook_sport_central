@@ -116,11 +116,36 @@ Season_north_isbm2<-Season_north_isbm %>% mutate(catch_estimate_predicted = catc
 Season_north_isbm_combined<- rbind(Season_north_isbm_old_new_2, Season_north_isbm2)
 
 
+# CBC ISBM ----------------------------------------------------------------
+Season_cbc_isbm<-Sport_mark_rate_finescale_combined%>% filter(YEAR %in% c(2015:2023)) %>% filter(finescale_fishery_old == "CBC S")
+
+#Modelling comparisons need to be done on models with same # of NAs - so drop nas
+Season_cbc_isbm_no_nas<-Season_cbc_isbm %>% drop_na(any_of(c("historic_summer", "status")))
+
+#Chosen model:
+cbc_isbm_model_full_gamma_spec<- glm(formula = catch_estimate + 1 ~  status + 1 + historic_summer,  family=Gamma(link = "log"), data = Season_cbc_isbm_no_nas)
+# res_gam_drop_kept_spec <- simulateResiduals(cbc_isbm_model_full_gamma_spec, plot = T, quantreg=T)
+# summary(cbc_isbm_model_full_gamma_spec)
+
+
+#### Adding data back in post modelling
+#Adding predicted data
+Season_cbc_isbm_old<- Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2008:2014)) %>% ungroup() %>% mutate(pred_cat = "predicted") %>% filter(finescale_fishery_old == "CBC S")
+Season_cbc_isbm_old_new<-predict.glm(cbc_isbm_model_full_gamma_spec, newdata =  Season_cbc_isbm_old, type = "response")
+Season_cbc_isbm_old_new_2<-Season_cbc_isbm_old %>%   mutate(catch_estimate_predicted = Season_cbc_isbm_old_new)
+
+Season_cbc_isbm2<-Season_cbc_isbm %>% mutate(catch_estimate_predicted = catch_estimate, pred_cat= "observed")
+Season_cbc_isbm_combined<- rbind(Season_cbc_isbm_old_new_2, Season_cbc_isbm2)
+
+
+
+
 # Combining all modelled data into season south combined ------------------
-Season_south_combined<-rbind(Season_south_combined, Summer_south_combined)
-Season_south_combined<- rbind(Season_south_combined, Season_north_aabm_combined)
-Season_south_combined<- rbind(Season_south_combined, Season_north_isbm_combined)
+models_combined<-rbind(Season_south_combined, Summer_south_combined)
+models_combined<- rbind(models_combined, Season_north_aabm_combined)
+models_combined<- rbind(models_combined, Season_north_isbm_combined)
+models_combined<- rbind(models_combined, Season_cbc_isbm_combined)
 
 
 
-write_rds(Season_south_combined, "Season_south_combined.RDS")
+write_rds(models_combined, "models_combined.RDS")

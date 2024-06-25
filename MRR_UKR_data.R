@@ -7,14 +7,14 @@ Sport_mark_rate_finescale<-read_rds("Sport_mark_rate_finescale.RDS")
 
 Sport_mark_rate_finescale_combined<-read_rds("Sport_mark_rate_finescale_combined.RDS")
 
-Season_south_combined<- read_rds("Season_south_combined.RDS")
+models_combined<- read_rds("models_combined.RDS")
 
 
 #For now, until we get the data from NBC and CBC just use: Season_south_combined which has the modelled data in it
 
 ### Restrict the mrr and ukr to be the same before 2013, since we don't have the data to to confidently allow these to diverge.
 #Also there were no MSFs in this time period except for in JDF.
-Sport_mark_rate_mrr<-Season_south_combined %>%
+Sport_mark_rate_mrr<-models_combined %>%
   pivot_wider(id_cols = c(YEAR, finescale_fishery), names_from=status, values_from = catch_estimate_predicted) %>%
   mutate(mrr=marked_Released_total/(marked_Kept_total+marked_Released_total),
          ukr=unmarked_Kept_total/(unmarked_Kept_total+unmarked_Released_total))%>%
