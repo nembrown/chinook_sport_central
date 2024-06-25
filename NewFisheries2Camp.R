@@ -22,27 +22,14 @@ library(dplyr)
 camp_config_filename <- r"(camp_2024msf.config)"
 camp_conn <- ctcUtil::open_camp_connection(camp_config_filename)
 
-# DELETE OLD CA JDF S FALL: ----
-cetl::delete_fishery(camp_conn, 32201)
+# TO DELETE ANY RECORDS: ----
+#cetl::delete_fishery(camp_conn, 321561)
 
 #Spring = Months 1-4, Summer = Months 5-9, Fall = Months 10-12
 # 30 days: April, June, September
 # 31 days: January, March, May, July, August, October, and December
 
 # CA JDF S:----
-# pre-2005 fishery:
-# cetl::duplicate_fishery(camp_conn,
-#                         3220,
-#                         32200,
-#                         name = "CA JDF S",
-#                         description = "CANADIAN JUAN DE FUCA SPORT",
-#                         reg_type_id = 3,
-#                         default_ukr = .8,
-#                         default_mrr = .2,
-#                         start_month = 10,
-#                         start_day = 1,
-#                         end_month = 12,
-#                         end_day = 31)
 # FALL:
 cetl::duplicate_fishery(camp_conn,
                         3220,
@@ -50,8 +37,6 @@ cetl::duplicate_fishery(camp_conn,
                         name = "CA JDF S FALL",
                         description = "CANADIAN JUAN DE FUCA SPORT - FALL",
                         reg_type_id = 3,
-                        #default_ukr = .8,
-                        #default_mrr = .2,
                         start_month = 10,
                         start_day = 1,
                         end_month = 12,
@@ -76,27 +61,12 @@ cetl::duplicate_fishery(camp_conn,
                         name = "CA JDF S SUMMER",
                         description = "CANADIAN JUAN DE FUCA SPORT - SUMMER",
                         reg_type_id = 3,
-                        #default_ukr = .8,
-                        #default_mrr = .2,
                         start_month = 5,
                         start_day = 1,
                         end_month = 9,
                         end_day = 30) # 30 day month
 
 # JOHN ST S: ----
-# pre-2005 fishery:
-# cetl::duplicate_fishery(camp_conn,
-#                         3208,
-#                         32080,
-#                         name = "JOHN ST S",
-#                         description = "JOHNSTONE STRAIT SPORT",
-#                         reg_type_id = 3,
-#                         default_ukr = .8,
-#                         default_mrr = .2,
-#                         start_month = 10,
-#                         start_day = 1,
-#                         end_month = 12,
-#                         end_day = 31)
 # FALL:
 cetl::duplicate_fishery(camp_conn,
                         3208,
@@ -104,8 +74,6 @@ cetl::duplicate_fishery(camp_conn,
                         name = "JOHN ST S FALL",
                         description = "JOHNSTONE STRAIT SPORT - FALL",
                         reg_type_id = 3,
-                        #default_ukr = .8,
-                        #default_mrr = .2,
                         start_month = 10,
                         start_day = 1,
                         end_month = 12,
@@ -117,8 +85,6 @@ cetl::duplicate_fishery(camp_conn,
                         name = "JOHN ST S SPRING",
                         description = "JOHNSTONE STRAIT SPORT - SPRING",
                         reg_type_id = 3,
-                        # default_ukr = .8,
-                        # default_mrr = .2,
                         start_month = 1,
                         start_day = 1,
                         end_month = 4,
@@ -131,27 +97,12 @@ cetl::duplicate_fishery(camp_conn,
                         name = "JOHN ST S SUMMER",
                         description = "JOHNSTONE STRAIT SPORT - SUMMER",
                         reg_type_id = 3,
-                        # default_ukr = .8,
-                        # default_mrr = .2,
                         start_month = 5,
                         start_day = 1,
                         end_month = 9,
                         end_day = 30) # 30 day month
 
 # NGS S: ----
-# pre-2005 fishery:
-# cetl::duplicate_fishery(camp_conn,
-#                         3209,
-#                         32090,
-#                         name = "NGS S",
-#                         description = "NORTH GEORGIA STRAIT SPORT",
-#                         reg_type_id = 3,
-#                         default_ukr = .8,
-#                         default_mrr = .2,
-#                         start_month = 10,
-#                         start_day = 1,
-#                         end_month = 12,
-#                         end_day = 31)
 # FALL:
 cetl::duplicate_fishery(camp_conn,
                         3209,
@@ -159,8 +110,6 @@ cetl::duplicate_fishery(camp_conn,
                         name = "NGS S FALL",
                         description = "NORTH GEORGIA STRAIT SPORT - FALL",
                         reg_type_id = 3,
-                        # default_ukr = .8,
-                        # default_mrr = .2,
                         start_month = 10,
                         start_day = 1,
                         end_month = 12,
@@ -172,8 +121,6 @@ cetl::duplicate_fishery(camp_conn,
                         name = "NGS S SPRING",
                         description = "NORTH GEORGIA STRAIT SPORT - SPRING",
                         reg_type_id = 3,
-                        # default_ukr = .8,
-                        # default_mrr = .2,
                         start_month = 1,
                         start_day = 1,
                         end_month = 4,
@@ -185,224 +132,80 @@ cetl::duplicate_fishery(camp_conn,
                         name = "NGS S SUMMER",
                         description = "NORTH GEORGIA STRAIT SPORT - SUMMER",
                         reg_type_id = 3,
-                        # default_ukr = .8,
-                        # default_mrr = .2,
                         start_month = 5,
                         start_day = 1,
                         end_month = 9,
                         end_day = 30) # 30 day month
 
 # WCVI AABM S:----
-# pre-2005 fishery:
-# cetl::duplicate_fishery(camp_conn,
-#                         3215,
-#                         32150,
-#                         name = "NWCVI AABM S",
-#                         description = "NORTH WCVI AABM SPORT",
-#                         reg_type_id = 3,
-#                         default_ukr = .8,
-#                         default_mrr = .2,
-#                         start_month = 10,
-#                         start_day = 1,
-#                         end_month = 12,
-#                         end_day = 31)
 # NORTH:
 # FALL:
 cetl::duplicate_fishery(camp_conn,
                         3215,
                         32151,
                         name = "NWCVI AABM S FALL",
-                        description = "NORTH WCVI AABM SPORT - FALL",
-                        reg_type_id = 3,
-                        # default_ukr = .8,
-                        # default_mrr = .2,
-                        start_month = 10,
-                        start_day = 1,
-                        end_month = 12,
-                        end_day = 31)
-
+                        description = "NORTH WCVI AABM SPORT - FALL")
 # SPRING:
 cetl::duplicate_fishery(camp_conn,
                         3215,
                         32152,
                         name = "NWCVI AABM S SPRING",
-                        description = "NORTH WCVI AABM SPORT - SPRING",
-                        reg_type_id = 3,
-                        # default_ukr = .8,
-                        # default_mrr = .2,
-                        start_month = 1,
-                        start_day = 1,
-                        end_month = 4,
-                        end_day = 30) # 30 day month
-
+                        description = "NORTH WCVI AABM SPORT - SPRING")
 # SUMMER:
 cetl::duplicate_fishery(camp_conn,
                         3215,
                         32153,
                         name = "NWCVI AABM S SUMMER",
-                        description = "NORTH WCVI AABM SPORT - SUMMER",
-                        reg_type_id = 3,
-                        # default_ukr = .8,
-                        # default_mrr = .2,
-                        start_month = 5,
-                        start_day = 1,
-                        end_month = 9,
-                        end_day = 30) # 30 day month
+                        description = "NORTH WCVI AABM SPORT - SUMMER")
 # SOUTH
 # FALL
 cetl::duplicate_fishery(camp_conn,
                         3215,
                         32154,
                         name = "SWCVI AABM S FALL",
-                        description = "SOUTH WCVI AABM SPORT - FALL",
-                        reg_type_id = 3,
-                        # default_ukr = .8,
-                        # default_mrr = .2,
-                        start_month = 10,
-                        start_day = 1,
-                        end_month = 12,
-                        end_day = 31)
+                        description = "SOUTH WCVI AABM SPORT - FALL")
 # SPRING:
 cetl::duplicate_fishery(camp_conn,
                         3215,
                         32155,
                         name = "SWCVI AABM S SPRING",
-                        description = "SOUTH WCVI AABM SPORT - SPRING",
-                        reg_type_id = 3,
-                        # default_ukr = .8,
-                        # default_mrr = .2,
-                        start_month = 1,
-                        start_day = 1,
-                        end_month = 4,
-                        end_day = 30) # 30 day month
+                        description = "SOUTH WCVI AABM SPORT - SPRING")
 # SUMMER:
 cetl::duplicate_fishery(camp_conn,
                         3215,
                         32156,
                         name = "SWCVI AABM S SUMMER",
-                        description = "SOUTH WCVI AABM SPORT - SUMMER",
-                        reg_type_id = 3,
-                        # default_ukr = .8,
-                        # default_mrr = .2,
-                        start_month = 5,
-                        start_day = 1,
-                        end_month = 9,
-                        end_day = 30) # 30 day month
+                        description = "SOUTH WCVI AABM SPORT - SUMMER")
 
 # WCVI ISBM Sport: ----
-# pre-2005 fishery:
-# cetl::duplicate_fishery(camp_conn,
-#                         3216,
-#                         32160,
-#                         name = "NWCVI ISBM Sport",
-#                         description = "NORTH WCVI ISBM SPORT",
-#                         reg_type_id = 3,
-#                         default_ukr = .8,
-#                         default_mrr = .2,
-#                         start_month = 10,
-#                         start_day = 1,
-#                         end_month = 12,
-#                         end_day = 31)
-#
 # NORTH:
-# # FALL
-# cetl::duplicate_fishery(camp_conn,
-#                         3216,
-#                         32161,
-#                         name = "NWCVI ISBM Sport FALL",
-#                         description = "NORTH WCVI ISBM SPORT - FALL",
-#                         reg_type_id = 3,
-#                         default_ukr = .8,
-#                         default_mrr = .2,
-#                         start_month = 10,
-#                         start_day = 1,
-#                         end_month = 12,
-#                         end_day = 31)
-#
-# # SPRING:
-# cetl::duplicate_fishery(camp_conn,
-#                         3216,
-#                         32162,
-#                         name = "NWCVI ISBM Sport SPRING",
-#                         description = "NORTH WCVI ISBM SPORT - SPRING",
-#                         reg_type_id = 3,
-#                         default_ukr = .8,
-#                         default_mrr = .2,
-#                         start_month = 1,
-#                         start_day = 1,
-#                         end_month = 4,
-#                         end_day = 30) # 30 day month
-#
-# # SUMMER:
+# FALL:
 cetl::duplicate_fishery(camp_conn,
-                        3216,
+                        32151,
                         32161,
-                        name = "NWCVI ISBM Sport SUMMER",
-                        description = "NORTH WCVI ISBM SPORT - SUMMER",
-                        reg_type_id = 3,
-                        #default_ukr = .8,
-                        #default_mrr = .2,
-                        start_month = 5,
-                        start_day = 1,
-                        end_month = 9,
-                        end_day = 30) # 30 day month
-# # SOUTH:
-# # FALL
-# cetl::duplicate_fishery(camp_conn,
-#                         3216,
-#                         32164,
-#                         name = "SWCVI ISBM Sport FALL",
-#                         description = "SOUTH WCVI ISBM SPORT - FALL",
-#                         reg_type_id = 3,
-#                         default_ukr = .8,
-#                         default_mrr = .2,
-#                         start_month = 10,
-#                         start_day = 1,
-#                         end_month = 12,
-#                         end_day = 31)
-#
-# # SPRING:
-# cetl::duplicate_fishery(camp_conn,
-#                         3216,
-#                         32165,
-#                         name = "SWCVI ISBM Sport SPRING",
-#                         description = "SOUTH WCVI ISBM SPORT - SPRING",
-#                         reg_type_id = 3,
-#                         default_ukr = .8,
-#                         default_mrr = .2,
-#                         start_month = 1,
-#                         start_day = 1,
-#                         end_month = 4,
-#                         end_day = 30) # 30 day month
-#
-# # SUMMER:
+                        name = "NWCVI ISBM S FALL",
+                        description = "NORTH WCVI ISBM SPORT - FALL")
+# SUMMER:
 cetl::duplicate_fishery(camp_conn,
-                        3216,
+                        32153,
                         32162,
-                        name = "SWCVI ISBM Sport SUMMER",
-                        description = "SOUTH WCVI ISBM SPORT - SUMMER",
-                        reg_type_id = 3,
-                        # default_ukr = .8,
-                        # default_mrr = .2,
-                        start_month = 5,
-                        start_day = 1,
-                        end_month = 9,
-                        end_day = 30) # 30 day month
+                        name = "NWCVI ISBM S SUMMER",
+                        description = "NORTH WCVI ISBM SPORT - SUMMER")
+# SOUTH
+# FALL
+cetl::duplicate_fishery(camp_conn,
+                        32154,
+                        32163,
+                        name = "SWCVI ISBM S FALL",
+                        description = "SOUTH WCVI ISBM SPORT - FALL")
+# SUMMER:
+cetl::duplicate_fishery(camp_conn,
+                        32156,
+                        32164,
+                        name = "SWCVI ISBM S SUMMER",
+                        description = "SOUTH WCVI ISBM SPORT - SUMMER")
 
 # SGS S:----
-# pre-2005 fishery:
-# cetl::duplicate_fishery(camp_conn,
-#                         3212,
-#                         32120,
-#                         name = "SGS S",
-#                         description = "SOUTH GEORGIA STRAIT SPORT",
-#                         reg_type_id = 3,
-#                         default_ukr = .8,
-#                         default_mrr = .2,
-#                         start_month = 10,
-#                         start_day = 1,
-#                         end_month = 12,
-#                         end_day = 31)
 # FALL
 cetl::duplicate_fishery(camp_conn,
                         3212,
@@ -410,8 +213,6 @@ cetl::duplicate_fishery(camp_conn,
                         name = "SGS S FALL",
                         description = "SOUTH GEORGIA STRAIT SPORT - FALL",
                         reg_type_id = 3,
-                        # default_ukr = .8,
-                        # default_mrr = .2,
                         start_month = 10,
                         start_day = 1,
                         end_month = 12,
@@ -423,8 +224,6 @@ cetl::duplicate_fishery(camp_conn,
                         name = "SGS S SPRING",
                         description = "SOUTH GEORGIA STRAIT SPORT - SPRING",
                         reg_type_id = 3,
-                        # default_ukr = .8,
-                        # default_mrr = .2,
                         start_month = 1,
                         start_day = 1,
                         end_month = 4,
@@ -436,27 +235,12 @@ cetl::duplicate_fishery(camp_conn,
                         name = "SGS S SUMMER",
                         description = "SOUTH GEORGIA STRAIT SPORT - SUMMER",
                         reg_type_id = 3,
-                        # default_ukr = .8,
-                        # default_mrr = .2,
                         start_month = 5,
                         start_day = 1,
                         end_month = 9,
                         end_day = 30) # 30 day month
 
 # CENTRAL S: ----
-# pre-2005 fishery:
-# cetl::duplicate_fishery(camp_conn,
-#                         3205,
-#                         32050,
-#                         name = "CENTRAL S",
-#                         description = "CENTRAL SPORT",
-#                         reg_type_id = 3,
-#                         default_ukr = .8,
-#                         default_mrr = .2,
-#                         start_month = 10,
-#                         start_day = 1,
-#                         end_month = 12,
-#                         end_day = 31)
 # FALL
 cetl::duplicate_fishery(camp_conn,
                         3205,
@@ -464,8 +248,6 @@ cetl::duplicate_fishery(camp_conn,
                         name = "CENTRAL S FALL",
                         description = "CENTRAL SPORT - FALL",
                         reg_type_id = 3,
-                        # default_ukr = .8,
-                        # default_mrr = .2,
                         start_month = 10,
                         start_day = 1,
                         end_month = 12,
@@ -477,8 +259,6 @@ cetl::duplicate_fishery(camp_conn,
                         name = "CENTRAL S SPRING",
                         description = "CENTRAL SPORT - SPRING",
                         reg_type_id = 3,
-                        # default_ukr = .8,
-                        # default_mrr = .2,
                         start_month = 1,
                         start_day = 1,
                         end_month = 4,
@@ -490,27 +270,12 @@ cetl::duplicate_fishery(camp_conn,
                         name = "CENTRAL S SUMMER",
                         description = "CENTRAL SPORT - SUMMER",
                         reg_type_id = 3,
-                        # default_ukr = .8,
-                        # default_mrr = .2,
                         start_month = 5,
                         start_day = 1,
                         end_month = 9,
                         end_day = 30) # 30 day month
 
 # NORTH AABM S: ----
-# pre-2005 fishery:
-# cetl::duplicate_fishery(camp_conn,
-#                         3201,
-#                         32010,
-#                         name = "NORTH AABM S",
-#                         description = "NORTH AABM SPORT (QCI)",
-#                         reg_type_id = 3,
-#                         default_ukr = .8,
-#                         default_mrr = .2,
-#                         start_month = 10,
-#                         start_day = 1,
-#                         end_month = 12,
-#                         end_day = 31)
 # FALL
 cetl::duplicate_fishery(camp_conn,
                         3201,
@@ -518,8 +283,6 @@ cetl::duplicate_fishery(camp_conn,
                         name = "NORTH AABM S FALL",
                         description = "NORTH AABM SPORT (QCI) - FALL",
                         reg_type_id = 3,
-                        # default_ukr = .8,
-                        # default_mrr = .2,
                         start_month = 10,
                         start_day = 1,
                         end_month = 12,
@@ -531,8 +294,6 @@ cetl::duplicate_fishery(camp_conn,
                         name = "NORTH AABM S SPRING",
                         description = "NORTH AABM SPORT (QCI) - SPRING",
                         reg_type_id = 3,
-                        # default_ukr = .8,
-                        # default_mrr = .2,
                         start_month = 1,
                         start_day = 1,
                         end_month = 4,
@@ -544,27 +305,12 @@ cetl::duplicate_fishery(camp_conn,
                         name = "NORTH AABM S SUMMER",
                         description = "NORTH AABM SPORT (QCI) - SUMMER",
                         reg_type_id = 3,
-                        # default_ukr = .8,
-                        # default_mrr = .2,
                         start_month = 5,
                         start_day = 1,
                         end_month = 9,
                         end_day = 30) # 30 day month
 
 # NORTH ISBM S: ----
-# pre-2005 fishery:
-# cetl::duplicate_fishery(camp_conn,
-#                         3202,
-#                         32020,
-#                         name = "NORTH ISBM S",
-#                         description = "NORTH ISBM SPORT",
-#                         reg_type_id = 3,
-#                         default_ukr = .8,
-#                         default_mrr = .2,
-#                         start_month = 10,
-#                         start_day = 1,
-#                         end_month = 12,
-#                         end_day = 31)
 # FALL
 cetl::duplicate_fishery(camp_conn,
                         3202,
@@ -572,8 +318,6 @@ cetl::duplicate_fishery(camp_conn,
                         name = "NORTH ISBM S FALL",
                         description = "NORTH ISBM SPORT - FALL",
                         reg_type_id = 3,
-                        # default_ukr = .8,
-                        # default_mrr = .2,
                         start_month = 10,
                         start_day = 1,
                         end_month = 12,
@@ -585,8 +329,6 @@ cetl::duplicate_fishery(camp_conn,
                         name = "NORTH ISBM S SPRING",
                         description = "NORTH ISBM SPORT - SPRING",
                         reg_type_id = 3,
-                        # default_ukr = .8,
-                        # default_mrr = .2,
                         start_month = 1,
                         start_day = 1,
                         end_month = 4,
@@ -598,8 +340,6 @@ cetl::duplicate_fishery(camp_conn,
                         name = "NORTH ISBM S SUMMER",
                         description = "NORTH ISBM SPORT - SUMMER",
                         reg_type_id = 3,
-                        # default_ukr = .8,
-                        # default_mrr = .2,
                         start_month = 5,
                         start_day = 1,
                         end_month = 9,
