@@ -27,6 +27,17 @@ nbc_aabm<- read.csv("Sport_data_set_NBC_AABM.csv") |>
              MONTH %in% c(10:12) ~ "fall"
            ))
 
+nbc_isbm<- read.csv("Sport_data_set_NBC_ISBM.csv") |>
+  as_tibble() |>
+  dplyr::select(YEAR, MONTH, AREA, REGION2, MANAGEMENT, SOURCE, MARKS_DESC, TYPE, VAL_calc)|>
+  rename(VAL = VAL_calc)|>
+  mutate(INCLUDE_15 = 1, VARIANCE = 0)|>
+  mutate(season = case_when(
+    MONTH %in% c(1:4) ~ "spring",
+    MONTH %in% c(5:9) ~ "summer",
+    MONTH %in% c(10:12) ~ "fall"
+  ))
+
 historic_effort<- nbc_aabm |>
   as_tibble() |>
   dplyr::select(YEAR, MONTH, AREA, REGION2, MANAGEMENT) |>
@@ -101,7 +112,6 @@ Sport_filtered_south_irec_unfiltered<-
   )) |>
   filter(SOURCE == "creel_unfiltered")
 
-
 Sport_filtered_south_irec<-
   estimates |>
   as_tibble() |>
@@ -141,7 +151,7 @@ Sport_filtered_south_irec<-
     MONTH %in% c(10:12) ~ "fall"
   ))
 
-#Take out NC and CC and add back in from csv but KEEP IREC in
+#Take out NC and add back in from csv but KEEP IREC in
 #Add back in NBC data from csv
 Sport_filtered_south_irec<-Sport_filtered_south_irec |>
                            rbind(Sport_filtered_south_irec_unfiltered)|>
@@ -150,7 +160,8 @@ Sport_filtered_south_irec<-Sport_filtered_south_irec |>
                              TRUE ~ "keep") ) |>
                            filter(filter_NC=="keep")|>
                            dplyr::select(-filter_NC)|>
-                           rbind(nbc_aabm)
+                           rbind(nbc_aabm)|>
+                           rbind(nbc_isbm)
 
 #Take filtered data and get a by-year estimate to in fill for NAs below
 
@@ -318,7 +329,7 @@ Sport_mark_rate_finescale<-
     AREA%in%c("Area 25", "Area 26", "Area 27") & season=="spring" ~ "NWCVI S SPRING AABM",
     AREA%in%c("Area 25", "Area 26", "Area 27") & MONTH%in%c(5,6) ~ "NWCVI S SUMMER AABM",
 
-    AREA%in%c("Area 121", "Area 123", "Area 124") & MANAGEMENT=="ISBM" & MONTH%in%c(7:9) ~ "SWCVI S SUMMER ISBM",
+    AREA%in%c("Area 121", "Area 123", "Area 124") & MANAGEMENT=="ISBM" & MONTH%in%c(8:9) ~ "SWCVI S SUMMER ISBM",
     AREA%in%c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal)") & MONTH%in%c(8,9) ~ "SWCVI S SUMMER ISBM",
 
     AREA%in%c("Area 125", "Area 126", "Area 127") & MANAGEMENT=="ISBM" & MONTH%in%c(7:9) ~ "NWCVI S SUMMER ISBM",

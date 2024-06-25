@@ -72,7 +72,7 @@ Summer_south2<-Summer_south %>% mutate(catch_estimate_predicted = catch_estimate
 Summer_south_combined<- rbind(Summer_south_old_new_2, Summer_south2)
 
 
-# NBC ---------------------------------------------------------------------
+# NBC AABM ---------------------------------------------------------------------
 ### Data needed
 Season_north_aabm<-Sport_mark_rate_finescale_combined%>% filter(YEAR %in% c(2015:2023)) %>% filter(finescale_fishery_old == "NBC AABM S")
 Season_north_aabm_no_nas<-Season_north_aabm %>% drop_na(any_of(c("historic_summer", "status", "finescale_fishery_old", "season", "historic_effort")))
@@ -93,9 +93,33 @@ Season_north_aabm2<-Season_north_aabm %>% mutate(catch_estimate_predicted = catc
 Season_north_aabm_combined<- rbind(Season_north_aabm_old_new_2, Season_north_aabm2)
 
 
+
+# NBC ISBM ----------------------------------------------------------------
+
+### Data needed
+Season_north_isbm<-Sport_mark_rate_finescale_combined%>% filter(YEAR %in% c(2015:2023)) %>% filter(finescale_fishery_old == "NBC ISBM S")
+Season_north_isbm_no_nas<-Season_north_isbm %>% drop_na(any_of(c("historic_summer", "status", "finescale_fishery_old", "season", "historic_effort")))
+
+
+###Chosen model
+North_isbm_model_full_gamma_spec<- glm(formula = catch_estimate + 1 ~ season + status + status:season +
+                                         1 + historic_summer,  family=Gamma(link = "log"), data = Season_north_isbm_no_nas)
+#res_gam_drop_kept_spec <- simulateResiduals(North_isbm_model_full_gamma_spec, plot = T, quantreg=T)
+
+#### Adding data back in post modelling
+#Adding predicted data
+Season_north_isbm_old<- Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2008:2014)) %>% ungroup() %>% mutate(pred_cat = "predicted") %>% filter(finescale_fishery_old == "NBC isbm S")
+Season_north_isbm_old_new<-predict.glm(North_isbm_model_full_gamma_spec, newdata =  Season_north_isbm_old, type = "response")
+Season_north_isbm_old_new_2<-Season_north_isbm_old %>%   mutate(catch_estimate_predicted = Season_north_isbm_old_new)
+
+Season_north_isbm2<-Season_north_isbm %>% mutate(catch_estimate_predicted = catch_estimate, pred_cat= "observed")
+Season_north_isbm_combined<- rbind(Season_north_isbm_old_new_2, Season_north_isbm2)
+
+
 # Combining all modelled data into season south combined ------------------
 Season_south_combined<-rbind(Season_south_combined, Summer_south_combined)
 Season_south_combined<- rbind(Season_south_combined, Season_north_aabm_combined)
+Season_south_combined<- rbind(Season_south_combined, Season_north_isbm_combined)
 
 
 
