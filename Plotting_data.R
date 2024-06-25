@@ -338,6 +338,19 @@ yearMonth2_season_south_old<- yearMonth2_season_old %>% filter(!str_detect(fines
 
 
   ggplot() +
+    geom_point(data=Sport_mark_rate_mrr, aes(y=unmarked_release, x=YEAR, col="lightblue")) + geom_line(data=Sport_mark_rate_mrr, aes(y=unmarked_release, x=YEAR, col="lightblue"))+
+    geom_point(data=Sport_mark_rate_mrr, aes(y=mrr, x=YEAR, col="lightblue4")) + geom_line(data=Sport_mark_rate_mrr, aes(y=mrr, x=YEAR, col="lightblue4"))+
+    # geom_point(data=Sport_mark_rate_mrr_creel, aes(y=ukr, x=YEAR, col="lightgreen")) + geom_line(data=Sport_mark_rate_mrr_creel, aes(y=ukr, x=YEAR, col="lightgreen"))+
+    # geom_point(data=Sport_mark_rate_mrr_creel, aes(y=mrr, x=YEAR, col="darkgreen")) + geom_line(data=Sport_mark_rate_mrr_creel, aes(y=mrr, x=YEAR, col="darkgreen"))+
+    scale_color_manual(values=c("lightblue", "lightblue4", "lightgreen", "darkgreen"),  labels = c("URR", "MRR", "URR", "MRR"))+
+    theme(legend.position="bottom")+
+    ylab("Proportion")+
+    facet_wrap(~finescale_fishery)+
+    theme_bw()+ geom_vline(xintercept = 2012)
+
+
+
+  ggplot() +
     geom_point(data=Sport_mark_rate_mrr, aes(y=unmarked_release_corrected, x=YEAR, col="lightblue")) + geom_line(data=Sport_mark_rate_mrr, aes(y=unmarked_release_corrected, x=YEAR, col="lightblue"))+
     geom_point(data=Sport_mark_rate_mrr, aes(y=mrr_corrected, x=YEAR, col="lightblue4")) + geom_line(data=Sport_mark_rate_mrr, aes(y=mrr_corrected, x=YEAR, col="lightblue4"))+
     # geom_point(data=Sport_mark_rate_mrr_creel, aes(y=ukr, x=YEAR, col="lightgreen")) + geom_line(data=Sport_mark_rate_mrr_creel, aes(y=ukr, x=YEAR, col="lightgreen"))+

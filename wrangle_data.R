@@ -27,6 +27,17 @@ nbc_aabm<- read.csv("Sport_data_set_NBC_AABM.csv") |>
              MONTH %in% c(10:12) ~ "fall"
            ))
 
+nbc_isbm<- read.csv("Sport_data_set_NBC_ISBM.csv") |>
+  as_tibble() |>
+  dplyr::select(YEAR, MONTH, AREA, REGION2, MANAGEMENT, SOURCE, MARKS_DESC, TYPE, VAL_calc)|>
+  rename(VAL = VAL_calc)|>
+  mutate(INCLUDE_15 = 1, VARIANCE = 0)|>
+  mutate(season = case_when(
+    MONTH %in% c(1:4) ~ "spring",
+    MONTH %in% c(5:9) ~ "summer",
+    MONTH %in% c(10:12) ~ "fall"
+  ))
+
 historic_effort<- nbc_aabm |>
   as_tibble() |>
   dplyr::select(YEAR, MONTH, AREA, REGION2, MANAGEMENT) |>
@@ -101,7 +112,6 @@ Sport_filtered_south_irec_unfiltered<-
   )) |>
   filter(SOURCE == "creel_unfiltered")
 
-
 Sport_filtered_south_irec<-
   estimates |>
   as_tibble() |>
@@ -146,11 +156,12 @@ Sport_filtered_south_irec<-
 Sport_filtered_south_irec<-Sport_filtered_south_irec |>
                            rbind(Sport_filtered_south_irec_unfiltered)|>
                            mutate(filter_NC = case_when(
-                             REGION2 %in% c("NC") & MANAGEMENT=="AABM" & SOURCE != "irec_calibrated" ~ "remove",
+                             REGION2 %in% c("NC") & SOURCE != "irec_calibrated" ~ "remove",
                              TRUE ~ "keep") ) |>
                            filter(filter_NC=="keep")|>
                            dplyr::select(-filter_NC)|>
-                           rbind(nbc_aabm)
+                           rbind(nbc_aabm)|>
+                           rbind(nbc_isbm)
 
 #Take filtered data and get a by-year estimate to in fill for NAs below
 

@@ -77,6 +77,17 @@ nbc_aabm<- read.csv("Sport_data_set_NBC_AABM.csv") |>
              MONTH %in% c(1:4) ~ "spring",
              MONTH %in% c(5:9) ~ "summer",
              MONTH %in% c(10:12) ~ "fall"))
+
+nbc_isbm<- read.csv("Sport_data_set_NBC_ISBM.csv") |>
+  as_tibble() |>
+  dplyr::select(YEAR, MONTH, AREA, REGION2, MANAGEMENT, SOURCE, MARKS_DESC, TYPE, VAL_calc)|>
+  rename(VAL = VAL_calc)|>
+  mutate(INCLUDE_15 = 1, VARIANCE = 0)|>
+  mutate(season = case_when(
+    MONTH %in% c(1:4) ~ "spring",
+    MONTH %in% c(5:9) ~ "summer",
+    MONTH %in% c(10:12) ~ "fall"
+  ))
 ```
 
 -   Filtered data for marine estimates only
@@ -224,7 +235,8 @@ Sport_filtered_south_irec<-Sport_filtered_south_irec |>
                              TRUE ~ "keep") ) |>
                            filter(filter_NC=="keep")|>
                            dplyr::select(-filter_NC)|>
-                           rbind(nbc_aabm)
+                           rbind(nbc_aabm)|>
+                           rbind(nbc_isbm)
 
 
 ```
