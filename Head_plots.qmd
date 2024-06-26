@@ -24,24 +24,61 @@ toc-location: left
 
 ```{r Loading packages, useful functions, echo=FALSE}
 #load packages
-library(tidyverse)
-library(odbc)
-library(lubridate)
-library(ggnewscale)
-library(patchwork)
-library(DHARMa)
-library(lme4)
-library(bbmle)
-library(SuppDists)
-library(MuMIn)
+library(dplyr)
+library(readr)
+library(ggplot2)
 
 #utils
 "%notin%" <- Negate("%in%")
 
-ggplot(head_catch_model_df, aes(x=catch_estimate_predicted, y=head_total)) +
-  geom_point() +
-  geom_smooth(method='lm', formula= y~x) +
+source("LoadHeadTotals.R")
+models_combined <- read_rds("models_combined.RDS")
+
+head_df <-
+  LoadHeadTotals() |>
+  filter(!is.na(region))
+
+
+head_catch_df <-
+  models_combined |>
+  filter(status == "marked_Kept_total") |>
+  full_join(head_df, c(YEAR="year", finescale_fishery = "region")) |>
+  mutate(YEAR = as.integer(YEAR),
+         submit_rate = head_total/catch_estimate_predicted)
+
+lm_eqn <- function(df){
+  m <- lm(head_total ~ catch_estimate_predicted + 0, df)
+
+  eq <- substitute(italic(y) == a %.% italic(x)*","~~italic(r)^2~"="~r2,
+                   list(a = format(unname(coef(m)[1]), digits = 2),
+                        b = format(unname(coef(m)[2]), digits = 2),
+                        r2 = format(summary(m)$r.squared, digits = 3)))
+  as.character(as.expression(eq));
+}
+
+
+head_catch_model_df <-
+  head_catch_df |>
+  filter(catch_estimate_predicted > 0, 
+         !(grepl("NBC", head_catch_df$finescale_fishery) & YEAR < 2015),
+         coalesce(head_total, 0) > 0,
+         coalesce(catch_estimate_predicted,0) > 0)
+
+```
+
+```{r Head to Kept Mark Catch, echo=FALSE}
+
+ggplot(data = head_catch_model_df, aes(x=catch_estimate_predicted,
+                                       y=head_total)) +
+  geom_point(size=2) +
+  geom_smooth(method='lm', formula= y~x + 1) +
   geom_text(x = 500, y = 5000, label = lm_eqn(head_catch_model_df), parse = TRUE, hjust=0, vjust=0)
 
 
 ```
+```{r Fishery Rates, echo=FALSE}
+
+head_catch_model_df |>
+  ggplot(aes(x=YEAR, y=submit_rate, color=finescale_fishery)) +
+  geom_line(size = 3)
+
