@@ -44,3 +44,5 @@ po/*~
 # RStudio Connect folder
 rsconnect/
 Sport_data_set_NBC_AABM.csv
+Sport_data_set_NBC_ISBM.csv
+Sport_data_set_CBC_ISBM.csv
