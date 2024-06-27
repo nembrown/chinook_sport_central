@@ -42,8 +42,8 @@ lm_eqn <- function(df){
   m <- lm(head_total ~ catch_estimate_predicted + 0, df)
   
   eq <- substitute(italic(y) == a %.% italic(x)*","~~italic(r)^2~"="~r2*"," ~~italic(n)*"="~df_n,
-                   list(a = format(unname(coef(m)[1]), digits = 2),
-                        b = format(unname(coef(m)[2]), digits = 2),
+                   list(a = format(unname(coef(m)[1]), digits = 3),
+                        b = format(unname(coef(m)[2]), digits = 3),
                         r2 = format(summary(m)$r.squared, digits = 3),
                         df_n = nrow(df)))
   as.character(as.expression(eq));
