@@ -38,23 +38,27 @@ head_df <-
   LoadHeadTotals() |>
   filter(!is.na(region))
 
+lm_eqn <- function(df){
+  m <- lm(head_total ~ catch_estimate_predicted + 0, df)
+  
+  eq <- substitute(italic(y) == a %.% italic(x)*","~~italic(r)^2~"="~r2*"," ~~italic(n)*"="~df_n,
+                   list(a = format(unname(coef(m)[1]), digits = 2),
+                        b = format(unname(coef(m)[2]), digits = 2),
+                        r2 = format(summary(m)$r.squared, digits = 3),
+                        df_n = nrow(df)))
+  as.character(as.expression(eq));
+}
+
 
 head_catch_df <-
   models_combined |>
   filter(status == "marked_Kept_total") |>
   full_join(head_df, c(YEAR="year", finescale_fishery = "region")) |>
   mutate(YEAR = as.integer(YEAR),
-         submit_rate = head_total/catch_estimate_predicted)
+         submit_rate = head_total/catch_estimate_predicted) |>
+  filter(catch_estimate_predicted > 20)
 
-lm_eqn <- function(df){
-  m <- lm(head_total ~ catch_estimate_predicted + 0, df)
 
-  eq <- substitute(italic(y) == a %.% italic(x)*","~~italic(r)^2~"="~r2,
-                   list(a = format(unname(coef(m)[1]), digits = 2),
-                        b = format(unname(coef(m)[2]), digits = 2),
-                        r2 = format(summary(m)$r.squared, digits = 3)))
-  as.character(as.expression(eq));
-}
 
 
 head_catch_model_df <-
@@ -71,14 +75,58 @@ head_catch_model_df <-
 ggplot(data = head_catch_model_df, aes(x=catch_estimate_predicted,
                                        y=head_total)) +
   geom_point(size=2) +
-  geom_smooth(method='lm', formula= y~x + 1) +
-  geom_text(x = 500, y = 5000, label = lm_eqn(head_catch_model_df), parse = TRUE, hjust=0, vjust=0)
+  geom_smooth(method='lm', formula= y~x + 0) +
+  geom_text(x = 500, y = 5000, label = lm_eqn(head_catch_model_df), parse = TRUE, hjust=0, vjust=0) +
+  ggtitle("Chinook Head to Clipped Catch") +
+  xlab("Chinook Kept Adclipped Catch") + 
+  ylab("Chinook Head Recoveries")
 
 
 ```
+
+
+```{r Pre iRec Head to Kept Mark Catch, echo=FALSE}
+
+pre_irec_catch_model_df <- 
+  head_catch_model_df |>
+  filter(YEAR < 2013)
+
+eq_y_pos <- max(pre_irec_catch_model_df$head_total, na.rm=0) * 0.9
+
+ggplot(data = pre_irec_catch_model_df,
+         aes(x=catch_estimate_predicted, y=head_total)) +
+  geom_point(size=2) +
+  geom_smooth(method='lm', formula= y~x + 0) +
+  geom_text(x = 500, y = eq_y_pos, label = lm_eqn(pre_irec_catch_model_df), parse = TRUE, hjust=0, vjust=0) +
+  ggtitle("Before iRec Chinook Head to Clipped Catch") +
+  xlab("Chinook Kept Adclipped Catch") + 
+  ylab("Chinook Head Recoveries")
+
+```
+```{r Post iRec Head to Kept Mark Catch, echo=FALSE}
+
+post_irec_catch_model_df <- 
+  head_catch_model_df |>
+  filter(YEAR >= 2013)
+
+eq_y_pos <- max(post_irec_catch_model_df$head_total, na.rm=0) * 0.9
+
+ggplot(data = post_irec_catch_model_df,
+       aes(x=catch_estimate_predicted, y=head_total)) +
+  geom_point(size=2) +
+  geom_smooth(method='lm', formula= y~x + 0) +
+  geom_text(x = 500, y = eq_y_pos, label = lm_eqn(post_irec_catch_model_df), parse = TRUE, hjust=0, vjust=0) +
+  ggtitle("iRec Chinook Head to Clipped Catch") +
+  xlab("Chinook Kept Adclipped Catch") + 
+  ylab("Chinook Head Recoveries")
+
+```
+
 ```{r Fishery Rates, echo=FALSE}
 
-head_catch_model_df |>
-  ggplot(aes(x=YEAR, y=submit_rate, color=finescale_fishery)) +
-  geom_line(size = 3)
+ggplot(data = head_catch_model_df, aes(x=YEAR, y=submit_rate, color=finescale_fishery)) +
+  geom_line(linewidth = 2)
+
+```
+
 
