@@ -183,6 +183,9 @@ Sport_mark_rate_source<- Sport_filtered_south_irec  %>%
   pivot_wider(id_cols = c(YEAR, AREA, MONTH, season, REGION2, SOURCE, MANAGEMENT), names_from=c(MARKS_DESC, TYPE), values_from = sum) |>
   mutate(marked_prop_source = sum(marked_Kept,marked_Released, na.rm = TRUE)/sum(marked_Kept,marked_Released,unmarked_Kept,unmarked_Released, na.rm =TRUE)) %>%
   mutate_all(~ifelse(is.nan(.), NA, .)) %>%
+  mutate(marked_prop_source, case_when(
+    marked_prop_source ==1 | marked_prop_source ==0 ~ NA,
+  TRUE ~ marked_prop_source)) %>%
   group_by(YEAR, AREA, MONTH, season, REGION2, MANAGEMENT) %>% summarise(marked_prop_source =mean(marked_prop_source, na.rm=TRUE)) %>%
   dplyr::select(YEAR, AREA, MONTH, season, REGION2, MANAGEMENT, marked_prop_source) %>% ungroup()
 
@@ -191,6 +194,9 @@ Sport_mark_rate_REGION2<- Sport_filtered_south_irec  %>%
   group_by(YEAR, AREA, MONTH, season, REGION2, MANAGEMENT, SOURCE, MARKS_DESC, TYPE) %>% summarise(sum=sum(VAL)) %>%
   pivot_wider(id_cols = c(YEAR, AREA, MONTH, season, REGION2, MANAGEMENT, SOURCE), names_from=c(MARKS_DESC, TYPE), values_from = sum) %>%
   mutate(marked_prop_REGION2 =sum(marked_Kept,marked_Released, na.rm = TRUE)/sum(marked_Kept,marked_Released,unmarked_Kept,unmarked_Released, na.rm =TRUE)) %>%
+  mutate(marked_prop_REGION2, case_when(
+    marked_prop_REGION2 ==1 | marked_prop_REGION2 ==0 ~ NA,
+    TRUE ~ marked_prop_REGION2)) %>%
   group_by(YEAR, REGION2, MONTH, season, SOURCE, MANAGEMENT) %>% summarise(marked_prop_REGION2 =mean(marked_prop_REGION2, na.rm=TRUE)) %>%
   dplyr::select(YEAR, MONTH, season, REGION2, SOURCE, MANAGEMENT, marked_prop_REGION2) %>% ungroup()
 
@@ -199,6 +205,9 @@ Sport_mark_rate_seasonal<- Sport_filtered_south_irec  %>%
   group_by(YEAR, AREA, MONTH, season, REGION2, MANAGEMENT, SOURCE, MARKS_DESC, TYPE) %>% summarise(sum=sum(VAL)) %>%
   pivot_wider(id_cols = c(YEAR, AREA, MONTH, REGION2, MANAGEMENT, SOURCE, season), names_from=c(MARKS_DESC, TYPE), values_from = sum) %>%
   mutate(marked_prop_seasonal =sum(marked_Kept,marked_Released, na.rm = TRUE)/sum(marked_Kept,marked_Released,unmarked_Kept,unmarked_Released, na.rm =TRUE)) %>%
+  mutate(marked_prop_seasonal, case_when(
+    marked_prop_seasonal ==1 | marked_prop_seasonal  ==0 ~ NA,
+    TRUE ~ marked_prop_seasonal)) %>%
   group_by(YEAR, season, AREA, REGION2, SOURCE, MANAGEMENT) %>% summarise(marked_prop_seasonal =mean(marked_prop_seasonal, na.rm=TRUE)) %>%
   dplyr::select(YEAR, season, AREA, REGION2, SOURCE, MANAGEMENT, marked_prop_seasonal) %>% ungroup()
 
@@ -207,6 +216,9 @@ Sport_mark_rate_seasonal_reg<- Sport_filtered_south_irec  %>%
   group_by(YEAR, AREA, MONTH, season, REGION2, MANAGEMENT, SOURCE, MARKS_DESC, TYPE) %>% summarise(sum=sum(VAL)) %>%
   pivot_wider(id_cols = c(YEAR, AREA, MONTH, REGION2, MANAGEMENT, SOURCE, season), names_from=c(MARKS_DESC, TYPE), values_from = sum) %>%
   mutate(marked_prop_seasonal_reg =sum(marked_Kept,marked_Released, na.rm = TRUE)/sum(marked_Kept,marked_Released,unmarked_Kept,unmarked_Released, na.rm =TRUE)) %>%
+  mutate(marked_prop_seasonal_reg, case_when(
+    marked_prop_seasonal_reg ==1 | marked_prop_seasonal_reg ==0 ~ NA,
+    TRUE ~ marked_prop_seasonal_reg)) %>%
   group_by(YEAR,season, REGION2, SOURCE, MANAGEMENT) %>% summarise(marked_prop_seasonal_reg =mean(marked_prop_seasonal_reg, na.rm=TRUE)) %>%
   dplyr::select(YEAR, season, REGION2, SOURCE, MANAGEMENT, marked_prop_seasonal_reg) %>% ungroup()
 
@@ -215,6 +227,9 @@ Sport_mark_rate_area_month<- Sport_filtered_south_irec  %>%
   group_by(YEAR, AREA, MONTH, season, REGION2, MANAGEMENT, SOURCE, MARKS_DESC, TYPE) %>% summarise(sum=sum(VAL)) %>%
   pivot_wider(id_cols = c(YEAR, AREA, MONTH, REGION2, MANAGEMENT, SOURCE, season), names_from=c(MARKS_DESC, TYPE), values_from = sum) %>%
   mutate(marked_prop_area_month =sum(marked_Kept,marked_Released, na.rm = TRUE)/sum(marked_Kept,marked_Released,unmarked_Kept,unmarked_Released, na.rm =TRUE)) %>%
+  mutate(marked_prop_area_month , case_when(
+    marked_prop_area_month  ==1 | marked_prop_area_month  ==0 ~ NA,
+    TRUE ~ marked_prop_area_month )) %>%
   group_by(AREA, MONTH, season, REGION2, SOURCE, MANAGEMENT) %>% summarise(marked_prop_area_month =mean(marked_prop_area_month, na.rm=TRUE)) %>%
   dplyr::select(AREA, MONTH, season, REGION2, SOURCE, MANAGEMENT, marked_prop_area_month) %>% ungroup()
 
@@ -223,7 +238,10 @@ Sport_mark_rate_region_month<- Sport_filtered_south_irec  %>%
   group_by(YEAR, AREA, MONTH, season, REGION2, MANAGEMENT, SOURCE, MARKS_DESC, TYPE) %>% summarise(sum=sum(VAL)) %>%
   pivot_wider(id_cols = c(YEAR, AREA, MONTH, REGION2, MANAGEMENT, SOURCE, season), names_from=c(MARKS_DESC, TYPE), values_from = sum) %>%
   mutate(marked_prop_region_month =sum(marked_Kept,marked_Released, na.rm = TRUE)/sum(marked_Kept,marked_Released,unmarked_Kept,unmarked_Released, na.rm =TRUE)) %>%
-  group_by( MONTH, season, REGION2, SOURCE, MANAGEMENT) %>% summarise(marked_prop_region_month =mean(marked_prop_region_month, na.rm=TRUE)) %>%
+  mutate(marked_prop_region_month , case_when(
+    marked_prop_region_month ==1 | marked_prop_region_month ==0 ~ NA,
+    TRUE ~ marked_prop_region_month)) %>%
+   group_by( MONTH, season, REGION2, SOURCE, MANAGEMENT) %>% summarise(marked_prop_region_month =mean(marked_prop_region_month, na.rm=TRUE)) %>%
   dplyr::select(MONTH, season, REGION2, MANAGEMENT, SOURCE, marked_prop_region_month) %>% ungroup()
 
 

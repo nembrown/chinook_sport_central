@@ -78,7 +78,21 @@ Season_south_old_new_2<-Season_south_old_sf %>%   mutate(catch_estimate_predicte
 Season_south2<-Season_south_sf %>% mutate(catch_estimate_predicted = catch_estimate, pred_cat= "observed")
 Season_south_combined<- rbind(Season_south_old_new_2, Season_south2)
 
+#### Testing mixed effects
+Season_model_full_gamma_glmm<- glmmTMB(formula = (catch_estimate+3) ~creel_plus_summer*status*season + (1|finescale_fishery_old) + (1|YEAR),  family=Gamma(link = "log"), data=Season_south_no_nas, na.action = na.fail)
+res_gam <- simulateResiduals(Season_model_full_gamma_glmm, plot = T, quantreg=T)
+summary(Season_model_full_gamma_glmm)
 
+dd<-dredge(Season_model_full_gamma_glmm, fixed= ~ creel_plus_summer)
+subset(dd, delta < 2)
+plot(dd, labAsExpr = TRUE)
+summary(get.models(dd, 1)[[1]])
+
+Season_model_full_gamma_glmm_spec<- glmmTMB(formula = (catch_estimate + 3) ~ creel_plus_summer + season + status +
+                                              (1 | finescale_fishery_old) + (1 | YEAR) + creel_plus_summer:status,  family=Gamma(link = "log"), data=Season_south_no_nas, na.action = na.fail)
+res_gam <- simulateResiduals(Season_model_full_gamma_glmm_spec, plot = T, quantreg=T)
+
+AICtab(Season_model_full_gamma_glmm_spec, Season_model_gamma_full_spec)
 
 
 # Season south - summer only  ---------------------------------------------
