@@ -607,9 +607,8 @@ resize(m, 7, 4)
 -   Next, we investigated if the fully interactive model is better than a subset of interactions. We used the dredge function from the MuMin package to sequentially drop terms (including all interactions).
 -   The best model included summer creel, marked and kept status, and season and various interactions of these terms
 
-```{=html}
 <!-- -->
-```
+
 -   $$ catch = creel.summer+season+status + season:status                                         $$
 
 ```{r Modelling NBC ISBM subsetting, message=FALSE, warning=FALSE, results='hide', echo=FALSE}
@@ -767,9 +766,8 @@ resize(m, 7, 4)
 -   Next, we investigated if the fully interactive model is better than a subset of interactions. We used the dredge function from the MuMin package to sequentially drop terms (including all interactions).
 -   The best model included summer creel, marked and kept status, and season and various interactions of these terms
 
-```{=html}
 <!-- -->
-```
+
 -   $$ catch = creel.summer+status                                      $$
 
 ```{r Modelling CBC ISBM subsetting, message=FALSE, warning=FALSE, results='hide', echo=FALSE}
