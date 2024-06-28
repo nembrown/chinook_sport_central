@@ -179,30 +179,19 @@ cetl::duplicate_fishery(camp_conn,
                         description = "SOUTH WCVI AABM SPORT - SUMMER")
 
 # WCVI ISBM Sport: ----
+# just call all ISBM summer, but need to extend to include Oct.
 # NORTH:
-# FALL:
-cetl::duplicate_fishery(camp_conn,
-                        32151,
-                        32161,
-                        name = "NWCVI ISBM S FALL",
-                        description = "NORTH WCVI ISBM SPORT - FALL")
 # SUMMER:
 cetl::duplicate_fishery(camp_conn,
                         32153,
-                        32162,
+                        32161,
                         name = "NWCVI ISBM S SUMMER",
                         description = "NORTH WCVI ISBM SPORT - SUMMER")
 # SOUTH
-# FALL
-cetl::duplicate_fishery(camp_conn,
-                        32154,
-                        32163,
-                        name = "SWCVI ISBM S FALL",
-                        description = "SOUTH WCVI ISBM SPORT - FALL")
 # SUMMER:
 cetl::duplicate_fishery(camp_conn,
                         32156,
-                        32164,
+                        32162,
                         name = "SWCVI ISBM S SUMMER",
                         description = "SOUTH WCVI ISBM SPORT - SUMMER")
 #/////////////
