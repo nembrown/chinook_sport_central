@@ -49,7 +49,7 @@ write.csv(Sport_mark_rate_mrr_corrected, "Sport_mark_rate_mrr.csv")
 # get distinct data for new fisheries
 # combine with model output and adjust values to match above application to CAMP
 # export as csv and paste to bottom of the sheet "cmfMSFReleaseRates" in https://psconline.sharepoint.com/:x:/r/sites/CTC_365/_layouts/15/Doc.aspx?sourcedoc=%7b7A1A3344-6105-46E7-AC6A-6428E37C6211%7d&file=finescale_msf_template_split_fisheries.xlsx&action=default&mobileredirect=true&xsdata=MDV8MDJ8bm9lbC5zd2FpbkBkZm8tbXBvLmdjLmNhfGRhNTk5M2M5ZDMzOTRkNjU4NzEzMDhkYzgwMTliODgxfDE1OTRmZGFlYTFkOTQ0MDU5MTVkMDExNDY3MjM0MzM4fDB8MHw2Mzg1MjYwOTUxNzA3MDcwNDB8VW5rbm93bnxUV0ZwYkdac2IzZDhleUpXSWpvaU1DNHdMakF3TURBaUxDSlFJam9pVjJsdU16SWlMQ0pCVGlJNklrMWhhV3dpTENKWFZDSTZNbjA9fDB8fHw%3d&sdata=Z1I4Ym5VV2Y4ZnhCL1R2NTU2SWFHVi9zSjlWOHBiU29HUWVDak5RUFE3WT0%3d
-
+library(dplyr)
 # load csv of output from Norah's Modelling:
 mkrukr <- read.csv('Sport_mark_rate_mrr.csv', as.is=TRUE) %>%
   mutate(FineFishery = gsub(" FALL","",
@@ -59,7 +59,9 @@ mkrukr <- read.csv('Sport_mark_rate_mrr.csv', as.is=TRUE) %>%
                                            gsub("SWCVI", "WCVI",
                                                 gsub("JNST S", "JOHN ST S", finescale_fishery)))))),
          FineFishery = gsub('S AABM', 'AABM S',
-                            gsub('S ISBM', 'ISBM Sport', FineFishery)))
+                            gsub('S ISBM', 'ISBM Sport',
+                                 gsub('NBC', 'NORTH',
+                                      gsub('CBC', 'CENTRAL', FineFishery)))))
 
 # load csv of all non-terminal finescale Canadian sport fisheries from "cmfMSFReleaseRates":
 cmfMSFReleaseRates<-read.csv('cmfMSFReleaseRates.csv', as.is = TRUE) %>%
@@ -89,10 +91,7 @@ mkrukr2 <- mkrukr %>%
                                            ifelse(grepl('SUMMER', FineFishery), as.numeric(paste0(FineFishery_ID_old, 3)), FineFishery_ID_old))),
          FineFisheryID_new = ifelse(FineFishery == 'SWCVI AABM S FALL', paste0(FineFishery_ID_old, 4),
                                     ifelse(FineFishery == 'SWCVI AABM S SPRING', paste0(FineFishery_ID_old, 5),
-                                           ifelse(FineFishery == 'SWCVI AABM S SUMMER', paste0(FineFishery_ID_old, 6),
-                                                  ifelse(FineFishery == 'NWCVI ISBM S SUMMER', paste0(FineFishery_ID_old, 2),
-                                                         ifelse(FineFishery == 'SWCVI ISBM S FALL', paste0(FineFishery_ID_old, 3),
-                                                                ifelse(FineFishery == 'SWCVI ISBM S SUMMER', paste0(FineFishery_ID_old, 4), FineFisheryID_new))))))
+                                           ifelse(FineFishery == 'SWCVI AABM S SUMMER', paste0(FineFishery_ID_old, 6), FineFisheryID_new)))
          # if wanting to add sources in here:
          # catch_mrr_source = "",
          # catch_ukr_source = ""

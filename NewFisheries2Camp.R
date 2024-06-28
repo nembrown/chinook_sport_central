@@ -23,7 +23,7 @@ camp_config_filename <- r"(camp_2024msf.config)"
 camp_conn <- ctcUtil::open_camp_connection(camp_config_filename)
 
 # TO DELETE ANY RECORDS: ----
-#cetl::delete_fishery(camp_conn, 321561)
+# cetl::delete_fishery(camp_conn, 32053)
 
 #Spring = Months 1-4, Summer = Months 5-9, Fall = Months 10-12
 # 30 days: April, June, September
@@ -136,7 +136,8 @@ cetl::duplicate_fishery(camp_conn,
                         start_day = 1,
                         end_month = 9,
                         end_day = 30) # 30 day month
-
+#\\\\\\\\\\\\
+# NOTE: for WCVI north/south AABM and ISBM, need to manually update dates based on original fishery temporal ranges:
 # WCVI AABM S:----
 # NORTH:
 # FALL:
@@ -178,33 +179,22 @@ cetl::duplicate_fishery(camp_conn,
                         description = "SOUTH WCVI AABM SPORT - SUMMER")
 
 # WCVI ISBM Sport: ----
+# just call all ISBM summer, but need to extend to include Oct.
 # NORTH:
-# FALL:
-cetl::duplicate_fishery(camp_conn,
-                        32151,
-                        32161,
-                        name = "NWCVI ISBM S FALL",
-                        description = "NORTH WCVI ISBM SPORT - FALL")
 # SUMMER:
 cetl::duplicate_fishery(camp_conn,
                         32153,
-                        32162,
+                        32161,
                         name = "NWCVI ISBM S SUMMER",
                         description = "NORTH WCVI ISBM SPORT - SUMMER")
 # SOUTH
-# FALL
-cetl::duplicate_fishery(camp_conn,
-                        32154,
-                        32163,
-                        name = "SWCVI ISBM S FALL",
-                        description = "SOUTH WCVI ISBM SPORT - FALL")
 # SUMMER:
 cetl::duplicate_fishery(camp_conn,
                         32156,
-                        32164,
+                        32162,
                         name = "SWCVI ISBM S SUMMER",
                         description = "SOUTH WCVI ISBM SPORT - SUMMER")
-
+#/////////////
 # SGS S:----
 # FALL
 cetl::duplicate_fishery(camp_conn,
@@ -240,42 +230,43 @@ cetl::duplicate_fishery(camp_conn,
                         end_month = 9,
                         end_day = 30) # 30 day month
 
-# CENTRAL S: ----
-# FALL
-cetl::duplicate_fishery(camp_conn,
-                        3205,
-                        32051,
-                        name = "CENTRAL S FALL",
-                        description = "CENTRAL SPORT - FALL",
-                        reg_type_id = 3,
-                        start_month = 10,
-                        start_day = 1,
-                        end_month = 12,
-                        end_day = 31)
-# SPRING:
-cetl::duplicate_fishery(camp_conn,
-                        3205,
-                        32052,
-                        name = "CENTRAL S SPRING",
-                        description = "CENTRAL SPORT - SPRING",
-                        reg_type_id = 3,
-                        start_month = 1,
-                        start_day = 1,
-                        end_month = 4,
-                        end_day = 30) # 30 day month
-# SUMMER:
-cetl::duplicate_fishery(camp_conn,
-                        3205,
-                        32053,
-                        name = "CENTRAL S SUMMER",
-                        description = "CENTRAL SPORT - SUMMER",
-                        reg_type_id = 3,
-                        start_month = 5,
-                        start_day = 1,
-                        end_month = 9,
-                        end_day = 30) # 30 day month
+# # CENTRAL S: ----
+# # NOT SPLITTING FOR NOW (so commenting out)!
+# # FALL
+# cetl::duplicate_fishery(camp_conn,
+#                         3205,
+#                         32051,
+#                         name = "CENTRAL S FALL",
+#                         description = "CENTRAL SPORT - FALL",
+#                         reg_type_id = 3,
+#                         start_month = 10,
+#                         start_day = 1,
+#                         end_month = 12,
+#                         end_day = 31)
+# # SPRING:
+# cetl::duplicate_fishery(camp_conn,
+#                         3205,
+#                         32052,
+#                         name = "CENTRAL S SPRING",
+#                         description = "CENTRAL SPORT - SPRING",
+#                         reg_type_id = 3,
+#                         start_month = 1,
+#                         start_day = 1,
+#                         end_month = 4,
+#                         end_day = 30) # 30 day month
+# # SUMMER:
+# cetl::duplicate_fishery(camp_conn,
+#                         3205,
+#                         32053,
+#                         name = "CENTRAL S SUMMER",
+#                         description = "CENTRAL SPORT - SUMMER",
+#                         reg_type_id = 3,
+#                         start_month = 5,
+#                         start_day = 1,
+#                         end_month = 9,
+#                         end_day = 30) # 30 day month
 
-# NORTH AABM S: ----
+# NORTH (NBC) AABM S: ----
 # FALL
 cetl::duplicate_fishery(camp_conn,
                         3201,
@@ -346,8 +337,14 @@ cetl::duplicate_fishery(camp_conn,
                         end_day = 30) # 30 day month
 
 # DELETE OLD FISHERIES...
-# cetl::delete_fishery(camp_conn, c(3205, 3201, 3202, 3215, 3216, 3208, 3209, 3212, 3220))
-
+# cetl::delete_fishery(camp_conn, 3201), 3202, 3215, 3216, 3208, 3209, 3212, 3220))
+# cetl::delete_fishery(camp_conn, 3202)
+# cetl::delete_fishery(camp_conn, 3208)
+# cetl::delete_fishery(camp_conn, 3209)
+# cetl::delete_fishery(camp_conn, 3212)
+# cetl::delete_fishery(camp_conn, 3215)
+# cetl::delete_fishery(camp_conn, 3216)
+# cetl::delete_fishery(camp_conn, 3220)
 dbDisconnect(camp_conn)
 
 
