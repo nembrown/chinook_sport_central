@@ -46,3 +46,9 @@ rsconnect/
 Sport_data_set_NBC_AABM.csv
 *.csv
 *.xlsx
+Sport_data_set_NBC_ISBM.csv
+Sport_data_set_CBC_ISBM.csv
+Sport_mark_rate_mrr.csv
+cmfMSFReleaseRates.csv
+cmfMSFReleaseRates_ModelResults.csv
+
