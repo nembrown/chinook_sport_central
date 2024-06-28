@@ -37,12 +37,12 @@ Season_model_gamma_full_spec<- glm(formula =catch_estimate + 3 ~ finescale_fishe
 # Season_model_full_gamma_glmm_spec<- glmmTMB(formula = (catch_estimate + 3) ~ creel_plus_summer + season + status +
 #                                               (1 | finescale_fishery_old) + creel_plus_summer:status,  family=Gamma(link = "log"), data=Season_south_no_nas, na.action = na.fail)
 
-
+#summary(Season_model_gamma_full_spec)
 #### Adding data back in post modelling
 #Adding predicted data
 Season_south_old_sf<- Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2005:2012)) %>% ungroup() %>% mutate(pred_cat = "predicted") %>% filter(!str_detect(finescale_fishery, "CBC|NBC"))%>%
   filter(season %in% c("spring", "fall"))
-Season_south_old_new<-predict(Season_model_full_gamma_glmm_spec, newdata =  Season_south_old_sf, type = "response")
+Season_south_old_new<-predict(Season_model_gamma_full_spec, newdata =  Season_south_old_sf, type = "response")
 Season_south_old_new_2<-Season_south_old_sf %>%   mutate(catch_estimate_predicted = Season_south_old_new)
 
 Season_south2<-Season_south_sf %>% mutate(catch_estimate_predicted = catch_estimate, pred_cat= "observed")
@@ -112,11 +112,10 @@ write_rds(Season_north_isbm_no_nas, "Season_north_isbm_no_nas.RDS")
 ###Chosen model
 North_isbm_model_full_gamma_spec<- glm(formula = catch_estimate + 1 ~ season + status + status:season +
                                          1 + historic_summer,  family=Gamma(link = "log"), data = Season_north_isbm_no_nas)
-#res_gam_drop_kept_spec <- simulateResiduals(North_isbm_model_full_gamma_spec, plot = T, quantreg=T)
 
 #### Adding data back in post modelling
 #Adding predicted data
-Season_north_isbm_old<- Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2008:2014)) %>% ungroup() %>% mutate(pred_cat = "predicted") %>% filter(finescale_fishery_old == "NBC isbm S")
+Season_north_isbm_old<- Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2008:2014)) %>% ungroup() %>% mutate(pred_cat = "predicted") %>% filter(finescale_fishery_old == "NBC ISBM S")
 Season_north_isbm_old_new<-predict.glm(North_isbm_model_full_gamma_spec, newdata =  Season_north_isbm_old, type = "response")
 Season_north_isbm_old_new_2<-Season_north_isbm_old %>%   mutate(catch_estimate_predicted = Season_north_isbm_old_new)
 
@@ -132,17 +131,13 @@ Season_cbc_isbm<-Sport_mark_rate_finescale_combined%>% filter(YEAR %in% c(2015:2
 Season_cbc_isbm_no_nas<-Season_cbc_isbm %>% drop_na(any_of(c("historic_summer", "status")))
 write_rds(Season_cbc_isbm_no_nas, "Season_cbc_isbm_no_nas.RDS")
 
-
-
 #Chosen model:
 cbc_isbm_model_full_gamma_spec<- glm(formula = catch_estimate + 1 ~  status + 1 + historic_summer,  family=Gamma(link = "log"), data = Season_cbc_isbm_no_nas)
-# res_gam_drop_kept_spec <- simulateResiduals(cbc_isbm_model_full_gamma_spec, plot = T, quantreg=T)
-# summary(cbc_isbm_model_full_gamma_spec)
 
 
 #### Adding data back in post modelling
 #Adding predicted data
-Season_cbc_isbm_old<- Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2008:2014)) %>% ungroup() %>% mutate(pred_cat = "predicted") %>% filter(finescale_fishery_old == "CBC S")
+Season_cbc_isbm_old<- Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2005:2014)) %>% ungroup() %>% mutate(pred_cat = "predicted") %>% filter(finescale_fishery_old == "CBC S")
 Season_cbc_isbm_old_new<-predict.glm(cbc_isbm_model_full_gamma_spec, newdata =  Season_cbc_isbm_old, type = "response")
 Season_cbc_isbm_old_new_2<-Season_cbc_isbm_old %>%   mutate(catch_estimate_predicted = Season_cbc_isbm_old_new)
 
