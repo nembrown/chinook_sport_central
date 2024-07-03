@@ -154,6 +154,20 @@ models_combined<- rbind(models_combined, Season_north_aabm_combined)
 models_combined<- rbind(models_combined, Season_north_isbm_combined)
 models_combined<- rbind(models_combined, Season_cbc_isbm_combined)
 
-
-
 write_rds(models_combined, "models_combined.RDS")
+
+
+# Combining all modelled data predicted only ------------------
+models_combined_predicted<-rbind(Season_south_combined, Summer_south_combined)
+models_combined_predicted<-models_combined_predicted %>% filter(pred_cat == "predicted")
+
+models_combined_north<- rbind(Season_north_aabm_combined, Season_north_isbm_combined)
+models_combined_north<- rbind(models_combined_north, Season_cbc_isbm_combined)
+models_combined_north<-models_combined_north %>% filter(pred_cat == "predicted")
+
+models_combined_predicted<-rbind(models_combined_predicted, models_combined_north)
+
+write_rds(models_combined_predicted, "models_combined_predicted.RDS")
+
+## MArked kept only
+models_combined_predicted_marked_kept<-models_combined_predicted %>% filter(status=="marked_Kept_total")

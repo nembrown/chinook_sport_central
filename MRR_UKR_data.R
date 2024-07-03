@@ -96,7 +96,7 @@ mkrukr2 <- mkrukr %>%
          # catch_mrr_source = "",
          # catch_ukr_source = ""
   ) %>%
-  select(Agency, Year = YEAR, ERAFishery_ID, ERAFishery, FineFishery_ID_old,
+  dplyr::select(Agency, Year = YEAR, ERAFishery_ID, ERAFishery, FineFishery_ID_old,
          FineFisheryID_new, FineFishery, FineFishery_Description, Terminal,
          MSF_Regulations_Category, legal_CNR_present,
          Marked_Kept = marked_Kept_total,

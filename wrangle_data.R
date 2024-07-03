@@ -438,8 +438,7 @@ Sport_mark_rate_finescale<- Sport_mark_rate_finescale %>% ungroup %>%
 
 ## Nick here is the post-2013 data to use
 # catch estimate is the appropriate column
-Sport_mark_rate_finescale_2014_onwards <-Sport_mark_rate_finescale %>% filter(YEAR>2013)
-
+Sport_mark_rate_finescale_2014_onwards <-Sport_mark_rate_finescale %>% filter(YEAR>2013) %>% filter(status=="marked_Kept_total")
 
 
 ### Collapsing
