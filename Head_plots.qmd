@@ -84,7 +84,6 @@ ggplot(data = head_catch_model_df, aes(x=catch_estimate_predicted,
 
 ```
 
-
 ```{r Pre iRec Head to Kept Mark Catch, echo=FALSE}
 
 pre_irec_catch_model_df <- 
@@ -103,6 +102,7 @@ ggplot(data = pre_irec_catch_model_df,
   ylab("Chinook Head Recoveries")
 
 ```
+
 ```{r Post iRec Head to Kept Mark Catch, echo=FALSE}
 
 post_irec_catch_model_df <- 
@@ -128,5 +128,9 @@ ggplot(data = head_catch_model_df, aes(x=YEAR, y=submit_rate, color=finescale_fi
   geom_line(linewidth = 2)
 
 ```
+```{r pre IRec Fishery Rates, echo=FALSE}
 
+ggplot(data = pre_irec_catch_model_df, aes(x=YEAR, y=submit_rate, color=finescale_fishery)) +
+  geom_line(linewidth = 2)
 
+```
