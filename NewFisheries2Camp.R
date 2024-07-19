@@ -138,62 +138,70 @@ cetl::duplicate_fishery(camp_conn,
                         end_day = 30) # 30 day month
 #\\\\\\\\\\\\
 # NOTE: for WCVI north/south AABM and ISBM, need to manually update dates based on original fishery temporal ranges:
-# WCVI AABM S:----
-# NORTH:
-# FALL:
-cetl::duplicate_fishery(camp_conn,
-                        3215,
-                        32151,
-                        name = "NWCVI AABM S FALL",
-                        description = "NORTH WCVI AABM SPORT - FALL")
-# SPRING:
-cetl::duplicate_fishery(camp_conn,
-                        3215,
-                        32152,
-                        name = "NWCVI AABM S SPRING",
-                        description = "NORTH WCVI AABM SPORT - SPRING")
-# SUMMER:
-cetl::duplicate_fishery(camp_conn,
-                        3215,
-                        32153,
-                        name = "NWCVI AABM S SUMMER",
-                        description = "NORTH WCVI AABM SPORT - SUMMER")
-# SOUTH
-# FALL
-cetl::duplicate_fishery(camp_conn,
-                        3215,
-                        32154,
-                        name = "SWCVI AABM S FALL",
-                        description = "SOUTH WCVI AABM SPORT - FALL")
-# SPRING:
-cetl::duplicate_fishery(camp_conn,
-                        3215,
-                        32155,
-                        name = "SWCVI AABM S SPRING",
-                        description = "SOUTH WCVI AABM SPORT - SPRING")
-# SUMMER:
-cetl::duplicate_fishery(camp_conn,
-                        3215,
-                        32156,
-                        name = "SWCVI AABM S SUMMER",
-                        description = "SOUTH WCVI AABM SPORT - SUMMER")
+# •	Split 3215 into the three seasons while maintaining their original date ranges (e.g., if a date range spans only one season, say Oct. 16 – Dec. 1, it’s fall, but if it spans multiple, say Jan 1 – May 10, then it would be Spring: Jan 1 – April 30 and Summer: May 1- May 10.
+# •	Split into north and south: regions 21, 23, 24, M401 are South and 25-27 are North.
+# •	Any regions without specified date ranges get split into the three seasons with the same date ranges as applied to other fisheries.
+# •	Delete any redundant rows
+# •	Make 3216 region 28 south and 27 north and south and should get partitioned out as per usual by three seasons
+# •	Copy over all regions with specified date ranges from 3215 to 3216 and apply the date ranges missing from 3215 (e.g., Fall = Oct. 16 – Dec. 1 in 3215 then fall = Oct 1-15 in 3216).
 
-# WCVI ISBM Sport: ----
-# just call all ISBM summer, but need to extend to include Oct.
-# NORTH:
-# SUMMER:
-cetl::duplicate_fishery(camp_conn,
-                        32153,
-                        32161,
-                        name = "NWCVI ISBM S SUMMER",
-                        description = "NORTH WCVI ISBM SPORT - SUMMER")
-# SOUTH
-# SUMMER:
-cetl::duplicate_fishery(camp_conn,
-                        32156,
-                        32162,
-                        name = "SWCVI ISBM S SUMMER",
-                        description = "SOUTH WCVI ISBM SPORT - SUMMER")
+# #***NOTE***# COMMENTED OUT WCVI SO THAT MANUAL UPDATES TO CAMP ARE NOT OVERWRITTEN - IF RUN, YOU WILL NEED TO FOLLOW STEPS ABOVE TO PARTITION OUT REGIONS/TIME PERIODS!
+# # WCVI AABM S:----
+# # NORTH:
+# # FALL:
+# cetl::duplicate_fishery(camp_conn,
+#                         3215,
+#                         32151,
+#                         name = "NWCVI AABM S FALL",
+#                         description = "NORTH WCVI AABM SPORT - FALL")
+# # SPRING:
+# cetl::duplicate_fishery(camp_conn,
+#                         3215,
+#                         32152,
+#                         name = "NWCVI AABM S SPRING",
+#                         description = "NORTH WCVI AABM SPORT - SPRING")
+# # SUMMER:
+# cetl::duplicate_fishery(camp_conn,
+#                         3215,
+#                         32153,
+#                         name = "NWCVI AABM S SUMMER",
+#                         description = "NORTH WCVI AABM SPORT - SUMMER")
+# # SOUTH
+# # FALL
+# cetl::duplicate_fishery(camp_conn,
+#                         3215,
+#                         32154,
+#                         name = "SWCVI AABM S FALL",
+#                         description = "SOUTH WCVI AABM SPORT - FALL")
+# # SPRING:
+# cetl::duplicate_fishery(camp_conn,
+#                         3215,
+#                         32155,
+#                         name = "SWCVI AABM S SPRING",
+#                         description = "SOUTH WCVI AABM SPORT - SPRING")
+# # SUMMER:
+# cetl::duplicate_fishery(camp_conn,
+#                         3215,
+#                         32156,
+#                         name = "SWCVI AABM S SUMMER",
+#                         description = "SOUTH WCVI AABM SPORT - SUMMER")
+#
+# # WCVI ISBM Sport: ----
+# # just call all ISBM summer, but need to extend to include Oct.
+# # NORTH:
+# # SUMMER:
+# cetl::duplicate_fishery(camp_conn,
+#                         32153,
+#                         32161,
+#                         name = "NWCVI ISBM S SUMMER",
+#                         description = "NORTH WCVI ISBM SPORT - SUMMER")
+# # SOUTH
+# # SUMMER:
+# cetl::duplicate_fishery(camp_conn,
+#                         32156,
+#                         32162,
+#                         name = "SWCVI ISBM S SUMMER",
+#                         description = "SOUTH WCVI ISBM SPORT - SUMMER")
 #/////////////
 # SGS S:----
 # FALL
@@ -337,14 +345,14 @@ cetl::duplicate_fishery(camp_conn,
                         end_day = 30) # 30 day month
 
 # DELETE OLD FISHERIES...
-# cetl::delete_fishery(camp_conn, 3201), 3202, 3215, 3216, 3208, 3209, 3212, 3220))
-# cetl::delete_fishery(camp_conn, 3202)
-# cetl::delete_fishery(camp_conn, 3208)
-# cetl::delete_fishery(camp_conn, 3209)
-# cetl::delete_fishery(camp_conn, 3212)
-# cetl::delete_fishery(camp_conn, 3215)
-# cetl::delete_fishery(camp_conn, 3216)
-# cetl::delete_fishery(camp_conn, 3220)
+cetl::delete_fishery(camp_conn, 3201)
+cetl::delete_fishery(camp_conn, 3202)
+cetl::delete_fishery(camp_conn, 3208)
+cetl::delete_fishery(camp_conn, 3209)
+cetl::delete_fishery(camp_conn, 3212)
+cetl::delete_fishery(camp_conn, 3215)
+cetl::delete_fishery(camp_conn, 3216)
+cetl::delete_fishery(camp_conn, 3220)
 dbDisconnect(camp_conn)
 
 
