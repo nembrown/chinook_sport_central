@@ -292,7 +292,7 @@ cetl::duplicate_fishery(camp_conn,
 # SUMMER:
 cetl::duplicate_fishery(camp_conn,
                         3201,
-                        32011,
+                        32013,
                         name = "NORTH AABM S SUMMER",
                         description = "NORTH AABM SPORT (QCI) - SUMMER",
                         reg_type_id = 3,
