@@ -136,10 +136,10 @@ write_rds(Summer_north_aabm_combined, "Summer_north_aabm_combined.RDS")
 
 ### Data needed
 
-Season_north_isbm<-Sport_mark_rate_finescale_combined%>% filter(YEAR %in% c(2015:2023)) %>% filter(finescale_fishery_old == "NBC ISBM S")%>%
+Season_nbc_isbm<-Sport_mark_rate_finescale_combined%>% filter(YEAR %in% c(2015:2023)) %>% filter(finescale_fishery_old == "NBC ISBM S")%>%
   filter(season %in% c("spring", "fall"))
-Season_north_isbm_no_nas<-Season_north_isbm %>% drop_na(any_of(c("historic_summer", "status", "finescale_fishery_old", "season", "historic_effort")))
-write_rds(Season_north_isbm_no_nas, "Season_north_isbm_no_nas.RDS")
+Season_nbc_isbm_no_nas<-Season_north_isbm %>% drop_na(any_of(c("historic_summer", "status", "finescale_fishery_old", "season", "historic_effort")))
+write_rds(Season_nbc_isbm_no_nas, "Season_nbc_isbm_no_nas.RDS")
 
 
 ###Chosen model
