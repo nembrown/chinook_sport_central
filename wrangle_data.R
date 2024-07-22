@@ -115,14 +115,12 @@ Sport_filtered_south_irec_unfiltered<-
     SOURCE == "iREC" ~ "irec_calibrated",
     TRUE ~ SOURCE )) |>
   mutate(AREA = case_when(
-    SOURCE  %in% c("creel_unfiltered", "lodge_log", "historic") & YEAR %in% c(2013:2019)  & str_detect(AREA, "Area 20") ~ "Area 20",
-    SOURCE  %in% c("creel_unfiltered", "lodge_log", "historic") & YEAR == 2020 & MONTH < 4 & str_detect(AREA, "Area 20") ~ "Area 20",
-    SOURCE  %in% c("creel_unfiltered", "lodge_log", "historic") & YEAR == 2013  & str_detect(AREA, "Area 23") ~ "Area 23",
-    SOURCE  %in% c("creel_unfiltered", "lodge_log", "historic") & YEAR == 2014  & MONTH < 4 & str_detect(AREA, "Area 23") ~ "Area 23",
-    SOURCE  %in% c("creel_unfiltered", "lodge_log", "historic") & YEAR == 2013 & str_detect(AREA, "Area 19") ~ "Area 19",
-    SOURCE  %in% c("creel_unfiltered", "lodge_log", "historic") & YEAR == 2014  & MONTH < 4 & str_detect(AREA, "Area 19") ~ "Area 19",
-    SOURCE  %in% c("creel_unfiltered", "lodge_log", "historic") & YEAR == 2013 & str_detect(AREA, "2E|2W") ~ "Area 2",
-    SOURCE  %in% c("creel_unfiltered", "lodge_log", "historic") & YEAR == 2014 & MONTH < 4 & str_detect(AREA, "2E|2W") ~ "Area 2",
+    SOURCE  != "irec_calibrated" & YEAR %in% c(2013:2019)  & grepl("Area 20", AREA) ~ "Area 20",
+    SOURCE  != "irec_calibrated" & YEAR == 2020 & MONTH < 4 & grepl("Area 20", AREA) ~ "Area 20",
+    SOURCE  != "irec_calibrated" & YEAR == 2013  & grepl("Area 23", AREA) ~ "Area 23",
+    SOURCE  != "irec_calibrated" & YEAR == 2014  & MONTH < 4 & grepl("Area 23", AREA) ~ "Area 23",
+    SOURCE  != "irec_calibrated" & YEAR == 2013 & grepl("2E|2W", AREA) ~ "Area 2",
+    SOURCE  != "irec_calibrated" & YEAR == 2014 & MONTH < 4 & grepl("2E|2W", AREA)  ~ "Area 2",
     TRUE ~ as.character(AREA)
   )) |>
   group_by(YEAR, MONTH, AREA, REGION2, MANAGEMENT, SOURCE, MARKS_DESC, TYPE, INCLUDE_15) |>
@@ -166,14 +164,12 @@ Sport_filtered_south_irec<-
     SOURCE == "iREC" ~ "irec_calibrated",
     TRUE ~ SOURCE )) |>
   mutate(AREA = case_when(
-    SOURCE %in% c("creel", "lodge_log", "historic") & YEAR %in% c(2013:2019)  & str_detect(AREA, "Area 20") ~ "Area 20",
-    SOURCE %in% c("creel", "lodge_log", "historic") & YEAR == 2020 & MONTH < 4 & str_detect(AREA, "Area 20") ~ "Area 20",
-    SOURCE %in% c("creel", "lodge_log", "historic") & YEAR == 2013 & str_detect(AREA, "Area 23") ~ "Area 23",
-    SOURCE %in% c("creel", "lodge_log", "historic") & YEAR == 2014  & MONTH < 4 & str_detect(AREA, "Area 23") ~ "Area 23",
-    SOURCE %in% c("creel", "lodge_log", "historic") & YEAR == 2013 & str_detect(AREA, "Area 19") ~ "Area 19",
-    SOURCE %in% c("creel", "lodge_log", "historic") & YEAR == 2014  & MONTH < 4 & str_detect(AREA, "Area 19") ~ "Area 19",
-    SOURCE %in% c("creel", "lodge_log", "historic") & YEAR == 2013 & str_detect(AREA, "2E|2W") ~ "Area 2",
-    SOURCE %in% c("creel", "lodge_log", "historic") & YEAR == 2014 & MONTH < 4 & str_detect(AREA, "2E|2W") ~ "Area 2",
+    SOURCE  != "irec_calibrated" & YEAR %in% c(2013:2019)  & grepl("Area 20", AREA) ~ "Area 20",
+    SOURCE  != "irec_calibrated" & YEAR == 2020 & MONTH < 4 & grepl("Area 20", AREA) ~ "Area 20",
+    SOURCE  != "irec_calibrated" & YEAR == 2013  & grepl("Area 23", AREA) ~ "Area 23",
+    SOURCE  != "irec_calibrated" & YEAR == 2014  & MONTH < 4 & grepl("Area 23", AREA) ~ "Area 23",
+    SOURCE  != "irec_calibrated" & YEAR == 2013 & grepl("2E|2W", AREA) ~ "Area 2",
+    SOURCE  != "irec_calibrated" & YEAR == 2014 & MONTH < 4 & grepl("2E|2W", AREA)  ~ "Area 2",
     TRUE ~ as.character(AREA)
   )) %>%
   group_by(YEAR, MONTH, AREA, REGION2, MANAGEMENT, SOURCE, MARKS_DESC, TYPE, INCLUDE_15) |>
@@ -272,7 +268,7 @@ Sport_mark_rate_region_month<- Sport_filtered_south_irec  %>%
 allobs2 <- tidyr::expand(Sport_filtered_south_irec, nesting(AREA, REGION2, MANAGEMENT), YEAR, nesting(MONTH, season), MARKS_DESC, TYPE, SOURCE) %>%
            mutate(bad_combos = case_when(
              AREA %in% c("Area 25", "Area 26", "Area 27") & MANAGEMENT == "ISBM" & MONTH %in% c(1:6,10:12) ~ "bad",
-             AREA %in% c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal") & MANAGEMENT == "ISBM" & MONTH %in% c(1:7,10:12) ~ "bad",
+             AREA %in% c("Area 21", "Area 24", "Area 23", "Area 23 (Barkley)", "Area 23 (Alberni Canal") & MANAGEMENT == "ISBM" & MONTH %in% c(1:7,10:12) ~ "bad",
              TRUE ~ "good")) %>%
             filter(bad_combos == "good") %>%
             dplyr::select(-bad_combos)
