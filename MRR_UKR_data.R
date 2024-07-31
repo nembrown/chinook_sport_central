@@ -1,14 +1,26 @@
 #### MRR URR
-source("wrangle_data.R")
-source("final_model.R")
+library(tidyverse)
+library(odbc)
+library(lubridate)
+library(ggnewscale)
+library(glmmTMB)
+library(DHARMa)
+library(fitdistrplus)
+library(lme4)
+library(bbmle)
+library(SuppDists)
+library(MuMIn)
+library(pacRecCatch)
+library(ROracle)
 
 
 Sport_mark_rate_finescale<-read_rds("Sport_mark_rate_finescale.RDS")
 
-Sport_mark_rate_finescale_combined<-read_rds("Sport_mark_rate_finescale_combined.RDS")
+#Sport_mark_rate_finescale_combined<-read_rds("Sport_mark_rate_finescale_combined.RDS")
+Sport_mark_rate_finescale_combined<-wrangle_rec_catch("pacRecCatch_db.yaml")
 
-models_combined<- read_rds("models_combined.RDS")
-
+#models_combined<- read_rds("models_combined.RDS")
+models_combined<-model_rec_catch(Sport_mark_rate_finescale_combined)
 
 #For now, until we get the data from NBC and CBC just use: Season_south_combined which has the modelled data in it
 
@@ -39,6 +51,19 @@ Sport_mark_rate_mrr$ukr_corrected[is.na(Sport_mark_rate_mrr$ukr_corrected)]<-1
 Sport_mark_rate_mrr_corrected<-Sport_mark_rate_mrr %>% dplyr::select(-mrr, -ukr, -unmarked_release, -unmarked_release_corrected) %>%
   rename(mrr=mrr_corrected, ukr=ukr_corrected)
 
+Sport_mark_rate_mrr_corrected_terminal<- Sport_mark_rate_mrr_corrected %>%
+                                         mutate(finescale_fishery = fct_recode(finescale_fishery, "TNORTH S" = "NBC ISBM S SUMMER",
+                                                                               "TCENTRAL S" = "CBC S",
+                                                                               "TNGS S" = "NGS S SUMMER",
+                                                                               "TSGS S" = "SGS S SUMMER",
+                                                                               "TWCVI S" = "SWCVI S SUMMER ISBM",
+                                                                               "TJOHN ST S" = "JNST S SUMMER",
+                                                                               "TCA JDF S" = "CA JDF S SUMMER")) %>%
+                                          filter(finescale_fishery %in% c("TNORTH S", "TCENTRAL S", "TNGS S", "TSGS S", "TWCVI S", "TJOHN ST S", "TCA JDF S"))
+
+
+Sport_mark_rate_mrr_corrected<- bind_rows(Sport_mark_rate_mrr_corrected, Sport_mark_rate_mrr_corrected_terminal)
+
 
 write.csv(Sport_mark_rate_mrr_corrected, "Sport_mark_rate_mrr.csv")
 
@@ -63,10 +88,9 @@ mkrukr <- read.csv('Sport_mark_rate_mrr.csv', as.is=TRUE) %>%
                                  gsub('NBC', 'NORTH',
                                       gsub('CBC', 'CENTRAL', FineFishery)))))
 
-# load csv of all non-terminal finescale Canadian sport fisheries from "cmfMSFReleaseRates":
+# load csv of all finescale Canadian sport fisheries from "cmfMSFReleaseRates":
 cmfMSFReleaseRates<-read.csv('cmfMSFReleaseRates.csv', as.is = TRUE) %>%
   filter(Agency == 'CDFO',
-         Terminal == 'FALSE',
          grepl('SPORT|Sport', FineFishery_Description))
 
 mkrukr2 <- mkrukr %>%
