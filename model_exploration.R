@@ -9,10 +9,19 @@ library(lme4)
 library(bbmle)
 library(SuppDists)
 library(MuMIn)
+library(pacRecCatch)
+library(ROracle)
 
 #Need to run wrangle_data first and then you get Sport_mark_rate_finescale_combined
 
 #source("wrangle_data.R")
+Sport_mark_rate_finescale_combined<-wrangle_rec_catch("pacRecCatch_db.yaml")
+write_rds(Sport_mark_rate_finescale_combined, "Sport_mark_rate_finescale_combined.RDS")
+
+
+Sport_mark_rate_finescale<-wrangle_rec_catch("pacRecCatch_db.yaml", by="area")
+Sport_mark_rate_finescale_combined<-wrangle_rec_catch("pacRecCatch_db.yaml", by="fishery")
+
 
 
 # Seasonal South - Spring and Fall ----------------------------------------
@@ -106,32 +115,32 @@ Summer_south<-Sport_mark_rate_finescale_combined %>%
 #Modelling comparisons need to be done on models with same # of NAs - so drop nas
 Summer_south_no_nas<-Summer_south %>% drop_na(any_of(c("creel_plus_summer", "mark_status","status", "finescale_fishery_old", "season", "creel_effort", "kept_status")))
 
-Summer_model_full<- glm(formula = catch_estimate ~creel_plus_summer*status*finescale_fishery_old*creel_effort,  family=gaussian, data = Summer_south_no_nas)
+Summer_model_full<- glm(formula = catch_estimate ~creel_plus_summer*status*finescale_fishery_old,  family=gaussian, data = Summer_south_no_nas)
 summary(Summer_model_full)
 res <- simulateResiduals(Summer_model_full, plot = T, quantreg=T)
 
 #poisson
-Summer_model_full_poisson<- glm(formula = catch_estimate ~creel_plus_summer*status*finescale_fishery_old*creel_effort,  family=poisson, data = Summer_south_no_nas)
+Summer_model_full_poisson<- glm(formula = catch_estimate ~creel_plus_summer*status*finescale_fishery_old,  family=poisson, data = Summer_south_no_nas)
 res_pois <- simulateResiduals(Summer_model_full_poisson, plot = T, quantreg=T)
 summary(Summer_model_full_poisson)
 
 #gamma
-Summer_model_full_gamma<- glm(formula = (catch_estimate) ~creel_plus_summer*status*finescale_fishery_old*creel_effort,  family=Gamma(link = "log"), data=Summer_south_no_nas, na.action = na.fail)
+Summer_model_full_gamma<- glm(formula = (catch_estimate) ~creel_plus_summer*status*finescale_fishery_old,  family=Gamma(link = "log"), data=Summer_south_no_nas, na.action = na.fail)
 res_gam <- simulateResiduals(Summer_model_full_gamma, plot = T, quantreg=T)
 summary(Summer_model_full_gamma)
 
 AICtab(Summer_model_full,Summer_model_full_poisson, Summer_model_full_gamma)
 
 ###full model status:
-Summer_model_gamma_full<- glm(formula = catch_estimate ~creel_plus_summer*finescale_fishery_old*status*creel_effort,  family=Gamma(link = "log"), data = Summer_south_no_nas, na.action = na.fail)
+Summer_model_gamma_full<- glm(formula = catch_estimate ~creel_plus_summer*finescale_fishery_old*status,  family=Gamma(link = "log"), data = Summer_south_no_nas, na.action = na.fail)
 dd2<-dredge(Summer_model_gamma_full, fixed= ~ creel_plus_summer)
 subset(dd2, delta < 2)
 plot(dd2, labAsExpr = TRUE)
 summary(get.models(dd2, 1)[[1]])
 
-Summer_model_gamma_full_spec<- glm(formula = catch_estimate + 3 ~ finescale_fishery_old + status +
-                                     creel_plus_summer:status + finescale_fishery_old:status +
-                                     1 + creel_plus_summer,  family=Gamma(link = "log"), data = Summer_south_no_nas)
+Summer_model_gamma_full_spec<- glm(formula = catch_estimate ~ finescale_fishery_old + status +
+                                     creel_plus_summer:finescale_fishery_old + creel_plus_summer:status +
+                                     finescale_fishery_old:status + 1 + creel_plus_summer,  family=Gamma(link = "log"), data = Summer_south_no_nas)
 res_gam_effort_summer_spec <- simulateResiduals(Summer_model_gamma_full_spec, plot = T, quantreg=T)
 summary(Summer_model_gamma_full_spec)
 

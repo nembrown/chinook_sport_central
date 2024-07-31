@@ -10,11 +10,16 @@ library(bbmle)
 library(SuppDists)
 library(MuMIn)
 
+library(pacRecCatch)
+library(ROracle)
+
 
 
 # Southern BC Spring and Fall iREC only-------------------------------------------------------------
 
-Sport_mark_rate_finescale_combined<-read_rds("Sport_mark_rate_finescale_combined.RDS")
+#Sport_mark_rate_finescale_combined<-read_rds("Sport_mark_rate_finescale_combined.RDS")
+
+Sport_mark_rate_finescale_combined<-wrangle_rec_catch("pacRecCatch_db.yaml")
 
 
 ### Data needed
@@ -63,10 +68,11 @@ Summer_south<-Sport_mark_rate_finescale_combined %>%
 Summer_south_no_nas<-Summer_south %>% drop_na(any_of(c("creel_plus_summer", "mark_status","status", "finescale_fishery_old", "season", "creel_effort", "kept_status")))
 write_rds(Summer_south_no_nas, "Summer_south_no_nas.RDS")
 
-Summer_model_gamma_full_spec<- glm(formula = catch_estimate + 3 ~ finescale_fishery_old + status +
-                                     creel_plus_summer:status + finescale_fishery_old:status +
-                                     1 + creel_plus_summer,  family=Gamma(link = "log"), data = Summer_south_no_nas)
-
+Summer_model_gamma_full_spec<- glm(formula = catch_estimate ~ finescale_fishery_old + status +
+                                     creel_plus_summer:finescale_fishery_old + creel_plus_summer:status +
+                                     finescale_fishery_old:status + 1 + creel_plus_summer,  family=Gamma(link = "log"), data = Summer_south_no_nas)
+res_gam_effort_summer_spec <- simulateResiduals(Summer_model_gamma_full_spec, plot = T, quantreg=T)
+summary(Summer_model_gamma_full_spec)
 
 Summer_south_old<- Sport_mark_rate_finescale_combined %>% filter(YEAR %in% c(2005:2012)) %>% ungroup() %>% mutate(pred_cat = "predicted") %>% filter(!str_detect(finescale_fishery, "CBC|NBC"))%>%
   filter(season %in% c("summer"))
@@ -138,7 +144,7 @@ write_rds(Summer_north_aabm_combined, "Summer_north_aabm_combined.RDS")
 
 Season_nbc_isbm<-Sport_mark_rate_finescale_combined%>% filter(YEAR %in% c(2015:2023)) %>% filter(finescale_fishery_old == "NBC ISBM S")%>%
   filter(season %in% c("spring", "fall"))
-Season_nbc_isbm_no_nas<-Season_north_isbm %>% drop_na(any_of(c("historic_summer", "status", "finescale_fishery_old", "season", "historic_effort")))
+Season_nbc_isbm_no_nas<-Season_nbc_isbm %>% drop_na(any_of(c("historic_summer", "status", "finescale_fishery_old", "season", "historic_effort")))
 write_rds(Season_nbc_isbm_no_nas, "Season_nbc_isbm_no_nas.RDS")
 
 
@@ -155,7 +161,7 @@ Season_north_isbm_old<- Sport_mark_rate_finescale_combined %>% filter(YEAR %in% 
 Season_north_isbm_old_new<-predict.glm(nbc_isbm_model_full_gamma_spec, newdata =  Season_north_isbm_old, type = "response")
 Season_north_isbm_old_new_2<-Season_north_isbm_old %>%   mutate(catch_estimate_predicted = Season_north_isbm_old_new)
 
-Season_north_isbm2<-Season_north_isbm  %>% mutate(catch_estimate_predicted = catch_estimate, pred_cat= "observed")
+Season_north_isbm2<-Season_nbc_isbm  %>% mutate(catch_estimate_predicted = catch_estimate, pred_cat= "observed")
 Season_north_isbm_combined<- rbind(Season_north_isbm_old_new_2, Season_north_isbm2)
 write_rds(Season_north_isbm_combined, "Season_north_isbm_combined.RDS")
 

@@ -349,7 +349,7 @@ Sport_mark_rate3<-Sport_mark_rate %>%
     catch_estimate_cat == "use_irec" ~ as.numeric(irec_calibrated),
     catch_estimate_cat == "use_historic" ~  as.numeric(historic_plus),
     catch_estimate_cat == "use_creel_plus" ~ as.numeric(creel_plus),
-    catch_estimate_cat == "creel_zero" ~ as.numeric(creel_plus))) %>%
+    catch_estimate_cat == "creel_plus_zero" ~ as.numeric(creel_plus))) %>%
   ungroup() %>%
   relocate(catch_estimate_cat, .after=status)
 
