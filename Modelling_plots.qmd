@@ -22,6 +22,8 @@ toc-location: left
 
 ```{r Loading data, message=FALSE, warning=FALSE, results='hide', echo=FALSE}
 #load packages
+library(ROracle)
+library(pacRecCatch)
 library(tidyverse)
 library(odbc)
 library(lubridate)
@@ -32,7 +34,6 @@ library(lme4)
 library(bbmle)
 library(SuppDists)
 library(MuMIn)
-library(glmmTMB)
 
 #utils
 "%notin%" <- Negate("%in%")
@@ -52,11 +53,9 @@ resize <- function(g, fig_width=NA, fig_height=NA) {
 }
 
 
-Sport_mark_rate_finescale<-read_rds("Sport_mark_rate_finescale.RDS")
+Sport_mark_rate_finescale<-wrangle_rec_catch("pacRecCatch_db.yaml", by="area")
 
-Sport_mark_rate_finescale_combined<-read_rds("Sport_mark_rate_finescale_combined.RDS")
-
-models_combined<- read_rds("models_combined.RDS")
+Sport_mark_rate_finescale_combined<-wrangle_rec_catch("pacRecCatch_db.yaml", by="fishery")
 
 Season_south_no_nas<-read_rds("Season_south_no_nas.RDS")
 Summer_south_no_nas<-read_rds("Summer_south_no_nas.RDS")
@@ -298,7 +297,9 @@ resize(m, 7, 5)
 ```{r Modelling summer subsetting, message=FALSE, warning=FALSE, results='hide', echo=FALSE}
 
 
-Summer_model<- glm(formula = catch_estimate + 3 ~ finescale_fishery_old + status +creel_plus_summer:status + finescale_fishery_old:status +  1 + creel_plus_summer,  family=Gamma(link = "log"), data = Summer_south_no_nas)
+Summer_model<- glm(formula = catch_estimate ~ finescale_fishery_old + status +
+                                     creel_plus_summer:finescale_fishery_old + creel_plus_summer:status +
+                                     finescale_fishery_old:status + 1 + creel_plus_summer,  family=Gamma(link = "log"), data = Summer_south_no_nas)
 
 res_gam <- simulateResiduals(Summer_model, plot = T, quantreg=T)
 
@@ -853,11 +854,6 @@ dataminmax_marked_released<- Season_north_isbm_no_nas %>% filter(finescale_fishe
 dataminmax_unmarked_kept<- Season_north_isbm_no_nas %>% filter(finescale_fishery==fishery_name_north_isbm[i], status=="unmarked_Kept_total")
 dataminmax_unmarked_released<- Season_north_isbm_no_nas %>% filter(finescale_fishery==fishery_name_north_isbm[i], status=="unmarked_Released_total")
 
-dataminmax_marked_kept<- Season_north_isbm_no_nas %>% filter(finescale_fishery==fishery_name_north_isbm[i], status=="marked_Kept_total")
-dataminmax_marked_released<- Season_north_isbm_no_nas %>% filter(finescale_fishery==fishery_name_north_isbm[i], status=="marked_Released_total")
-dataminmax_unmarked_kept<- Season_north_isbm_no_nas %>% filter(finescale_fishery==fishery_name_north_isbm[i], status=="unmarked_Kept_total")
-dataminmax_unmarked_released<- Season_north_isbm_no_nas %>% filter(finescale_fishery==fishery_name_north_isbm[i], status=="unmarked_Released_total")
-
 g1<-ggplot(Season_north_isbm_no_nas %>% filter(finescale_fishery==fishery_name_north_isbm[i], status=="marked_Kept_total"), aes(x=historic_summer,  y= catch_estimate, col=status))+
   geom_point()+
   geom_line(ndata %>% filter(finescale_fishery==fishery_name_north_isbm[i], status=="marked_Kept_total"), mapping=aes(y= fit, x=historic_summer, col=status))+
@@ -1159,11 +1155,6 @@ resize(p, 5, 2)
 
 #####
  
-dataminmax_marked_kept<- Season_cbc_isbm_no_nas %>% filter(finescale_fishery==fishery_name_cbc_isbm[i], status=="marked_Kept_total")
-dataminmax_marked_released<- Season_cbc_isbm_no_nas %>% filter(finescale_fishery==fishery_name_cbc_isbm[i], status=="marked_Released_total")
-dataminmax_unmarked_kept<- Season_cbc_isbm_no_nas %>% filter(finescale_fishery==fishery_name_cbc_isbm[i], status=="unmarked_Kept_total")
-dataminmax_unmarked_released<- Season_cbc_isbm_no_nas %>% filter(finescale_fishery==fishery_name_cbc_isbm[i], status=="unmarked_Released_total")
-
 dataminmax_marked_kept<- Season_cbc_isbm_no_nas %>% filter(finescale_fishery==fishery_name_cbc_isbm[i], status=="marked_Kept_total")
 dataminmax_marked_released<- Season_cbc_isbm_no_nas %>% filter(finescale_fishery==fishery_name_cbc_isbm[i], status=="marked_Released_total")
 dataminmax_unmarked_kept<- Season_cbc_isbm_no_nas %>% filter(finescale_fishery==fishery_name_cbc_isbm[i], status=="unmarked_Kept_total")
