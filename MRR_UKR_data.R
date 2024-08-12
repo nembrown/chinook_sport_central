@@ -115,7 +115,9 @@ mkrukr2 <- mkrukr %>%
                                            ifelse(grepl('SUMMER', FineFishery), as.numeric(paste0(FineFishery_ID_old, 3)), FineFishery_ID_old))),
          FineFisheryID_new = ifelse(FineFishery == 'SWCVI AABM S FALL', paste0(FineFishery_ID_old, 4),
                                     ifelse(FineFishery == 'SWCVI AABM S SPRING', paste0(FineFishery_ID_old, 5),
-                                           ifelse(FineFishery == 'SWCVI AABM S SUMMER', paste0(FineFishery_ID_old, 6), FineFisheryID_new)))
+                                           ifelse(FineFishery == 'SWCVI AABM S SUMMER', paste0(FineFishery_ID_old, 6), FineFisheryID_new))),
+         FineFisheryID_new = ifelse(FineFishery == 'NWCVI ISBM Sport SUMMER', paste0(FineFishery_ID_old, 1),
+                                           ifelse(FineFishery == 'SWCVI ISBM Sport SUMMER', paste0(FineFishery_ID_old, 2), FineFisheryID_new))
          # if wanting to add sources in here:
          # catch_mrr_source = "",
          # catch_ukr_source = ""
