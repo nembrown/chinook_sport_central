@@ -14,19 +14,18 @@ library(pacRecCatch)
 library(ROracle)
 
 
-Sport_mark_rate_finescale<-read_rds("Sport_mark_rate_finescale.RDS")
-
-#Sport_mark_rate_finescale_combined<-read_rds("Sport_mark_rate_finescale_combined.RDS")
 Sport_mark_rate_finescale_combined<-wrangle_rec_catch("pacRecCatch_db.yaml")
-
-#models_combined<- read_rds("models_combined.RDS")
+Sport_mark_rate_finescale<-wrangle_rec_catch("pacRecCatch_db.yaml", by="area")
 models_combined<-model_rec_catch(Sport_mark_rate_finescale_combined)
 
 #For now, until we get the data from NBC and CBC just use: Season_south_combined which has the modelled data in it
 
+
+
+ ### Split into before 2013 and after (past and current, past uses modelling, current uses by PFMA)
 ### Restrict the mrr and ukr to be the same before 2013, since we don't have the data to to confidently allow these to diverge.
 #Also there were no MSFs in this time period except for in JDF.
-Sport_mark_rate_mrr<-models_combined %>%
+Sport_mark_rate_mrr_past<-models_combined %>% filter(YEAR<2013) %>%
   pivot_wider(id_cols = c(YEAR, finescale_fishery), names_from=status, values_from = catch_estimate_predicted) %>%
   mutate(mrr=marked_Released_total/(marked_Kept_total+marked_Released_total),
          ukr=unmarked_Kept_total/(unmarked_Kept_total+unmarked_Released_total))%>%
@@ -44,14 +43,13 @@ Sport_mark_rate_mrr<-models_combined %>%
   )) %>%
   mutate(ukr_corrected = 1-unmarked_release_corrected)
 
-Sport_mark_rate_mrr$mrr_corrected[is.na(Sport_mark_rate_mrr$mrr_corrected)]<-0
-Sport_mark_rate_mrr$ukr_corrected[is.na(Sport_mark_rate_mrr$ukr_corrected)]<-1
+Sport_mark_rate_mrr_past$mrr_corrected[is.na(Sport_mark_rate_mrr_past$mrr_corrected)]<-0
+Sport_mark_rate_mrr_past$ukr_corrected[is.na(Sport_mark_rate_mrr_past$ukr_corrected)]<-1
 
-
-Sport_mark_rate_mrr_corrected<-Sport_mark_rate_mrr %>% dplyr::select(-mrr, -ukr, -unmarked_release, -unmarked_release_corrected) %>%
+Sport_mark_rate_mrr_past_corrected<-Sport_mark_rate_mrr_past %>% dplyr::select(-mrr, -ukr, -unmarked_release, -unmarked_release_corrected) %>%
   rename(mrr=mrr_corrected, ukr=ukr_corrected)
 
-Sport_mark_rate_mrr_corrected_terminal<- Sport_mark_rate_mrr_corrected %>%
+Sport_mark_rate_mrr_past_corrected_terminal<- Sport_mark_rate_mrr_past_corrected %>%
                                          mutate(finescale_fishery = fct_recode(finescale_fishery, "TNORTH S" = "NBC ISBM S SUMMER",
                                                                                "TCENTRAL S" = "CBC S",
                                                                                "TNGS S" = "NGS S SUMMER",
@@ -62,7 +60,61 @@ Sport_mark_rate_mrr_corrected_terminal<- Sport_mark_rate_mrr_corrected %>%
                                           filter(finescale_fishery %in% c("TNORTH S", "TCENTRAL S", "TNGS S", "TSGS S", "TWCVI S", "TJOHN ST S", "TCA JDF S"))
 
 
-Sport_mark_rate_mrr_corrected<- bind_rows(Sport_mark_rate_mrr_corrected, Sport_mark_rate_mrr_corrected_terminal)
+Sport_mark_rate_mrr_past_corrected<- bind_rows(Sport_mark_rate_mrr_past_corrected, Sport_mark_rate_mrr_past_corrected_terminal)
+
+
+
+Sport_mark_rate_mrr_recent<-Sport_mark_rate_finescale %>% filter(YEAR>2012, AREA !="Area 22", !is.na(finescale_fishery)) %>%
+  pivot_wider(id_cols = c(YEAR, AREA, MONTH, REGION2, MANAGEMENT, finescale_fishery), names_from=status, values_from = catch_estimate) %>%
+  mutate(total_catch = marked_Kept_total+marked_Released_total + unmarked_Kept_total+unmarked_Released_total,
+         mrr=marked_Released_total/(marked_Kept_total+marked_Released_total),
+         ukr=unmarked_Kept_total/(unmarked_Kept_total+unmarked_Released_total))
+
+Sport_mark_rate_mrr_recent$mrr[is.na(Sport_mark_rate_mrr_recent$mrr)]<-0
+Sport_mark_rate_mrr_recent$ukr[is.na(Sport_mark_rate_mrr_recent$ukr)]<-1
+
+Sport_mark_rate_mrr_recent_sum<-Sport_mark_rate_mrr_recent %>% group_by(YEAR, finescale_fishery) %>% summarise(sum_total_catch = sum(total_catch, na.rm = TRUE))
+
+Sport_mark_rate_mrr_recent<- Sport_mark_rate_mrr_recent %>% left_join(Sport_mark_rate_mrr_recent_sum) %>%
+                              mutate(component_mrr = (total_catch/sum_total_catch)*mrr,
+                                     component_ukr = (total_catch/sum_total_catch)*ukr)
+
+Sport_mark_rate_mrr_recent_finescale<-Sport_mark_rate_mrr_recent %>% group_by(YEAR, finescale_fishery) %>% summarise(mrr = sum(component_mrr, na.rm = TRUE), ukr=sum(component_ukr, na.rm=TRUE), sum_total_catch=sum(total_catch)) %>%
+                                      mutate(ukr = case_when(
+                                        sum_total_catch == 0 ~ 1,
+                                        TRUE ~ ukr)) %>% dplyr::select(-sum_total_catch)
+
+Sport_mark_data_finescale<-models_combined %>% filter(YEAR>2012) %>%
+  pivot_wider(id_cols = c(YEAR, finescale_fishery), names_from=status, values_from = catch_estimate_predicted)
+
+Sport_mark_rate_mrr_recent_finescale<- Sport_mark_rate_mrr_recent_finescale %>% left_join(Sport_mark_data_finescale)
+
+Sport_mark_rate_mrr_recent_finescale_terminal<- Sport_mark_rate_mrr_recent_finescale %>%
+  mutate(finescale_fishery = fct_recode(finescale_fishery, "TNORTH S" = "NBC ISBM S SUMMER",
+                                        "TCENTRAL S" = "CBC S",
+                                        "TNGS S" = "NGS S SUMMER",
+                                        "TSGS S" = "SGS S SUMMER",
+                                        "TWCVI S" = "SWCVI S SUMMER ISBM",
+                                        "TJOHN ST S" = "JNST S SUMMER",
+                                        "TCA JDF S" = "CA JDF S SUMMER")) %>%
+  filter(finescale_fishery %in% c("TNORTH S", "TCENTRAL S", "TNGS S", "TSGS S", "TWCVI S", "TJOHN ST S", "TCA JDF S"))
+
+
+Sport_mark_rate_mrr_recent_finescale<- bind_rows(Sport_mark_rate_mrr_recent_finescale,Sport_mark_rate_mrr_recent_finescale_terminal)
+
+
+Sport_mark_rate_mrr_corrected<-bind_rows(Sport_mark_rate_mrr_past_corrected, Sport_mark_rate_mrr_recent_finescale)
+
+Sport_mark_rate_mrr_corrected<- Sport_mark_rate_mrr_corrected %>%
+                                add_row(YEAR = 2005, finescale_fishery = "NBC ISBM S SPRING", mrr = 0, ukr = 1) %>%
+  add_row(YEAR = 2005, finescale_fishery = "NBC ISBM S SUMMER", mrr = 0, ukr = 1) %>%
+  add_row(YEAR = 2005, finescale_fishery = "NBC ISBM S FALL", mrr = 0, ukr = 1) %>%
+  add_row(YEAR = 2006, finescale_fishery = "NBC ISBM S SPRING", mrr = 0, ukr = 1) %>%
+  add_row(YEAR = 2006, finescale_fishery = "NBC ISBM S SUMMER", mrr = 0, ukr = 1) %>%
+  add_row(YEAR = 2006, finescale_fishery = "NBC ISBM S FALL", mrr = 0, ukr = 1) %>%
+  add_row(YEAR = 2007, finescale_fishery = "NBC ISBM S SPRING", mrr = 0, ukr = 1) %>%
+  add_row(YEAR = 2007, finescale_fishery = "NBC ISBM S SUMMER", mrr = 0, ukr = 1) %>%
+  add_row(YEAR = 2007, finescale_fishery = "NBC ISBM S FALL", mrr = 0, ukr = 1)
 
 
 write.csv(Sport_mark_rate_mrr_corrected, "Sport_mark_rate_mrr.csv")
