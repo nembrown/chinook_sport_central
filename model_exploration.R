@@ -139,7 +139,8 @@ plot(dd2, labAsExpr = TRUE)
 summary(get.models(dd2, 1)[[1]])
 
 Summer_model_gamma_full_spec<- glm(formula = catch_estimate ~ finescale_fishery_old + status +
-                                     creel_plus_summer:finescale_fishery_old + creel_plus_summer:status +
+                                     creel_plus_summer:finescale_fishery_old +
+                                     creel_plus_summer:status +
                                      finescale_fishery_old:status + 1 + creel_plus_summer,  family=Gamma(link = "log"), data = Summer_south_no_nas)
 res_gam_effort_summer_spec <- simulateResiduals(Summer_model_gamma_full_spec, plot = T, quantreg=T)
 summary(Summer_model_gamma_full_spec)

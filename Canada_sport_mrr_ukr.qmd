@@ -20,9 +20,17 @@ toc-depth: 4
 toc-location: left
 ---
 
-# Methods
+# Introduction
 
-```{r Loading packages, useful functions, echo=FALSE}
+Recreational catch estimation in British Columbia has historically been accomplished using a combination of creel surveys and logbook programs. Creel surveys involve overflights to determine effort and dockside fisher interviews. This data is supplemented by logbook programs where guides and lodges voluntarily submit catch data. However, there are substantial spatial and temporal gaps in the creel and logbook data, which targets the most heavily fished areas and months. A mandatory Internet Recreational Effort and Catch (iREC) survey was introduced in 2013 to resolve these gaps.
+
+iREC is an online sport catch reporting system that randomly selects recreational licence holders to self-report kept and released fish by adipose clip status for a given month of the year. This survey covers all months and regions. License holders also report if they did not fish which is equally as important as reported catch. The values from iREC are calibrated against creel survey estimates and combined to fill in spatial and temporal gaps where there are no creel or logbook programs but fishing does occur. These data have been variably incorporated into the recreational catch since 2013 in most regions domestically, but this incorporation has not occurred in a standardized way. Furthermore, iREC has not be incorporated in catch estimates prior to 2013. The Pacific Salmon Treaty outlines a 2009-2015 base period for calculating calendar year exploitation rate (CYER). This base period currently combines incongruous data sources (a mix of yearly iREC-incorporated and yearly catch estimates without iREC) and creates a bias when comparing to current data (yearly iREC-incorporated catch estimates).
+
+Here, we present (1) a standardized method for combining quality-controlled creel and iREC data in years where both sources exist (2013-present) to generate the best recreational catch estimate by month and area, which is then rolled up to year and finescale fishery levels. (2) Next, in years where iREC is unavailable (before 2013), we model iREC-incorporated seasonal catch estimates by finescale fishery using the relationship between summertime creel estimates without iREC and seasonal iREC-incorporated catch estimates from 2013-2023. These seasonal estimates are then rolled up into yearly estimates.
+
+# Methods (1): Combining iREC and creel estimates
+
+```{r Loading packages, useful functions, message=FALSE, warning=FALSE, results='hide', echo=FALSE}
 #load packages
 library(tidyverse)
 library(odbc)
@@ -51,572 +59,122 @@ resize <- function(g, fig_width=NA, fig_height=NA) {
   sub_chunk <- paste0("`","``{r sub_chunk_", floor(runif(1) * 10000), ", fig.height=", fig_height, ", fig.width=", fig_width, ", warning=FALSE, echo=FALSE}","\n(", g_deparsed, ")()","\n`","``")
   cat(knitr::knit(text = knitr::knit_expand(text = sub_chunk), quiet = TRUE))
 }
-```
 
-## Pulling and filtering data
+Sport_mark_rate_finescale<-read_rds("Sport_mark_rate_finescale.RDS")
 
--   We pulled raw recreational catch data from CREST database: data sources include creel, irec, lodge and log-book data. Data is typically in number of marked and unmarked fish kept and released.
+Sport_mark_rate_finescale_combined<-read_rds("Sport_mark_rate_finescale_combined.RDS")
 
-```{r Pulling from CREST and NBC csv}
+models_combined<- read_rds("models_combined.RDS")
 
-#Pull sport data from CREST
-source("PullAllSport.R")
-# PullAllSport(Start_year) set the calendar year to start querying from to the current year
-rslt <- PullAllSport(2005)
-quality_report <- rslt[[1]]
-estimates <- rslt[[2]]
-rm(rslt)
+Season_south_no_nas<-read_rds("Season_south_no_nas.RDS")
+Summer_south_no_nas<-read_rds("Summer_south_no_nas.RDS")
+Season_north_aabm_no_nas<-read_rds("Season_north_aabm_no_nas.RDS")
+Season_north_isbm_no_nas<-read_rds("Season_north_isbm_no_nas.RDS")
+Season_cbc_isbm_no_nas<-read_rds("Season_cbc_isbm_no_nas.RDS")
+Summer_north_aabm_no_nas<-read_rds("Summer_north_aabm_no_nas.RDS")
+Summer_north_isbm_no_nas<-read_rds("Summer_north_isbm_no_nas.RDS")
 
-#Load North Coast data from csv.
-nbc_aabm<- read.csv("Sport_data_set_NBC_AABM.csv") |>
-           as_tibble() |>
-           dplyr::select(YEAR, MONTH, AREA, REGION2, MANAGEMENT, SOURCE, MARKS_DESC, TYPE, VAL_calc)|>
-           rename(VAL = VAL_calc)|>
-           mutate(INCLUDE_15 = 1, VARIANCE = 0)|>
-           mutate(season = case_when(
-             MONTH %in% c(1:4) ~ "spring",
-             MONTH %in% c(5:9) ~ "summer",
-             MONTH %in% c(10:12) ~ "fall"))
-
-nbc_isbm<- read.csv("Sport_data_set_NBC_ISBM.csv") |>
-  as_tibble() |>
-  dplyr::select(YEAR, MONTH, AREA, REGION2, MANAGEMENT, SOURCE, MARKS_DESC, TYPE, VAL_calc)|>
-  rename(VAL = VAL_calc)|>
-  mutate(INCLUDE_15 = 1, VARIANCE = 0)|>
-  mutate(season = case_when(
-    MONTH %in% c(1:4) ~ "spring",
-    MONTH %in% c(5:9) ~ "summer",
-    MONTH %in% c(10:12) ~ "fall"
-  ))
-
-cbc_isbm<- read.csv("Sport_data_set_CBC_ISBM.csv") |>
-  as_tibble() |>
-  dplyr::select(YEAR, MONTH, AREA, REGION2, MANAGEMENT, SOURCE, MARKS_DESC, TYPE, VAL_calc)|>
-  rename(VAL = VAL_calc)|>
-  mutate(INCLUDE_15 = 1, VARIANCE = 0)|>
-  mutate(season = case_when(
-    MONTH %in% c(1:4) ~ "spring",
-    MONTH %in% c(5:9) ~ "summer",
-    MONTH %in% c(10:12) ~ "fall"
-  ))
-```
-
--   Filtered data for marine estimates only
-
--   Filtered the creel data based on high quality creel which meet the following criteria in a given PFMA and month:
-
-    -   At least 3 flights for each type of day (weekday or weekend)
-    -   At least 25 interviews mid week OR at least 10% of interviews from mid-week
-    -   At least 25 interviews on weekends OR at least 10% of interviews from weekend
-    -   At least 15 day spread in flights
-    -   At least 15 day spread in interviews
-
--   After filtering for criteria, we identify where a creel or logbook estimate was made (even if 0).
-
--   We combined estimates under sources called "Lodge Log","Lodge Manifest","Lodge Manifest - Log", "Lodge Estimate", "Log Estimate", "Lodge eLog" to be called lodge_log.
-
--   We identify a season - spring is months 1:5, summer 6:8 and fall 9:12
-
--   We also expanded the dataset to include all combinations of area, year, month, mark status, kept status and source -\> adding NAs where no data was collected
-
-```{r Aligning creel and irec}
-#isolating months and areas where there is definitely creel effort, to be used later:
-creel_effort<-  estimates |>
-                as_tibble() |>
-                 mutate(INCLUDE_15 = case_when(
-                   SOURCE != "Creel" ~ 1,
-                   YEAR == 2006 & MONTH==8& REGION2=="WCVIS"& MANAGEMENT=="ISBM" ~ 1,
-                   YEAR == 2005 & MONTH==7& REGION2=="GSS"& MANAGEMENT=="ISBM" ~ 1,
-                   TRUE ~ INCLUDE_15
-                 ))|>
-                filter(INCLUDE_15 ==1, YEAR<2024, SOURCE=="Creel") |>
-                dplyr::select(YEAR, MONTH, AREA, REGION2, MANAGEMENT) |>
-                unique()
-creel_effort$creel_done<-"yes"
-
-#logbook effort
-logbook_effort<-  estimates |>
-  as_tibble() |>
-  mutate(INCLUDE_15 = case_when(
-    SOURCE != "Creel" ~ 1,
-    YEAR == 2006 & MONTH==8& REGION2=="WCVIS"& MANAGEMENT=="ISBM" ~ 1,
-    YEAR == 2005 & MONTH==7& REGION2=="GSS"& MANAGEMENT=="ISBM" ~ 1,
-    TRUE ~ INCLUDE_15
-  ))|>
-  filter(INCLUDE_15 ==1, YEAR<2024, SOURCE %notin% c("Creel", "iREC")) |>
-  dplyr::select(YEAR, MONTH, AREA, REGION2, MANAGEMENT) |>
-  unique()
-logbook_effort$logbook_done<-"yes"
-
-creel_plus_effort<- full_join(creel_effort, logbook_effort) %>%
-  mutate(creel_plus_done = case_when(
-    logbook_done == "yes" | creel_done == "yes" ~ "yes",
-    TRUE ~ "no"
-  ))
-
-historic_effort<- nbc_aabm |>
-  as_tibble() |>
-  dplyr::select(YEAR, MONTH, AREA, REGION2, MANAGEMENT) |>
-  unique()
-historic_effort$historic_done<-"yes"
-
-
-Sport_filtered_south_irec_unfiltered<-
-  estimates |>
-  as_tibble() |>
-  filter( YEAR<2024)|>
-  filter(AREA %notin% c("Area 29 (In River)", "Campbell River", "Quinsam River", "CR-1", "CR-2", "CR-3", "CR-4", "QR-1", "QR-2", "QR-3", "QR-4")) |>
-  mutate(AREA = case_when(
-    AREA== "Area 29 (Marine)" ~ "Area 29",
-    AREA== "Area 19" & REGION2=="JDF" ~ "Area 19 (JDF)",
-    AREA== "Area 19" & REGION2=="GSS" ~ "Area 19 (GS)",
-    TRUE ~ as.character(AREA))) |>
-  filter(SUB_TYPE == "LEGAL") |>
-  mutate(REGION2 = case_when(AREA == "Area 2" ~ "NC", TRUE ~ REGION2)) |>
-  mutate(MANAGEMENT = case_when(
-        AREA %in% c("Area 2","Area 1", "Area 101", "Area 102",  "Area 142", "Area 2E", "Area 2W") ~ "AABM", TRUE ~ MANAGEMENT )) |>
-  mutate(MARKS_DESC = case_when(
-    MARKS_DESC == "Not Adipose Checked" ~ "unchecked",
-    MARKS_DESC == "Not Checked" ~ "unchecked",
-    MARKS_DESC == "Not Applicable" ~ "unchecked",
-    MARKS_DESC == "Not Adipose Marked" ~ "unmarked",
-    MARKS_DESC == "Adipose Marked" ~ "marked")) |>
-  mutate(SOURCE = case_when(
-    SOURCE == "Creel" ~ "creel_unfiltered",
-    SOURCE == "Historic" ~ "historic",
-    SOURCE %in% c("Lodge Log","Lodge Manifest","Lodge Manifest - Log", "Lodge Estimate", "Log Estimate", "Lodge eLog") ~ "lodge_log",
-    SOURCE == "iREC" ~ "irec_calibrated",
-    TRUE ~ SOURCE )) |>
-  group_by(YEAR, MONTH, AREA, REGION2, MANAGEMENT, SOURCE, MARKS_DESC, TYPE, INCLUDE_15) |>
-  summarise(VARIANCE=sum(VARIANCE), VAL=sum(ESTIMATE)) |> ungroup()|>
-  mutate(season = case_when(
-    MONTH %in% c(1:4) ~ "spring",
-    MONTH %in% c(5:9) ~ "summer",
-    MONTH %in% c(10:12) ~ "fall"
-  )) |>
-  filter(SOURCE == "creel_unfiltered")
-
-
-Sport_filtered_south_irec<-
-  estimates |>
-  as_tibble() |>
-  mutate(INCLUDE_15 = case_when(
-    SOURCE != "Creel" ~ 1,
-    YEAR == 2006 & MONTH==8& REGION2=="WCVIS"& MANAGEMENT=="ISBM" ~ 1,
-    YEAR == 2005 & MONTH==7& REGION2=="GSS"& MANAGEMENT=="ISBM" ~ 1,
-    TRUE ~ INCLUDE_15
-  ))|>
-  filter(INCLUDE_15 ==1, YEAR<2024)|>
-  filter(AREA %notin% c("Area 29 (In River)", "Campbell River", "Quinsam River", "CR-1", "CR-2", "CR-3", "CR-4", "QR-1", "QR-2", "QR-3", "QR-4")) |>
-   mutate(AREA = case_when(
-    AREA== "Area 29 (Marine)" ~ "Area 29",
-    AREA== "Area 19" & REGION2=="JDF" ~ "Area 19 (JDF)",
-    AREA== "Area 19" & REGION2=="GSS" ~ "Area 19 (GS)",
-    TRUE ~ as.character(AREA))) |>
-  filter(SUB_TYPE == "LEGAL") |>
-  mutate(REGION2 = case_when(AREA == "Area 2" ~ "NC", TRUE ~ REGION2)) |>
-  mutate(MANAGEMENT = case_when(
-          AREA %in% c("Area 2","Area 1", "Area 101", "Area 102",  "Area 142", "Area 2E", "Area 2W") ~ "AABM", TRUE ~ MANAGEMENT )) |>
-  mutate(MARKS_DESC = case_when(
-    MARKS_DESC == "Not Adipose Checked" ~ "unchecked",
-    MARKS_DESC == "Not Checked" ~ "unchecked",
-    MARKS_DESC == "Not Applicable" ~ "unchecked",
-    MARKS_DESC == "Not Adipose Marked" ~ "unmarked",
-    MARKS_DESC == "Adipose Marked" ~ "marked")) |>
-  mutate(SOURCE = case_when(
-    SOURCE == "Creel" ~ "creel",
-    SOURCE == "Historic" ~ "historic",
-    SOURCE %in% c("Lodge Log","Lodge Manifest","Lodge Manifest - Log", "Lodge Estimate", "Log Estimate", "Lodge eLog") ~ "lodge_log",
-    SOURCE == "iREC" ~ "irec_calibrated",
-    TRUE ~ SOURCE )) |>
-  group_by(YEAR, MONTH, AREA, REGION2, MANAGEMENT, SOURCE, MARKS_DESC, TYPE, INCLUDE_15) |>
-  summarise(VARIANCE=sum(VARIANCE), VAL=sum(ESTIMATE)) |> ungroup()|>
-  mutate(season = case_when(
-    MONTH %in% c(1:4) ~ "spring",
-    MONTH %in% c(5:9) ~ "summer",
-    MONTH %in% c(10:12) ~ "fall"
-  ))
-
-#Take out NC and CC and add back in from csv but KEEP IREC in
-#Add back in NBC data from csv
-Sport_filtered_south_irec<-Sport_filtered_south_irec |>
-                           rbind(Sport_filtered_south_irec_unfiltered)|>
-                           mutate(filter_NC = case_when(
-                             REGION2 %in% c("NC") & SOURCE != "irec_calibrated" ~ "remove",
-                             TRUE ~ "keep") ) |>
-                           filter(filter_NC=="keep")|>
-                           dplyr::select(-filter_NC)|>
-                           rbind(nbc_aabm)|>
-                           rbind(nbc_isbm)|>
-                           rbind(cbc_isbm)
+Season_south_combined<-read_rds("Season_south_combined.RDS")
+Summer_south_combined<-read_rds("Summer_south_combined.RDS")
+Season_north_aabm_combined<-read_rds("Season_north_aabm_combined.RDS")
+Summer_north_aabm_combined<-read_rds("Summer_north_aabm_combined.RDS")
+Season_north_isbm_combined<-read_rds("Season_north_isbm_combined.RDS")
+Season_cbc_isbm_combined<-read_rds("Season_cbc_isbm_combined.RDS")
+Summer_north_isbm_combined<-read_rds("Summer_north_isbm_combined.RDS")
 
 
 ```
 
-## Extrapolating unchecked catch
+Note: should be used going forward
 
--   We also expanded the dataset to include all combinations of area, year, month, mark status, kept status and source -\> adding NAs where no data was collected
+## Loading and filtering data
 
--   Data is typically in number of marked and unmarked fish kept and released, however, there are two other categories when mark status is unknown: unchecked kept and unchecked released. We need to extrapolate to marked and unmarked catch using mark rate
+We pulled raw recreational catch data from the CREST database. This database stores creel, logbook, and iREC data for both marine and freshwater regions. We filtered the data to contain only marine estimates for legal-sized marked and unmarked fish kept and released. We loaded in data from Northern and Central BC separately since the information in CREST is incomplete for these regions.
 
--   We calculated mark rate in a number of different ways and prioritize the assignment of mark rate in the following order:
+Following the method used for iREC calibration (see DFO iREC report), we filtered the creel data based on quality criteria in a given area and month. Each monthly creel estimate included in our data was required to meet each of the following criteria:
 
-    1.  Monthly area calculation - Mark rate calculated for a given source (iREC, creel, or logbook) within a given year, month, and area
-    2.  Monthly average by source - Mark rate calculated within a given year, month, and area, averaged across sources
-    3.  Monthly regional average - Mark rate calculated for a given source within a given year, month, and region (averaged across areas within a region)
-    4.  Seasonal area average - Mark rate calculated for a given source (iREC, creel, or logbook) within a given year, season, and area
-    5.  Seasonal regional average -Mark rate calculated for a given source within a given year, season, and region
-    6.  Monthly area average across years - Mark rate calculated for a given source within a given month, area, and across years
-    7.  Monthly regional average across years- Mark rate calculated for a given source within a given month, region, and across years
+-   At least 3 flights for each type of day (weekday or weekend)
+-   At least 25 interviews mid week OR at least 10% of interviews from mid-week
+-   At least 25 interviews on weekends OR at least 10% of interviews from weekend
+-   At least 15 day spread in flights
+-   At least 15 day spread in interviews
 
-```{r Mark rates by category}
+This quality control was to avoid situations where a monthly estimate was generated by expanding from only a small number of days which increases uncertainty. The filtered creel estimates were then augmented with logbook data where available (logbook and creel estimates were summed).
 
-#2. Mark rate averaged across source
-Sport_mark_rate_source<- Sport_filtered_south_irec  %>%
-  group_by(YEAR, AREA, MONTH, season, REGION2, MANAGEMENT, SOURCE, MARKS_DESC, TYPE) %>% summarise(sum=sum(VAL)) %>%
-  pivot_wider(id_cols = c(YEAR, AREA, MONTH, season, REGION2, SOURCE, MANAGEMENT), names_from=c(MARKS_DESC, TYPE), values_from = sum) |>
-  mutate(marked_prop_source = sum(marked_Kept,marked_Released, na.rm = TRUE)/sum(marked_Kept,marked_Released,unmarked_Kept,unmarked_Released, na.rm =TRUE)) %>%
-  mutate_all(~ifelse(is.nan(.), NA, .)) %>%
-  group_by(YEAR, AREA, MONTH, season, REGION2, MANAGEMENT) %>% summarise(marked_prop_source =mean(marked_prop_source, na.rm=TRUE)) %>%
-  dplyr::select(YEAR, AREA, MONTH, season, REGION2, MANAGEMENT, marked_prop_source) %>% ungroup()
+## Extrapolating unchecked catch by mark rate
 
-#3. Mark rate monthly Regional average
-Sport_mark_rate_REGION2<- Sport_filtered_south_irec  %>%
-  group_by(YEAR, AREA, MONTH, season, REGION2, MANAGEMENT, SOURCE, MARKS_DESC, TYPE) %>% summarise(sum=sum(VAL)) %>%
-  pivot_wider(id_cols = c(YEAR, AREA, MONTH, season, REGION2, MANAGEMENT, SOURCE), names_from=c(MARKS_DESC, TYPE), values_from = sum) %>%
-  mutate(marked_prop_REGION2 =sum(marked_Kept,marked_Released, na.rm = TRUE)/sum(marked_Kept,marked_Released,unmarked_Kept,unmarked_Released, na.rm =TRUE)) %>%
-  group_by(YEAR, REGION2, MONTH, season, SOURCE, MANAGEMENT) %>% summarise(marked_prop_REGION2 =mean(marked_prop_REGION2, na.rm=TRUE)) %>%
-  dplyr::select(YEAR, MONTH, season, REGION2, MANAGEMENT, marked_prop_REGION2) %>% ungroup()
+Data is typically collected in number of marked and unmarked fish kept and released. However, when mark status is unknown, the catch estimates can be provided as unchecked kept and unchecked released catch. We extrapolated these unchecked estimates to marked and unmarked catch using mark rate.
 
-#4. Mark rate seasonal area average
-Sport_mark_rate_seasonal<- Sport_filtered_south_irec  %>%
-  group_by(YEAR, AREA, MONTH, season, REGION2, MANAGEMENT, SOURCE, MARKS_DESC, TYPE) %>% summarise(sum=sum(VAL)) %>%
-  pivot_wider(id_cols = c(YEAR, AREA, MONTH, REGION2, MANAGEMENT, SOURCE, season), names_from=c(MARKS_DESC, TYPE), values_from = sum) %>%
-  mutate(marked_prop_seasonal =sum(marked_Kept,marked_Released, na.rm = TRUE)/sum(marked_Kept,marked_Released,unmarked_Kept,unmarked_Released, na.rm =TRUE)) %>%
-  group_by(YEAR, season, AREA, REGION2, SOURCE, MANAGEMENT) %>% summarise(marked_prop_seasonal =mean(marked_prop_seasonal, na.rm=TRUE)) %>%
-  dplyr::select(YEAR, season, AREA, REGION2, MANAGEMENT, marked_prop_seasonal) %>% ungroup()
+We calculated mark rate in a number of different ways and prioritize the assignment of mark rate in the following order:
 
-#5. Mark rate seasonal regional average
-Sport_mark_rate_seasonal_reg<- Sport_filtered_south_irec  %>%
-  group_by(YEAR, AREA, MONTH, season, REGION2, MANAGEMENT, SOURCE, MARKS_DESC, TYPE) %>% summarise(sum=sum(VAL)) %>%
-  pivot_wider(id_cols = c(YEAR, AREA, MONTH, REGION2, MANAGEMENT, SOURCE, season), names_from=c(MARKS_DESC, TYPE), values_from = sum) %>%
-  mutate(marked_prop_seasonal_reg =sum(marked_Kept,marked_Released, na.rm = TRUE)/sum(marked_Kept,marked_Released,unmarked_Kept,unmarked_Released, na.rm =TRUE)) %>%
-  group_by(YEAR,season, REGION2, SOURCE, MANAGEMENT) %>% summarise(marked_prop_seasonal_reg =mean(marked_prop_seasonal_reg, na.rm=TRUE)) %>%
-  dplyr::select(YEAR, season, REGION2, MANAGEMENT, marked_prop_seasonal_reg) %>% ungroup()
+1.  Monthly area calculation - Mark rate calculated for a given source (iREC, creel, or logbook) within a given year, month, and area
+2.  Monthly average by source - Mark rate calculated within a given year, month, and area, averaged across sources
+3.  Monthly regional average - Mark rate calculated for a given source within a given year, month, and region (averaged across areas within a region)
+4.  Seasonal area average - Mark rate calculated for a given source (iREC, creel, or logbook) within a given year, season, and area
+5.  Seasonal regional average -Mark rate calculated for a given source within a given year, season, and region
+6.  Monthly area average across years - Mark rate calculated for a given source within a given month, area, and across years
+7.  Monthly regional average across years- Mark rate calculated for a given source within a given month, region, and across years
 
-#6. Mark rate area month across years
-Sport_mark_rate_area_month<- Sport_filtered_south_irec  %>%
-  group_by(YEAR, AREA, MONTH, season, REGION2, MANAGEMENT, SOURCE, MARKS_DESC, TYPE) %>% summarise(sum=sum(VAL)) %>%
-  pivot_wider(id_cols = c(YEAR, AREA, MONTH, REGION2, MANAGEMENT, SOURCE, season), names_from=c(MARKS_DESC, TYPE), values_from = sum) %>%
-  mutate(marked_prop_area_month =sum(marked_Kept,marked_Released, na.rm = TRUE)/sum(marked_Kept,marked_Released,unmarked_Kept,unmarked_Released, na.rm =TRUE)) %>%
-  group_by(AREA, MONTH, season, REGION2, SOURCE, MANAGEMENT) %>% summarise(marked_prop_area_month =mean(marked_prop_area_month, na.rm=TRUE)) %>%
-  dplyr::select(AREA, MONTH, season, REGION2, MANAGEMENT, marked_prop_area_month) %>% ungroup()
+## Aligning iREC and creel estimates
 
-#7. Mark rate regional month across years
-Sport_mark_rate_region_month<- Sport_filtered_south_irec  %>%
-  group_by(YEAR, AREA, MONTH, season, REGION2, MANAGEMENT, SOURCE, MARKS_DESC, TYPE) %>% summarise(sum=sum(VAL)) %>%
-  pivot_wider(id_cols = c(YEAR, AREA, MONTH, REGION2, MANAGEMENT, SOURCE, season), names_from=c(MARKS_DESC, TYPE), values_from = sum) %>%
-  mutate(marked_prop_region_month =sum(marked_Kept,marked_Released, na.rm = TRUE)/sum(marked_Kept,marked_Released,unmarked_Kept,unmarked_Released, na.rm =TRUE)) %>%
-  group_by( MONTH, season, REGION2, SOURCE, MANAGEMENT) %>% summarise(marked_prop_region_month =mean(marked_prop_region_month, na.rm=TRUE)) %>%
-  dplyr::select(MONTH, season, REGION2, MANAGEMENT, SOURCE, marked_prop_region_month) %>% ungroup()
+There are a few areas that were initially not split by the iREC system into their component parts, as done in the creel database. These include areas 2, 19, 20, and 23. We therefore combined data from 2013 until the split was successfully incorporated into iREC (2014 for Areas 2,19, and 23; 2020 for Area 20).
+
+## Combining iREC and creel estimates
+
+We used the following rules to choose the best catch estimate between creel (augmented with logbook data) and calibrated iREC:
+
+For Southern BC:
+
+-   In months May-September (5-9) use creel+ logbook, otherwise use calibrated iREC
+
+-   In months outside of 5-9, use calibrated iREC
+
+For Northern and Central BC:
+
+-   Use calibrated iREC
+
+These rules prioritize quality-controlled creel estimates during months where the most creel effort is concentrated, and then prioritizes iREC data during shoulder seasons and anywhere there is a gap in creel coverage. Northern and Central BC do not have standardized creel
+
+## Visualization
+
+Here put the visuals for by PFMA
+
+```{r PFMA plotting coverage of creel and logbook only, echo=FALSE, message=FALSE, warning=FALSE, fig.height=8, fig.width=10}
+
+pfma_yearMonth <- plyr::ddply(Sport_mark_rate_finescale, c( "YEAR", "MONTH", "AREA", "finescale_fishery_old"), summarise,
+                         sum_creel = sum(creel, na.rm = TRUE), sum= sum(creel_plus, na.rm = TRUE), sum_historic= sum(historic_plus, na.rm = TRUE), sum_catch_estimate = sum(catch_estimate, na.rm = TRUE), sum_irec = sum(irec_calibrated, na.rm = TRUE)) %>% mutate(across(where(is.numeric), ~na_if(., 0))) 
+
+
+pfma_yearMonth_catch_estimate_1<-pfma_yearMonth  %>% filter(sum_catch_estimate!=sum,sum_catch_estimate!=sum_historic, sum_catch_estimate!=sum_irec)
+
+pfma_yearMonth_irec_1<-pfma_yearMonth  %>% filter(sum_catch_estimate==sum_irec)
+
+
+
+g<-ggplot()+
+  geom_tile(data=pfma_yearMonth, aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
+  scale_fill_gradient(low = col1, high = col2,  na.value = colclear, limits=c(0,90000)) +
+  scale_y_discrete(limits=rev)+
+  guides(fill=guide_legend(title="creel or logbook estimates")) +
+  new_scale_fill() +
+  geom_tile(data=pfma_yearMonth_catch_estimate_1, aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
+  scale_fill_gradient(low = col3, high = col4,  na.value = colclear, limits=c(0,90000))+
+  guides(fill=guide_legend(title="creel plus iREC estimates")) +
+  new_scale_fill() +
+  geom_tile(data=pfma_yearMonth_irec_1, aes(x=YEAR, y=as.factor(MONTH), fill = sum_catch_estimate),colour = "white") +
+  scale_fill_gradient(low = col5, high = col6,  na.value = colclear, limits=c(0,90000))+
+  facet_wrap(~AREA)+
+  guides(fill=guide_legend(title="iREC estimates")) +
+  labs(title = "Coverage by PFMA",
+       x = "Year", y = "Month") +
+  theme_bw() + theme_minimal() + geom_vline(xintercept = 2013)
+
+g
 ```
 
-```{r expanding to all combinations}
-allobs2 <- tidyr::expand(Sport_filtered_south_irec, nesting(AREA, REGION2, MANAGEMENT), YEAR, nesting(MONTH, season), MARKS_DESC, TYPE, SOURCE) %>%
-           mutate(bad_combos = case_when(
-             AREA %in% c("Area 25", "Area 26", "Area 27") & MANAGEMENT == "ISBM" & MONTH %in% c(1:6,10:12) ~ "bad",
-             AREA %in% c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal") & MANAGEMENT == "ISBM" & MONTH %in% c(1:7,10:12) ~ "bad",
-             TRUE ~ "good")) %>%
-            filter(bad_combos == "good") %>%
-            dplyr::select(-bad_combos)
-```
+Alternatively, we can add up the catch to get total catch estimates across fisheries by month.
 
--   We joined the various calculations of mark rate to the catch data and expanded unchecked kept and released into marked and unmarked of those categories using the best available chosen mark rate
-
-```{r Allocating unchecked catch}
-Sport_mark_rate<- Sport_filtered_south_irec  %>%
-  group_by(YEAR, MONTH, season, AREA, REGION2, MANAGEMENT, SOURCE, MARKS_DESC, TYPE) %>% summarise(sum=sum(VAL), sum_VARIANCE=sum(VARIANCE)) %>%
-  ungroup() %>%
-  full_join(allobs2) %>%
-  pivot_wider(id_cols = c(YEAR, MONTH, season, AREA, REGION2, MANAGEMENT, SOURCE), names_from=c(MARKS_DESC, TYPE), values_from = sum) %>%
-  group_by(YEAR, MONTH, AREA, season, REGION2, MANAGEMENT, SOURCE) %>%
-  mutate(marked_prop = sum(marked_Kept,marked_Released, na.rm = TRUE)/sum(marked_Kept,marked_Released,unmarked_Kept,unmarked_Released, na.rm =TRUE)) %>%
-  left_join(Sport_mark_rate_source) %>%
-  left_join(Sport_mark_rate_seasonal_reg) %>%
-  left_join(Sport_mark_rate_area_month) %>%
-  left_join(Sport_mark_rate_REGION2) %>%
-  left_join(Sport_mark_rate_seasonal)%>%
-  left_join(Sport_mark_rate_region_month) %>%
-  mutate_all(~ifelse(is.nan(.), NA, .)) %>%
-  mutate(marked_prop_use1 = case_when(
-    (is.na(marked_prop) | marked_prop %in% c(0,1)) & !is.na(marked_prop_source) & marked_prop_source %notin% c(0,1) ~ marked_prop_source,
-    (is.na(marked_prop) | marked_prop %in% c(0,1)) & (is.na(marked_prop_source)| marked_prop_source %in% c(0,1))  & !is.na(marked_prop_REGION2) & marked_prop_REGION2 %notin% c(0,1) ~ marked_prop_REGION2,
-    (is.na(marked_prop) | marked_prop %in% c(0,1)) & (is.na(marked_prop_source)| marked_prop_source %in% c(0,1))  & (is.na(marked_prop_REGION2)| marked_prop_REGION2 %in% c(0,1)) & !is.na(marked_prop_seasonal) & marked_prop_seasonal %notin% c(0,1) ~ marked_prop_seasonal,
-    (is.na(marked_prop) | marked_prop %in% c(0,1)) & (is.na(marked_prop_source)| marked_prop_source %in% c(0,1))  & (is.na(marked_prop_REGION2)| marked_prop_REGION2 %in% c(0,1)) & (is.na(marked_prop_seasonal)| marked_prop_seasonal %in% c(0,1)) & !is.na(marked_prop_seasonal_reg) & marked_prop_seasonal_reg %notin% c(0,1) ~ marked_prop_seasonal_reg,
-    (is.na(marked_prop) | marked_prop %in% c(0,1)) & (is.na(marked_prop_source)| marked_prop_source %in% c(0,1))  & (is.na(marked_prop_REGION2)| marked_prop_REGION2 %in% c(0,1)) & (is.na(marked_prop_seasonal)| marked_prop_seasonal %in% c(0,1)) & (is.na(marked_prop_seasonal_reg) | marked_prop_seasonal_reg %in% c(0,1)) & !is.na(marked_prop_area_month) & marked_prop_area_month %notin% c(0,1) ~ marked_prop_area_month,
-    (is.na(marked_prop) | marked_prop %in% c(0,1)) & (is.na(marked_prop_source)| marked_prop_source %in% c(0,1))  & (is.na(marked_prop_REGION2)| marked_prop_REGION2 %in% c(0,1)) & (is.na(marked_prop_seasonal)| marked_prop_seasonal %in% c(0,1)) & (is.na(marked_prop_seasonal_reg) | marked_prop_seasonal_reg %in% c(0,1)) & (is.na(marked_prop_area_month) |marked_prop_area_month %in% c(0,1))& !is.na(marked_prop_region_month) & marked_prop_region_month %notin% c(0,1) ~ marked_prop_region_month,
-    TRUE ~ marked_prop)) %>%
-  mutate(marked_prop_use = case_when(
-    is.na(marked_prop_use1) ~ 0.5,
-    TRUE ~ marked_prop_use1)) %>%
-  mutate(marked_Kept_add = marked_prop_use*unchecked_Kept,
-         marked_Released_add = marked_prop_use*unchecked_Released,
-         unmarked_Kept_add = (1-marked_prop_use)*unchecked_Kept,
-         unmarked_Released_add = (1-marked_prop_use)*unchecked_Released) %>%
-  mutate(marked_Kept_total = sum(marked_Kept_add, marked_Kept, na.rm = TRUE),
-         marked_Released_total = sum(marked_Released_add, marked_Released, na.rm=TRUE),
-         unmarked_Kept_total = sum(unmarked_Kept_add, unmarked_Kept, na.rm=TRUE),
-         unmarked_Released_total = sum(unmarked_Released_add, unmarked_Released, na.rm=TRUE)) %>%
-  ungroup()
-```
-
-## Choosing best catch estimate
-
--   We then used criteria to choose the catch estimate by PFMA and month as follows:
-
-    -   In months 5-9 use creel+ lodge if that data exists, otherwise use calibrated iREC
-
-    -   In months outside of 5-9 use calibrated iREC
-
--   This calculation was grouped ignoring mark and kept status, so that true zeros for one category of catch wouldn't influence the other categories inclusion.
-
-```{r calculating catch estimate}
-Sport_mark_rate2<-Sport_mark_rate %>%
-  dplyr::select(YEAR, MONTH, season, AREA, REGION2, MANAGEMENT, SOURCE, marked_Kept_total, unmarked_Kept_total, marked_Released_total, unmarked_Released_total) %>%
-  pivot_longer(cols=c(contains("total")), names_to = "status", values_to = "value") %>%
-  group_by(YEAR, MONTH, season, AREA, REGION2, MANAGEMENT, SOURCE) %>%
-  summarise_if(is.numeric, sum, na.rm = TRUE) %>%
-  pivot_wider(id_cols = c(YEAR, MONTH, season, AREA, REGION2, MANAGEMENT), names_from = SOURCE, values_from = value) %>%
-  mutate_all(~ifelse(is.nan(.), NA, .)) %>%
-  rowwise() %>%
-  group_by(YEAR, MONTH, season, AREA, REGION2, MANAGEMENT) %>%
-  mutate(creel_plus = sum(creel,lodge_log, na.rm=TRUE),
-         creel_unfiltered_plus = sum(creel_unfiltered,lodge_log, na.rm=TRUE),
-         historic_plus = sum(historic,lodge_log, na.rm=TRUE)) %>%
-  group_by(YEAR, MONTH, season, AREA, REGION2, MANAGEMENT) %>%
-  mutate(catch_estimate_cat = case_when(
-    YEAR > 2012 & MONTH %in% c(5:9) & (is.na(creel) | creel==0) ~ "use_irec",
-    YEAR > 2012 & MONTH %in% c(1:4,10:12) ~ "use_irec",
-    YEAR < 2013 & (is.na(creel_plus) | creel_plus==0) & (!is.na(historic) & historic!=0)~ "use_historic",
-    YEAR < 2013 & (is.na(creel_plus) | creel_plus==0) ~ "creel_plus_zero",
-    TRUE ~ "use_creel_plus")) %>%
-  ungroup() %>% dplyr::select(YEAR, MONTH, season, AREA, REGION2, MANAGEMENT, catch_estimate_cat)
-
-
-
-Sport_mark_rate3<-Sport_mark_rate %>%
-  dplyr::select(YEAR, MONTH, season, AREA, REGION2, MANAGEMENT, SOURCE, marked_Kept_total, unmarked_Kept_total, marked_Released_total, unmarked_Released_total) %>%
-  pivot_longer(cols=c(contains("total")), names_to = "status", values_to = "value") %>%
-  pivot_wider(id_cols = c(YEAR, MONTH, season, AREA, REGION2, MANAGEMENT, status), names_from = SOURCE, values_from = value) %>%
-  mutate_all(~ifelse(is.nan(.), NA, .)) %>%
-  rowwise() %>%
-  group_by(YEAR, MONTH, season, AREA, REGION2, MANAGEMENT, status) %>%
-  mutate(creel_plus = sum(creel,lodge_log, na.rm=TRUE),
-         creel_unfiltered_plus = sum(creel_unfiltered,lodge_log, na.rm=TRUE),
-         historic_plus = sum(historic,lodge_log, na.rm=TRUE)) %>%
-  group_by(YEAR, MONTH, season, AREA, REGION2, MANAGEMENT) %>%
-  left_join(Sport_mark_rate2) %>%
-  mutate(catch_estimate = case_when(
-    catch_estimate_cat == "use_irec" ~ as.numeric(irec_calibrated),
-    catch_estimate_cat == "use_historic" ~  as.numeric(historic_plus),
-    catch_estimate_cat == "use_creel_plus" ~ as.numeric(creel_plus),
-    catch_estimate_cat == "creel_zero" ~ as.numeric(creel_plus))) %>%
-  ungroup() %>%
-  relocate(catch_estimate_cat, .after=status)
-
-```
-
-## Splitting fisheries by season
-
--   Assign previous finescale fisheries to the catch data using PFMAs and month
-
--   Assign new finescale fisheries (including terminal) to the catch data using PFMAs and season
-
--   Generally seasonal fisheries fall into the pre-defined categories - spring is months 1:4, summer 5:9 and fall 10:12, with a few exceptions - the WCVI ISBM fisheries are shorter length.
-
-```{r Assigning finescale fisheries}
-Sport_mark_rate_finescale<-
-  Sport_mark_rate3%>% ungroup %>%
-  mutate(finescale_fishery = case_when(
-    AREA%in%c( "Area 125", "Area 126", "Area 127") & MANAGEMENT=="AABM" & season=="fall" ~ "NWCVI S FALL AABM",
-    AREA%in%c( "Area 125", "Area 126", "Area 127") & MANAGEMENT=="AABM" & season=="spring" ~ "NWCVI S SPRING AABM",
-    AREA%in%c( "Area 125", "Area 126", "Area 127") & MANAGEMENT=="AABM" & season=="summer" ~ "NWCVI S SUMMER AABM",
-
-    AREA%in%c("Area 121", "Area 123", "Area 124") & MANAGEMENT=="AABM" & season=="fall" ~ "SWCVI S FALL AABM",
-    AREA%in%c("Area 121", "Area 123", "Area 124") & MANAGEMENT=="AABM" & season=="spring" ~ "SWCVI S SPRING AABM",
-    AREA%in%c("Area 121", "Area 123", "Area 124") & MANAGEMENT=="AABM" & season=="summer" ~ "SWCVI S SUMMER AABM",
-
-    AREA%in%c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal)")  & MONTH%in%c(10:12) ~ "SWCVI S FALL AABM",
-    AREA%in%c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal)")  & season=="spring" ~ "SWCVI S SPRING AABM",
-    AREA%in%c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal)")  & MONTH%in%c(5:7) ~ "SWCVI S SUMMER AABM",
-
-    AREA%in%c("Area 25", "Area 26", "Area 27") & MONTH%in%c(10:12) ~ "NWCVI S FALL AABM",
-    AREA%in%c("Area 25", "Area 26", "Area 27") & season=="spring" ~ "NWCVI S SPRING AABM",
-    AREA%in%c("Area 25", "Area 26", "Area 27") & MONTH%in%c(5:6) ~ "NWCVI S SUMMER AABM",
-
-    AREA%in%c("Area 121", "Area 123", "Area 124") & MANAGEMENT=="ISBM" & MONTH%in%c(7:9) ~ "SWCVI S SUMMER ISBM",
-    AREA%in%c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal)") & MONTH%in%c(8,9) ~ "SWCVI S SUMMER ISBM",
-
-    AREA%in%c("Area 125", "Area 126", "Area 127") & MANAGEMENT=="ISBM" & MONTH%in%c(7:9) ~ "NWCVI S SUMMER ISBM",
-    AREA%in%c("Area 25", "Area 26", "Area 27") & MONTH%in%c(7,8,9) ~ "NWCVI S SUMMER ISBM",
-
-    (AREA %in%c("Area 13", "Area 14", "Area 15", "Area 16") |REGION2== "GSN")& season=="fall" ~ "NGS S FALL",
-    (AREA %in%c("Area 13", "Area 14", "Area 15", "Area 16") |REGION2== "GSN")& season=="spring" ~ "NGS S SPRING",
-    (AREA %in%c("Area 13", "Area 14", "Area 15", "Area 16") |REGION2== "GSN")& season=="summer" ~ "NGS S SUMMER",
-
-
-    (AREA %in%c("Area 17", "Area 18", "Area 19 (GS)", "Area 28", "Area 29") |REGION2== "GSS")& season=="fall" ~ "SGS S FALL", #this captures 19
-    (AREA %in%c("Area 17", "Area 18", "Area 19 (GS)", "Area 28", "Area 29") |REGION2== "GSS")& season=="spring" ~ "SGS S SPRING",
-    (AREA %in%c("Area 17", "Area 18", "Area 19 (GS)", "Area 28", "Area 29") |REGION2== "GSS")& season=="summer" ~ "SGS S SUMMER",
-
-
-    (AREA %in% c("Area 11", "Area 111", "Area 12") | REGION2 == "JST") & season=="fall" ~ "JNST S FALL",
-    (AREA %in% c("Area 11", "Area 111", "Area 12")| REGION2 == "JST") & season=="spring" ~ "JNST S SPRING",
-    (AREA %in% c("Area 11", "Area 111", "Area 12")| REGION2 == "JST") & season=="summer" ~ "JNST S SUMMER",
-
-
-    AREA %in% c("Area 10", "Area 106", "Area 110", "Area 6", "Area 7", "Area 8", "Area 9", "Area 130", "Area 108", "Area 109", "Area 107") & season=="spring"   ~ "CBC S",
-    AREA %in% c("Area 10", "Area 106", "Area 110", "Area 6", "Area 7", "Area 8", "Area 9", "Area 130", "Area 108", "Area 109", "Area 107") & season=="fall"  ~ "CBC S",
-    AREA %in% c("Area 10", "Area 106", "Area 110", "Area 6", "Area 7", "Area 8", "Area 9", "Area 130", "Area 108", "Area 109", "Area 107") & season=="summer"   ~ "CBC S",
-
-
-    AREA %in% c("Area 2","Area 1", "Area 101", "Area 102",  "Area 142", "Area 2E", "Area 2W")& season=="spring"   ~ "NBC AABM S SPRING",
-    AREA %in% c("Area 2","Area 1", "Area 101", "Area 102",  "Area 142", "Area 2E", "Area 2W")& season=="fall"  ~ "NBC AABM S FALL",
-    AREA %in% c("Area 2","Area 1", "Area 101", "Area 102",  "Area 142", "Area 2E", "Area 2W")& season=="summer"  ~ "NBC AABM S SUMMER",
-
-
-    AREA %in% c( "Area 103", "Area 104", "Area 105", "Area 3", "Area 4", "Area 5")& season=="spring"  ~ "NBC ISBM S SPRING",
-    AREA %in% c( "Area 103", "Area 104", "Area 105", "Area 3", "Area 4", "Area 5")& season=="fall"  ~ "NBC ISBM S FALL",
-    AREA %in% c( "Area 103", "Area 104", "Area 105", "Area 3", "Area 4", "Area 5")& season=="summer"  ~ "NBC ISBM S SUMMER",
-
-
-    (AREA %in% c( "Area 19 (JDF)", "Area 20", "Area 20 (East)", "Area 20 (West)") | REGION2 == "JDF") & season=="spring"  ~ "CA JDF S SPRING", #this captures 19
-    (AREA %in% c( "Area 19 (JDF)", "Area 20", "Area 20 (East)", "Area 20 (West)") | REGION2 == "JDF") & season=="fall"  ~ "CA JDF S FALL",
-    (AREA %in% c( "Area 19 (JDF)", "Area 20", "Area 20 (East)", "Area 20 (West)") | REGION2 == "JDF") & season=="summer"  ~ "CA JDF S SUMMER")) %>%
-
-
-  mutate(finescale_fishery_old = case_when(
-    AREA%in%c( "Area 125", "Area 126", "Area 127") & MANAGEMENT=="AABM" & MONTH%in%c(1:12) ~ "NWCVI S AABM",
-    AREA%in%c("Area 121", "Area 123", "Area 124") & MANAGEMENT=="AABM" & MONTH%in%c(1:12) ~ "SWCVI S AABM",
-    AREA%in%c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal)")  & MONTH%in%c(1:7, 10:12) ~ "SWCVI S AABM",
-    AREA%in%c("Area 25", "Area 26", "Area 27") & MONTH%in%c(1:6, 10:12) ~ "NWCVI S AABM",
-    AREA%in%c("Area 121", "Area 123", "Area 124") & MANAGEMENT=="ISBM" & MONTH%in%c(7:12) ~ "SWCVI S ISBM",
-    AREA%in%c("Area 125", "Area 126", "Area 127") & MANAGEMENT=="ISBM" & MONTH%in%c(7:12) ~ "NWCVI S ISBM",
-    AREA%in%c("Area 21", "Area 24", "Area 23 (Barkley)", "Area 23 (Alberni Canal)") & MONTH%in%c(8,9) ~ "SWCVI S ISBM",
-    AREA%in%c("Area 25", "Area 26", "Area 27") & MONTH%in%c(7,8,9) ~ "NWCVI S ISBM",
-    (AREA %in%c("Area 13", "Area 14", "Area 15", "Area 16") |REGION2== "GSN")& MONTH%in%c(1:12) ~ "NGS S",
-    (AREA %in%c("Area 17", "Area 18",  "Area 19 (GS)", "Area 28", "Area 29") |REGION2== "GSS")& MONTH%in%c(1:12) ~ "SGS S",
-    (AREA %in% c("Area 11", "Area 111", "Area 12") | REGION2 == "JST") & MONTH%in%c(1:12) ~ "JNST S",
-    AREA %in% c("Area 10", "Area 106", "Area 110", "Area 6", "Area 7", "Area 8", "Area 9", "Area 130", "Area 108", "Area 109", "Area 107")& MONTH%in%c(1:12)  ~ "CBC S",
-    AREA %in% c("Area 2","Area 1", "Area 101", "Area 102",  "Area 142", "Area 2E", "Area 2W")& MONTH%in%c(1:12)  ~ "NBC AABM S",
-    AREA %in% c( "Area 103", "Area 104", "Area 105", "Area 3", "Area 4", "Area 5")& MONTH%in%c(1:12)  ~ "NBC ISBM S",
-    (AREA %in% c( "Area 19 (JDF)", "Area 20", "Area 20 (East)", "Area 20 (West)") | REGION2 == "JDF") & MONTH%in%c(1:12) ~ "CA JDF S"))
-
-
-```
-
--   We also identified a fishery specific consistently creel or logbooked coverage period for the summer period
-
-    -   This is where there is consistent data throughout the time series (from 2005 to 2023) from the creel + logbook data
-
-    -   This consistent chunk of data will be used to predict the estimated catch in the section of the time series where we don't have iREC
-
-    -   The summer coverage period included all months within 6:8 that are consistent through the timeseries.
-
-```{r Assigning seasonal coverage}
-
-
-Sport_mark_rate_finescale<- Sport_mark_rate_finescale %>% ungroup %>%
-  mutate(summer_coverage_tf = case_when(
-    finescale_fishery_old == "CA JDF S" & MONTH %in% c(7:8)  ~ "yes",
-    finescale_fishery_old == "JNST S" & MONTH %in% c(7:8)  ~ "yes",
-    finescale_fishery_old == "NGS S" & MONTH %in% c(7:8)  ~ "yes",
-    finescale_fishery_old == "SGS S" & MONTH %in% c(7:8) & YEAR %notin% c(2016)  ~ "yes",
-    finescale_fishery_old == "SWCVI S ISBM" & MONTH %in% c(8) ~ "yes",
-    finescale_fishery_old == "SWCVI S AABM" & MONTH %in% c(7:8)  ~ "yes",
-    finescale_fishery_old == "SWCVI S" & MONTH %in% c(7:8) ~ "yes",
-    finescale_fishery_old == "NWCVI S ISBM" & MONTH %in% c(7:8) ~ "yes",
-    finescale_fishery_old == "NWCVI S AABM" & MONTH %in% c(7:8)  ~ "yes",
-    finescale_fishery_old == "NWCVI S" & MONTH %in% c(7:8) ~ "yes",
-    finescale_fishery_old == "CBC S" & MONTH %in% c(7:8) ~ "yes",
-    finescale_fishery_old == "NBC AABM S" & MONTH %in% c(7:8) ~ "yes",
-    finescale_fishery_old == "NBC ISBM S" & MONTH %in% c(7:8) ~ "yes",
-    .default = "no"))
-```
-
--   We sum up catch by mark and kept status for each year and new finescale fishery of the defined coverage periods for creel and for the previously calculated catch estimate. This is the data used in the modelling exercise described below.
--   We also calculate creel effort - a proportion of months and areas in a given finescale fishery that we surveyed using creel or logbooks. This is used in the modelling efforts below.
-
-```{r summing data by fishery, combining summer period and catch effort}
-
-Sport_mark_rate_finescale_sum<- Sport_mark_rate_finescale %>%
-  filter(!is.na(finescale_fishery)) %>%
-  group_by(YEAR, status, finescale_fishery_old, finescale_fishery) %>%
-  summarise_at(vars(creel:catch_estimate), sum, na.rm=TRUE)
-
-Sport_creel_finescale_summer<- Sport_mark_rate_finescale %>%
-  filter(!is.na(finescale_fishery_old), summer_coverage_tf=="yes") %>%
-  group_by(YEAR, status, finescale_fishery_old) %>%
-  summarise_at(vars(creel_plus), sum, na.rm=TRUE) %>%
-  rename(creel_plus_summer=creel_plus)
-
-Sport_historic_finescale_summer<- Sport_mark_rate_finescale %>%
-  filter(!is.na(finescale_fishery_old), summer_coverage_tf=="yes") %>%
-  group_by(YEAR, status, finescale_fishery_old) %>%
-  summarise_at(vars(historic), sum, na.rm=TRUE) %>%
-  rename(historic_summer=historic)
-
-Sport_creel_finescale_creel_effort<- Sport_mark_rate_finescale %>%
-  full_join(creel_plus_effort) %>%
-  mutate(creel_plus_done = case_when(
-    is.na(creel_plus_done)~ "no",
-    TRUE ~ creel_plus_done)) %>%
-  filter(!is.na(finescale_fishery_old), summer_coverage_tf=="yes") %>%
-  group_by(YEAR, finescale_fishery_old, finescale_fishery) %>% count(creel_plus_done) %>%
-  pivot_wider(names_from = creel_plus_done, values_from = n) %>%
-  mutate(creel_effort = sum(yes, na.rm=TRUE)/sum(no, yes, na.rm=TRUE)) %>%
-  ungroup() %>%
-  dplyr::select(YEAR, finescale_fishery_old,creel_effort)
-
-Sport_creel_finescale_historic_effort<- Sport_mark_rate_finescale %>%
-  full_join(historic_effort) %>%
-  mutate(historic_done = case_when(
-    is.na(historic_done)~ "no",
-    TRUE ~ historic_done)) %>%
-  filter(!is.na(finescale_fishery_old), summer_coverage_tf=="yes") %>%
-  group_by(YEAR, finescale_fishery_old, finescale_fishery) %>% count(historic_done) %>%
-  pivot_wider(names_from = historic_done, values_from = n) %>%
-  mutate(historic_effort = sum(yes, na.rm=TRUE)/sum(no, yes, na.rm=TRUE)) %>%
-  ungroup() %>%
-  dplyr::select(YEAR, finescale_fishery_old,historic_effort)
-
-
-#Year, finescale fishery
-Sport_mark_rate_finescale_combined<-left_join(Sport_mark_rate_finescale_sum, Sport_creel_finescale_summer)
-Sport_mark_rate_finescale_combined<-left_join(Sport_mark_rate_finescale_combined, Sport_historic_finescale_summer)
-Sport_mark_rate_finescale_combined<-left_join(Sport_mark_rate_finescale_combined, Sport_creel_finescale_creel_effort)
-Sport_mark_rate_finescale_combined<-left_join(Sport_mark_rate_finescale_combined, Sport_creel_finescale_historic_effort)
-
-Sport_mark_rate_finescale_combined<-Sport_mark_rate_finescale_combined %>% mutate(mark_status = case_when(
-  status %in% c("marked_Kept_total", "marked_Released_total") ~ "marked",
-  TRUE ~ "unmarked"
-))%>% mutate(kept_status = case_when(
-  status %in% c("marked_Kept_total", "unmarked_Kept_total") ~ "Kept",
-  TRUE ~ "Released"
-))
-
-Sport_mark_rate_finescale_combined<-Sport_mark_rate_finescale_combined %>% mutate(season = case_when(
-  str_detect(finescale_fishery, "SUMMER")  ~ "summer",
-  str_detect(finescale_fishery, "SPRING")  ~ "spring",
-  str_detect(finescale_fishery, "FALL")  ~ "fall"))
-
-```
-
-# Visualization
-
--   Alternatively, we can add up the catch to get total catch estimates across fisheries by month.
-
-```{r summarizing by old finescale fishery}
+```{r summarizing by old finescale fishery, message=FALSE, warning=FALSE, results='hide', echo=FALSE}
 yearMonth <- plyr::ddply(Sport_mark_rate_finescale, c( "YEAR", "MONTH", "finescale_fishery_old"), summarise,
                          sum_creel = sum(creel, na.rm = TRUE), sum= sum(creel_plus, na.rm = TRUE), sum_historic= sum(historic_plus, na.rm = TRUE), sum_catch_estimate = sum(catch_estimate, na.rm = TRUE), sum_irec = sum(irec_calibrated, na.rm = TRUE)) %>% filter(finescale_fishery_old!="NA") %>% mutate(across(where(is.numeric), ~na_if(., 0))) 
 
@@ -674,6 +232,30 @@ g3
 ```
 
 # Modelling
+
+-   Splitting fisheries by season
+
+    -   Assign previous finescale fisheries to the catch data using PFMAs and month
+
+    -   Assign new finescale fisheries (including terminal) to the catch data using PFMAs and season
+
+    -   Generally seasonal fisheries fall into the pre-defined categories - spring is months 1:4, summer 5:9 and fall 10:12, with a few exceptions - the WCVI ISBM fisheries are shorter length.
+
+    -   We also identified a fishery specific consistently creel or logbooked coverage period for the summer period
+
+        -   This is where there is consistent data throughout the time series (from 2005 to 2023) from the creel + logbook data
+
+        -   This consistent chunk of data will be used to predict the estimated catch in the section of the time series where we don't have iREC
+
+        -   The summer coverage period included all months within 6:8 that are consistent through the timeseries.
+
+    -   We sum up catch by mark and kept status for each year and new finescale fishery of the defined coverage periods for creel and for the previously calculated catch estimate. This is the data used in the modelling exercise described below.
+
+    -   We also calculate creel effort - a proportion of months and areas in a given finescale fishery that we surveyed using creel or logbooks. This is used in the modelling efforts below.
+
+-   
+
+-   
 
 -   Now we take the chunks of summer, spring, fall consistently creeled or logbooked data between 2013 and 2023 and establish a relationship via a model with the irec based catch estimate.
 

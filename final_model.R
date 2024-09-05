@@ -69,7 +69,8 @@ Summer_south_no_nas<-Summer_south %>% drop_na(any_of(c("creel_plus_summer", "mar
 write_rds(Summer_south_no_nas, "Summer_south_no_nas.RDS")
 
 Summer_model_gamma_full_spec<- glm(formula = catch_estimate ~ finescale_fishery_old + status +
-                                     creel_plus_summer:finescale_fishery_old + creel_plus_summer:status +
+                                     creel_plus_summer:finescale_fishery_old +
+                                     creel_plus_summer:status +
                                      finescale_fishery_old:status + 1 + creel_plus_summer,  family=Gamma(link = "log"), data = Summer_south_no_nas)
 res_gam_effort_summer_spec <- simulateResiduals(Summer_model_gamma_full_spec, plot = T, quantreg=T)
 summary(Summer_model_gamma_full_spec)
